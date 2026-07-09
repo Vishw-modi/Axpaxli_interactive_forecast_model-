@@ -47,22 +47,37 @@ export default function ForecastApp() {
   const chatRef = useRef<HTMLDivElement>(null);
   const assumpRef = useRef<HTMLDivElement>(null);
 
+  // AI Modal state
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [activeAiMetric, setActiveAiMetric] = useState<string | null>(null);
+  const [aiChatMessages, setAiChatMessages] = useState<{who: string, text: string, suggestion?: number}[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [hasUploaded, setHasUploaded] = useState(false);
+  const [aiInputValue, setAiInputValue] = useState('');
+
   const chatScript = [
-    {who:'ai', text:"Let's build your wet AMD forecast together. First — scope: US only, neovascular AMD, all lines of therapy?"},
-    {who:'user', text:'Yes, US only, all lines of therapy.', assump:[{k:'Scope', v:'US, wet AMD, all lines'}]},
-    {who:'ai', text:'Got it. For epidemiology I\'ll anchor on a US diagnosed wet AMD prevalence of about 1.75M patients, based on published claims and NHANES-derived estimates. Does that align with your internal numbers?'},
-    {who:'user', text:'That matches what we use internally.', assump:[{k:'Diagnosed prevalence (US)', v:'1,750,000 patients'}]},
-    {who:'ai', text:'How should we handle the diagnosis and treatment funnel? Default: 85% of prevalent patients are diagnosed, and 92% of diagnosed patients initiate anti-VEGF therapy.'},
-    {who:'user', text:'Sounds right, keep those.', assump:[{k:'Diagnosis rate', v:'85%'},{k:'Treatment initiation rate', v:'92%'}]},
-    {who:'ai', text:'Noted. Now the competitive set — your asset launches against Eylea, Eylea HD, Vabysmo, Susvimo, Lucentis/Cimerli, and the aflibercept biosimilars (Yesafili, Opuviz). What\'s the core differentiator for your product: efficacy, durability, or delivery?'},
-    {who:'user', text:'Durability — we\'re targeting q16-week maintenance dosing after a loading phase, longer than Vabysmo.', assump:[{k:'Key differentiator', v:'Extended durability, q16-week dosing'}]},
-    {who:'ai', text:'That\'s a meaningful differentiator against today\'s q8-week standard of care. I\'ll set the addressable segment at 65% of treated patients — naive starts plus patients likely to switch off a shorter-interval therapy. Reasonable?'},
-    {who:'user', text:'Yes, 65% addressable works.', assump:[{k:'Addressable share', v:'65% of treated patients'}]},
-    {who:'ai', text:'For uptake, I\'d default to 25% peak share of treated patients within 4 years, similar to how Vabysmo scaled post-launch. Want to keep that pace, or adjust?'},
-    {who:'user', text:'Keep 25% peak share, but slow the ramp — 5 years to peak, not 4. Payer friction will be real given how crowded this class is.', assump:[{k:'Peak share', v:'25%'},{k:'Years to peak', v:'5 years'}]},
-    {who:'ai', text:'Updated to 25% peak share over 5 years. Last question: where should we anchor net price per injection, after rebates? Eylea HD lists around $2,625 WAC — do you want to price in line with that, or discount to drive share?'},
-    {who:'user', text:'Net price of $2,200 per injection after rebates, roughly a 15% discount to Eylea HD WAC.', assump:[{k:'Net price per injection', v:'$2,200'}]},
-    {who:'ai', text:'Got it — $2,200 net per injection, and I\'ll assume 6 injections per patient per year and 85% twelve-month persistency, consistent with recent anti-VEGF launches. I have everything I need. Generating your forecast now.', assump:[{k:'Injections / year', v:'6'},{k:'12-month persistency', v:'85%'}]}
+    {who:'ai', text:"Let's build your wet AMD forecast together. What is the scope of the project - add country of study, drug in question, lines of therapy involved?"},
+    {who:'user', text:"US only, our new anti-VEGF asset, all lines of therapy.", assump:[{k:'Scope', v:'US, new asset, all lines'}]},
+    {who:'ai', text:"Got it. For epidemiology I'll anchor on a US diagnosed wet AMD prevalence of about 1.75M patients, based on published claims and NHANES-derived estimates. Does that align with your internal numbers?"},
+    {who:'user', text:"Yes, that aligns with our internal numbers.", assump:[{k:'Diagnosed prevalence (US)', v:'1,750,000 patients'}]},
+    {who:'ai', text:"How should we handle the diagnosis and treatment funnel? Default: 85% of prevalent patients are diagnosed, and 92% of diagnosed patients initiate anti-VEGF therapy. I'll utilize this for starters does this align to your expectations?"},
+    {who:'user', text:"Yes, that aligns to our expectations.", assump:[{k:'Diagnosis rate', v:'85%'},{k:'Treatment initiation rate', v:'92%'}]},
+    {who:'ai', text:"To arrive at the addressable pool were there any prior tests involved? if yes then what % patients are over expressing the biomarker. If no I'll not apply filter."},
+    {who:'user', text:"No prior tests involved. Do not apply a filter.", assump:[]},
+    {who:'ai', text:"Are there any other filters to be applied to arrive at the addressable pool?"},
+    {who:'user', text:"No.", assump:[]},
+    {who:'ai', text:"Noted. Now the competitive set — your asset launches against Eylea, Eylea HD, Vabysmo, Susvimo, Lucentis/Cimerli, and the aflibercept biosimilars (Yesafili, Opuviz). What's the core differentiator for your product: efficacy, durability, or delivery?"},
+    {who:'user', text:"Durability.", assump:[{k:'Key differentiator', v:'Durability'}]},
+    {who:'ai', text:"That's a meaningful differentiator against today's q8-week standard of care. I'll set the addressable segment at 65% of treated patients — naive starts plus patients likely to switch off a shorter-interval therapy. Reasonable?"},
+    {who:'user', text:"Yes, that's reasonable.", assump:[{k:'Addressable share', v:'65% of treated patients'}]},
+    {who:'ai', text:"For uptake, I'd default to 25% peak share of treated patients within 4 years, similar to how Vabysmo scaled post-launch. Want to keep that pace, or adjust?"},
+    {who:'user', text:"Keep that pace.", assump:[{k:'Peak share', v:'25%'},{k:'Years to peak', v:'4 years'}]},
+    {who:'ai', text:"What is the dosing of your product?"},
+    {who:'user', text:"q16-week maintenance dosing after a loading phase.", assump:[]},
+    {who:'ai', text:"Eylea HD lists around $2,625 WAC — do you want to price in line with that, or discount to drive share?"},
+    {who:'user', text:"Price in line with that at $2,625.", assump:[{k:'Net price per injection', v:'$2,625'}]},
+    {who:'ai', text:"What is the average patient compliance you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
+    {who:'user', text:"We expect 6 injections per year with 85% persistency over twelve months.", assump:[{k:'Injections / year', v:'6'},{k:'12-month persistency', v:'85%'}]}
   ];
 
   const runChat = () => {
@@ -76,7 +91,7 @@ export default function ForecastApp() {
         if (msg.assump) {
           setAssumptions(prev => [...prev, ...msg.assump!]);
         }
-      }, i * 260);
+      }, i * 2000);
     });
   };
 
@@ -98,6 +113,84 @@ export default function ForecastApp() {
 
   const resetAssumptions = () => {
     setState(defaultState);
+  };
+
+  const openAiModal = (metricKey: string) => {
+    setActiveAiMetric(metricKey);
+    setIsAiModalOpen(true);
+    setHasUploaded(false);
+    
+    // Set initial chat message based on metric
+    let initMsg = "";
+    if (metricKey === 'prevalence') initMsg = "The diagnosed wet AMD prevalence is set to 1.75M based on recent US claims data and NHANES-derived population estimates.";
+    else if (metricKey === 'diagnosisRate') initMsg = "The diagnosis rate of 85% reflects a high degree of symptomatic presentation in neovascular AMD compared to other retinal diseases.";
+    else if (metricKey === 'treatmentRate') initMsg = "The 92% treatment initiation rate is standard; most diagnosed wet AMD patients immediately begin anti-VEGF therapy to prevent vision loss.";
+    else if (metricKey === 'addressableShare') initMsg = "The 65% addressable share accounts for naive starts and patients willing to switch off their current short-interval therapy for a more durable option.";
+    else if (metricKey === 'peakShare') initMsg = "A 25% peak share is aggressive but attainable for a highly differentiated asset, mirroring the recent trajectory of Vabysmo.";
+    else if (metricKey === 'yearsToPeak') initMsg = "5 years to peak reflects typical access friction and contracting delays in this highly competitive, mature market.";
+    else if (metricKey === 'netPrice') initMsg = "A net price of $2,625 positions your asset at parity with Eylea HD, assuming no deep discounting is required to drive initial uptake.";
+    else if (metricKey === 'injectionsPerYear') initMsg = "6 injections per year reflects real-world clinical practice for a durable agent, assuming an initial loading phase followed by q16-week maintenance.";
+    else if (metricKey === 'persistency') initMsg = "85% twelve-month persistency is consistent with established anti-VEGF therapies, accounting for real-world drop-offs and switching.";
+    else initMsg = "Let's review this assumption.";
+
+    setAiChatMessages([
+      { who: 'ai', text: initMsg }
+    ]);
+  };
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setIsUploading(true);
+    setTimeout(() => {
+      setIsUploading(false);
+      setHasUploaded(true);
+      
+      let newMsg = "I've analyzed the uploaded document. ";
+      let suggestionValue = 0;
+      
+      if (activeAiMetric === 'prevalence') { newMsg += "Based on the new claims analysis in the deck, the prevalence is closer to 1.9M."; suggestionValue = 1900000; }
+      else if (activeAiMetric === 'diagnosisRate') { newMsg += "The market research indicates diagnosis rates are improving due to AI screening tools. Suggesting 88%."; suggestionValue = 0.88; }
+      else if (activeAiMetric === 'treatmentRate') { newMsg += "New guidelines pushed the treatment rate to 95% in your target clinics."; suggestionValue = 0.95; }
+      else if (activeAiMetric === 'addressableShare') { newMsg += "Physician surveys in the deck show 70% of treated patients are considered switch-eligible."; suggestionValue = 0.70; }
+      else if (activeAiMetric === 'peakShare') { newMsg += "Given the highly competitive contracting landscape detailed in the report, a 20% peak share is more realistic."; suggestionValue = 0.20; }
+      else if (activeAiMetric === 'yearsToPeak') { newMsg += "The payer access timeline suggests it will take 6 years to reach peak share."; suggestionValue = 6; }
+      else if (activeAiMetric === 'netPrice') { newMsg += "The pricing strategy deck recommends a launch net price of $2,400 to secure early formulary placement."; suggestionValue = 2400; }
+      else if (activeAiMetric === 'injectionsPerYear') { newMsg += "KOL feedback indicates real-world undertreatment; average injections will likely be 5 per year."; suggestionValue = 5; }
+      else if (activeAiMetric === 'persistency') { newMsg += "The analog data shows a 12-month persistency of 80% for similar intervals."; suggestionValue = 0.80; }
+      
+      setAiChatMessages(prev => [...prev, { who: 'ai', text: newMsg, suggestion: suggestionValue }]);
+    }, 2000);
+  };
+
+  const acceptSuggestion = (val: number) => {
+    if (activeAiMetric) {
+      handleStateChange(activeAiMetric as keyof ForecastState, val);
+      setAiChatMessages(prev => {
+        const withoutButtons = prev.map(m => ({ ...m, suggestion: undefined }));
+        return [...withoutButtons, { who: 'user', text: "I'll use that suggestion." }, { who: 'ai', text: "Great, I've updated the model with this new assumption."}];
+      });
+    }
+  };
+
+  const rejectSuggestion = () => {
+    setAiChatMessages(prev => {
+      const withoutButtons = prev.map(m => ({ ...m, suggestion: undefined }));
+      return [...withoutButtons, { who: 'user', text: "I'll keep the current number." }, { who: 'ai', text: "Understood. The current assumption remains in place."}];
+    });
+  };
+
+  const handleAiSubmit = (e?: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e && e.key !== 'Enter') return;
+    if (!aiInputValue.trim()) return;
+
+    const userText = aiInputValue.trim();
+    setAiInputValue('');
+    
+    setAiChatMessages(prev => [...prev, { who: 'user', text: userText }]);
+    
+    setTimeout(() => {
+      setAiChatMessages(prev => [...prev, { who: 'ai', text: "I am a prototype assistant! In the full version, I will analyze your request against your custom data and update the forecast dynamically." }]);
+    }, 1000);
   };
 
   const exportCSV = () => {
@@ -265,19 +358,31 @@ export default function ForecastApp() {
             <div className="card">
               <h3>Epidemiology &amp; treatment funnel (US)</h3>
               <div className="field-group">
-                <label className="field">Diagnosed wet AMD prevalence</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Diagnosed wet AMD prevalence
+                  <button onClick={() => openAiModal('prevalence')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={state.prevalence} step="10000" onChange={(e) => handleStateChange('prevalence', parseFloat(e.target.value))} />
               </div>
               <div className="field-group">
-                <label className="field">Diagnosis rate (% of prevalence diagnosed)</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Diagnosis rate (% of prevalence diagnosed)
+                  <button onClick={() => openAiModal('diagnosisRate')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={Math.round(state.diagnosisRate * 100)} step="1" onChange={(e) => handleStateChange('diagnosisRate', parseFloat(e.target.value) / 100)} />
               </div>
               <div className="field-group">
-                <label className="field">Treatment initiation rate (% of diagnosed treated with anti-VEGF)</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Treatment initiation rate (% of diagnosed treated with anti-VEGF)
+                  <button onClick={() => openAiModal('treatmentRate')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={Math.round(state.treatmentRate * 100)} step="1" onChange={(e) => handleStateChange('treatmentRate', parseFloat(e.target.value) / 100)} />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field">Addressable share (naive + switch-eligible, % of treated)</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Addressable share (naive + switch-eligible, % of treated)
+                  <button onClick={() => openAiModal('addressableShare')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={Math.round(state.addressableShare * 100)} step="1" onChange={(e) => handleStateChange('addressableShare', parseFloat(e.target.value) / 100)} />
               </div>
             </div>
@@ -304,26 +409,41 @@ export default function ForecastApp() {
             <div className="card">
               <h3>Uptake &amp; share</h3>
               <div className="field-group">
-                <label className="field">Peak market share of treated patients (%)</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Peak market share of treated patients (%)
+                  <button onClick={() => openAiModal('peakShare')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={Math.round(state.peakShare * 100)} step="1" onChange={(e) => handleStateChange('peakShare', parseFloat(e.target.value) / 100)} />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field">Years to reach peak share</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Years to reach peak share
+                  <button onClick={() => openAiModal('yearsToPeak')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={state.yearsToPeak} step="1" onChange={(e) => handleStateChange('yearsToPeak', parseFloat(e.target.value))} />
               </div>
             </div>
             <div className="card">
               <h3>Pricing &amp; persistency</h3>
               <div className="field-group">
-                <label className="field">Net price per injection, post-rebate (USD)</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Net price per injection, post-rebate (USD)
+                  <button onClick={() => openAiModal('netPrice')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={state.netPrice} step="50" onChange={(e) => handleStateChange('netPrice', parseFloat(e.target.value))} />
               </div>
               <div className="field-group">
-                <label className="field">Injections per patient per year</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Injections per patient per year
+                  <button onClick={() => openAiModal('injectionsPerYear')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={state.injectionsPerYear} step="0.5" onChange={(e) => handleStateChange('injectionsPerYear', parseFloat(e.target.value))} />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field">12-month persistency rate (%)</label>
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  12-month persistency rate (%)
+                  <button onClick={() => openAiModal('persistency')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
                 <input type="number" value={Math.round(state.persistency * 100)} step="1" onChange={(e) => handleStateChange('persistency', parseFloat(e.target.value) / 100)} />
               </div>
             </div>
@@ -668,6 +788,61 @@ export default function ForecastApp() {
 
           <p className="footer-note">End of prototype walkthrough. Use the tabs above to revisit any page.</p>
         </section>
+
+        {isAiModalOpen && (
+          <div onClick={() => setIsAiModalOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: '500px', maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', position: 'relative', padding: 0 }}>
+              <div style={{ background: 'var(--navy)', color: 'white', padding: '16px', borderTopLeftRadius: '10px', borderTopRightRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, color: 'white' }}>Forecast.ai Assistant</h3>
+                <button onClick={() => setIsAiModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px' }}>✕</button>
+              </div>
+              
+              <div style={{ padding: '16px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {aiChatMessages.map((msg, i) => (
+                  <div key={i} style={{ 
+                    alignSelf: msg.who === 'user' ? 'flex-end' : 'flex-start',
+                    background: msg.who === 'user' ? 'var(--teal)' : 'var(--bg)',
+                    color: msg.who === 'user' ? 'white' : 'var(--text)',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    maxWidth: '85%'
+                  }}>
+                    <div style={{ fontSize: '13px', lineHeight: '1.5' }}>{msg.text}</div>
+                    {msg.suggestion && (
+                      <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                        <button className="btn" style={{ padding: '4px 10px', fontSize: '12px', minWidth: '0' }} onClick={() => acceptSuggestion(msg.suggestion!)}>Use this instead</button>
+                        <button className="btn secondary" style={{ padding: '4px 10px', fontSize: '12px', minWidth: '0' }} onClick={rejectSuggestion}>Reject</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {isUploading && (
+                  <div style={{ alignSelf: 'flex-start', background: 'var(--bg)', padding: '10px 14px', borderRadius: '8px', fontSize: '13px' }}>
+                    <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>Analyzing document...</span>
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ padding: '16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+                {!hasUploaded && (
+                  <label className="btn secondary" style={{ flex: 1, textAlign: 'center', cursor: 'pointer', margin: 0 }}>
+                    Upload Market Research
+                    <input type="file" style={{ display: 'none' }} onChange={handleUpload} />
+                  </label>
+                )}
+                <input 
+                  type="text" 
+                  placeholder="Type a message..." 
+                  value={aiInputValue}
+                  onChange={(e) => setAiInputValue(e.target.value)}
+                  onKeyDown={handleAiSubmit}
+                  style={{ flex: 2, padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border)' }} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );
