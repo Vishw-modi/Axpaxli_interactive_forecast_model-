@@ -7,7 +7,7 @@ export type ForecastState = {
   yearsToPeak: number;
   netPrice: number;
   injectionsPerYear: number;
-  persistency: number;
+  compliance: number;
 };
 
 export const defaultState: ForecastState = {
@@ -19,7 +19,7 @@ export const defaultState: ForecastState = {
   yearsToPeak: 5,
   netPrice: 2200,
   injectionsPerYear: 6,
-  persistency: 0.85
+  compliance: 0.85
 };
 
 export function fmtNum(n: number): string {
@@ -57,7 +57,7 @@ export function computeForecast(s: ForecastState) {
     const frac = smoothstep(t);
     const shareN = s.peakShare * frac;
     const patientsN = addressable * shareN;
-    const revenueN = patientsN * s.injectionsPerYear * s.netPrice * s.persistency;
+    const revenueN = patientsN * s.injectionsPerYear * s.netPrice * s.compliance;
     
     years.push('Year ' + n);
     patients.push(patientsN);
@@ -65,7 +65,7 @@ export function computeForecast(s: ForecastState) {
     share.push(shareN * 100);
   }
   
-  const peakRevenue = addressable * s.peakShare * s.injectionsPerYear * s.netPrice * s.persistency;
+  const peakRevenue = addressable * s.peakShare * s.injectionsPerYear * s.netPrice * s.compliance;
   const cumulative = revenue.reduce((a, b) => a + b, 0);
   
   return {
