@@ -40,6 +40,7 @@ export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
   const [maxTab, setMaxTab] = useState(1);
   const [state, setState] = useState<ForecastState>(defaultState);
+  const [selectedModel, setSelectedModel] = useState('ARIMA');
   
   // Chat state
   const [chatStarted, setChatStarted] = useState(false);
@@ -481,7 +482,23 @@ export default function ForecastApp() {
             </div>
           </div>
 
-          <div style={{ textAlign: 'right' }}>
+          <div className="card">
+            <h3>Forecasting algorithm</h3>
+            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>Select the algorithm to be used for generating the forecast.</p>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <select 
+                value={selectedModel} 
+                onChange={e => setSelectedModel(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '400px', background: '#fff' }}
+              >
+                <option value="SMA">SMA</option>
+                <option value="Exponential Smoothing">Exponential Smoothing</option>
+                <option value="ARIMA">ARIMA</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'right', marginTop: '24px' }}>
             <button className="btn secondary" onClick={resetAssumptions} style={{ marginRight: '8px' }}>Reset to conversation defaults</button>
             <button className="btn" onClick={() => goPage(4)}>Generate forecast →</button>
           </div>
