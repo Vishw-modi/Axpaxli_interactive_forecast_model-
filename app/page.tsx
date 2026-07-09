@@ -255,7 +255,7 @@ export default function ForecastApp() {
     { name: 'Base', tag: 'tag-base', s: state },
     { name: 'Upside', tag: 'tag-up', s: up }
   ];
-  const scenarios = savedScenarios.length > 0 ? savedScenarios : defaultScenarios;
+  const scenarios = [...defaultScenarios, ...savedScenarios];
 
   return (
     <>
@@ -562,14 +562,14 @@ export default function ForecastApp() {
           </div>
 
           <div className="card">
-            <h3>Revenue forecast, US ($)</h3>
+            <h3>Cumulative revenue forecast, US ($)</h3>
             <div className="legend-row">
-              <span><span className="legend-dot" style={{ background: '#2a78d6' }}></span>Net revenue</span>
+              <span><span className="legend-dot" style={{ background: '#2a78d6' }}></span>Cumulative net revenue</span>
             </div>
             <div className="canvas-wrap">
               {activeTab === 4 && <Line 
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: f.years, datasets: [{ label: 'Net revenue', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                data={{ labels: f.years, datasets: [{ label: 'Cumulative revenue', data: f.cumulativeRevenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
               />}
             </div>
           </div>
@@ -749,9 +749,10 @@ export default function ForecastApp() {
                 </div>
               )}
 
-              <div className="grid4" style={{ gridTemplateColumns: '1fr 1fr', alignContent: 'start' }} id="scenarioMetrics">
+              <div className="grid3" style={{ alignContent: 'start' }} id="scenarioMetrics">
                 <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(f.peakRevenue)}</div></div>
                 <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(f.addressable * state.peakShare)}</div></div>
+                <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct(state.peakShare * 100)}</div></div>
                 <div className="metric"><div className="label">Year 1 revenue</div><div className="value">{fmtM(f.revenue[0])}</div></div>
                 <div className="metric"><div className="label">Year 2 revenue</div><div className="value">{fmtM(f.revenue[1])}</div></div>
                 <div className="metric"><div className="label">Year 3 revenue</div><div className="value">{fmtM(f.revenue[2])}</div></div>
@@ -798,7 +799,7 @@ export default function ForecastApp() {
         {/* PAGE 7 : COMPARE */}
         <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
           <h1>Scenario comparison</h1>
-          <p className="lead">{savedScenarios.length > 0 ? "Your custom saved scenarios side by side." : "Downside and upside cases, derived from your base assumptions, side by side."}</p>
+          <p className="lead">Base, downside, and upside cases alongside any custom scenarios you've saved.</p>
 
           <div className="card">
             <h3>Summary</h3>

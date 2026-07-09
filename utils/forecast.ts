@@ -65,6 +65,12 @@ export function computeForecast(s: ForecastState) {
     share.push(shareN * 100);
   }
   
+  const cumulativeRevenue = revenue.reduce((acc: number[], val) => {
+    acc.push((acc.length > 0 ? acc[acc.length - 1] : 0) + val);
+    return acc;
+  }, []);
+
+  
   const peakRevenue = addressable * s.peakShare * s.injectionsPerYear * s.netPrice * s.compliance;
   const cumulative = revenue.reduce((a, b) => a + b, 0);
   
@@ -72,6 +78,7 @@ export function computeForecast(s: ForecastState) {
     years,
     patients,
     revenue,
+    cumulativeRevenue,
     share,
     addressable,
     peakRevenue,
