@@ -78,8 +78,8 @@ export default function ForecastApp() {
     {who:'user', text:"Keep that pace.", assump:[{k:'Peak share', v:'25%'},{k:'Years to peak', v:'4 years'}]},
     {who:'ai', text:"What is the dosing of your product?"},
     {who:'user', text:"q16-week maintenance dosing after a loading phase.", assump:[]},
-    {who:'ai', text:"Eylea HD lists around $2,625 WAC — do you want to price in line with that, or discount to drive share?"},
-    {who:'user', text:"Price in line with that at $2,625.", assump:[{k:'Net price per injection', v:'$5,125'}]},
+    {who:'ai', text:"Eylea HD lists around $5,125 WAC — do you want to price in line with that, or discount to drive share?"},
+    {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection', v:'$5,125'}]},
     {who:'ai', text:"What is the average patient compliance you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
     {who:'user', text:"We expect 6 injections per year with 85% patient compliance.", assump:[{k:'Injections / year', v:'2'},{k:'Patient compliance', v:'85%'}]}
   ];
@@ -135,7 +135,7 @@ export default function ForecastApp() {
     else if (metricKey === 'addressableShare') initMsg = "The 65% addressable share accounts for naive starts and patients willing to switch off their current short-interval therapy for a more durable option.";
     else if (metricKey === 'peakShare') initMsg = "A 25% peak share is aggressive but attainable for a highly differentiated asset, mirroring the recent trajectory of Vabysmo.";
     else if (metricKey === 'yearsToPeak') initMsg = "5 years to peak reflects typical access friction and contracting delays in this highly competitive, mature market.";
-    else if (metricKey === 'netPrice') initMsg = "A net price of $2,625 positions your asset at parity with Eylea HD, assuming no deep discounting is required to drive initial uptake.";
+    else if (metricKey === 'netPrice') initMsg = "A net price of $5,125 positions your asset at parity with Eylea HD, assuming no deep discounting is required to drive initial uptake.";
     else if (metricKey === 'injectionsPerYear') initMsg = "6 injections per year reflects real-world clinical practice for a durable agent, assuming an initial loading phase followed by q16-week maintenance.";
     else if (metricKey === 'compliance') initMsg = "85% patient compliance is consistent with established therapies, accounting for real-world drop-offs and switching.";
     else initMsg = "Let's review this assumption.";
