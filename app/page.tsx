@@ -256,7 +256,7 @@ export default function ForecastApp() {
           <img src="/Tredence_KMK_Logo-removebg-preview.png" alt="Tredence KMK Logo" style={{ height: '88px', objectFit: 'contain', marginTop: '-22px', marginBottom: '-22px' }} />
           <div>
             <div className="name" style={{ color: 'var(--navy)' }}>Forecast.ai</div>
-            <div className="tag" style={{ color: 'var(--text-muted)' }}>Wet AMD forecasting demo — illustrative data</div>
+            <div className="tag" style={{ color: 'var(--text-muted)' }}>Wet AMD forecasting demo</div>
           </div>
         </div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Prototype for client demo</div>
