@@ -29,8 +29,9 @@ body {
 }
 
 header.topbar {
-  background: var(--navy);
-  color: #fff;
+  background: #ffffff;
+  color: var(--navy);
+  border-bottom: 1px solid var(--border);
   padding: 14px 24px;
   display: flex;
   align-items: center;
@@ -44,8 +45,8 @@ header.topbar {
   width: 30px; height: 30px; border-radius: 8px; background: var(--accent);
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
 }
-.brand .name { font-weight: 600; font-size: 16px; }
-.brand .tag { font-size: 11px; color: #9fb3c2; margin-top: 1px; }
+.brand .name { font-weight: 700; font-size: 24px; letter-spacing: -0.02em; color: var(--navy); }
+.brand .tag { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 
 nav.tabs {
   display: flex;

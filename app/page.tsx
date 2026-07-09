@@ -158,15 +158,15 @@ export default function ForecastApp() {
 
   return (
     <>
-      <header className="topbar">
-        <div className="brand">
-          <div className="mark">RF</div>
+      <header className="topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--border)', padding: '6px 24px' }}>
+        <div className="brand" style={{ gap: '24px' }}>
+          <img src="/Tredence_KMK_Logo-removebg-preview.png" alt="Tredence KMK Logo" style={{ height: '44px', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'left center', marginLeft: '12px' }} />
           <div>
-            <div className="name">RetinaForecast AI</div>
-            <div className="tag">Wet AMD forecasting demo — illustrative data</div>
+            <div className="name" style={{ color: 'var(--navy)' }}>Forecast.ai</div>
+            <div className="tag" style={{ color: 'var(--text-muted)' }}>Wet AMD forecasting demo — illustrative data</div>
           </div>
         </div>
-        <div style={{ fontSize: '12px', color: '#9fb3c2' }}>Prototype for client demo</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Prototype for client demo</div>
       </header>
 
       <nav className="tabs" id="tabnav">
@@ -194,7 +194,7 @@ export default function ForecastApp() {
         {/* PAGE 1 : WELCOME */}
         <section className={`page ${activeTab === 1 ? 'active' : ''}`} id="page-1">
           <h1>Forecast wet AMD launches through conversation, not spreadsheets</h1>
-          <p className="lead">RetinaForecast AI asks the questions a senior forecasting analyst would ask, builds a patient-flow model from your answers, and lets you stress-test every assumption in real time.</p>
+          <p className="lead">Forecast.ai asks the questions a senior forecasting analyst would ask, builds a patient-flow model from your answers, and lets you stress-test every assumption in real time.</p>
 
           <div className="grid3">
             <div className="card">
@@ -230,7 +230,7 @@ export default function ForecastApp() {
             <div className="card chat-thread" id="chatThread" ref={chatRef}>
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`bubble ${msg.who === 'ai' ? 'ai' : 'user'}`} style={{ animationDelay: '0s' }}>
-                  <span className="who">{msg.who === 'ai' ? 'RetinaForecast AI' : 'You'}</span>
+                  <span className="who">{msg.who === 'ai' ? 'Forecast.ai' : 'You'}</span>
                   {msg.text}
                 </div>
               ))}
