@@ -79,7 +79,7 @@ export default function ForecastApp() {
     {who:'ai', text:"Eylea HD lists around $2,625 WAC — do you want to price in line with that, or discount to drive share?"},
     {who:'user', text:"Price in line with that at $2,625.", assump:[{k:'Net price per injection', v:'$2,625'}]},
     {who:'ai', text:"What is the average patient compliance you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
-    {who:'user', text:"We expect 6 injections per year with 85% compliance over twelve months.", assump:[{k:'Injections / year', v:'6'},{k:'12-month compliance', v:'85%'}]}
+    {who:'user', text:"We expect 6 injections per year with 85% patient compliance.", assump:[{k:'Injections / year', v:'6'},{k:'Patient compliance', v:'85%'}]}
   ];
 
   const runChat = () => {
@@ -135,7 +135,7 @@ export default function ForecastApp() {
     else if (metricKey === 'yearsToPeak') initMsg = "5 years to peak reflects typical access friction and contracting delays in this highly competitive, mature market.";
     else if (metricKey === 'netPrice') initMsg = "A net price of $2,625 positions your asset at parity with Eylea HD, assuming no deep discounting is required to drive initial uptake.";
     else if (metricKey === 'injectionsPerYear') initMsg = "6 injections per year reflects real-world clinical practice for a durable agent, assuming an initial loading phase followed by q16-week maintenance.";
-    else if (metricKey === 'compliance') initMsg = "85% twelve-month compliance is consistent with established therapies, accounting for real-world drop-offs and switching.";
+    else if (metricKey === 'compliance') initMsg = "85% patient compliance is consistent with established therapies, accounting for real-world drop-offs and switching.";
     else initMsg = "Let's review this assumption.";
 
     setAiChatMessages([
@@ -161,7 +161,7 @@ export default function ForecastApp() {
       else if (activeAiMetric === 'yearsToPeak') { newMsg += "The payer access timeline suggests it will take 6 years to reach peak share."; suggestionValue = 6; }
       else if (activeAiMetric === 'netPrice') { newMsg += "The pricing strategy deck recommends a launch net price of $2,400 to secure early formulary placement."; suggestionValue = 2400; }
       else if (activeAiMetric === 'injectionsPerYear') { newMsg += "KOL feedback indicates real-world undertreatment; average injections will likely be 5 per year."; suggestionValue = 5; }
-      else if (activeAiMetric === 'compliance') { newMsg += "The analog data shows a 12-month compliance of 80% for similar intervals."; suggestionValue = 0.80; }
+      else if (activeAiMetric === 'compliance') { newMsg += "The analog data shows a patient compliance of 80% for similar intervals."; suggestionValue = 0.80; }
       
       setAiChatMessages(prev => [...prev, { who: 'ai', text: newMsg, suggestion: suggestionValue }]);
     }, 2000);
@@ -454,7 +454,7 @@ export default function ForecastApp() {
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
                 <div className="flex-between">
-                  12-month compliance rate (%)
+                  Patient compliance rate (%)
                   <button onClick={() => openAiModal('compliance')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
                 </div>
                 <input type="number" value={Math.round(state.compliance * 100)} step="1" onChange={(e) => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
@@ -685,7 +685,7 @@ export default function ForecastApp() {
                 <input type="range" min="2" max="7" step="1" value={state.yearsToPeak} onChange={e => handleStateChange('yearsToPeak', parseFloat(e.target.value))} />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <div className="row-flex"><label className="field" style={{ margin: 0 }}>12-month compliance</label><span className="val">{fmtPct(state.compliance * 100)}</span></div>
+                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Patient compliance</label><span className="val">{fmtPct(state.compliance * 100)}</span></div>
                 <input type="range" min="60" max="98" step="1" value={Math.round(state.compliance * 100)} onChange={e => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
               </div>
             </div>
