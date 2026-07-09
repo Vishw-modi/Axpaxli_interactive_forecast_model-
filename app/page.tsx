@@ -91,7 +91,7 @@ export default function ForecastApp() {
         if (msg.assump) {
           setAssumptions(prev => [...prev, ...msg.assump!]);
         }
-      }, i * 2000);
+      }, i * 1000);
     });
   };
 
