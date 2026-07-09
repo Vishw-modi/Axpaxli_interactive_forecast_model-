@@ -159,8 +159,8 @@ export default function ForecastApp() {
   return (
     <>
       <header className="topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--border)', padding: '6px 24px' }}>
-        <div className="brand" style={{ gap: '24px' }}>
-          <img src="/Tredence_KMK_Logo-removebg-preview.png" alt="Tredence KMK Logo" style={{ height: '44px', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'left center', marginLeft: '12px' }} />
+        <div className="brand" style={{ gap: '24px', alignItems: 'center' }}>
+          <img src="/Tredence_KMK_Logo-removebg-preview.png" alt="Tredence KMK Logo" style={{ height: '88px', objectFit: 'contain', marginTop: '-22px', marginBottom: '-22px' }} />
           <div>
             <div className="name" style={{ color: 'var(--navy)' }}>Forecast.ai</div>
             <div className="tag" style={{ color: 'var(--text-muted)' }}>Wet AMD forecasting demo — illustrative data</div>
