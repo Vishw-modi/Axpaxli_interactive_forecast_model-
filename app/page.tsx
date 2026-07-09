@@ -41,6 +41,8 @@ export default function ForecastApp() {
   const [maxTab, setMaxTab] = useState(1);
   const [state, setState] = useState<ForecastState>(defaultState);
   const [selectedModel, setSelectedModel] = useState('ARIMA');
+  const [savedScenarios, setSavedScenarios] = useState<{name: string, tag: string, s: ForecastState}[]>([]);
+  const [scenarioNameInput, setScenarioNameInput] = useState('');
   
   // Chat state
   const [chatStarted, setChatStarted] = useState(false);
@@ -59,7 +61,7 @@ export default function ForecastApp() {
 
   const chatScript = [
     {who:'ai', text:"Let's build your forecast together. What is the scope of the project - add country of study, drug in question, lines of therapy involved?"},
-    {who:'user', text:"US only, our new anti-VEGF asset, all lines of therapy.", assump:[{k:'Scope', v:'US, new asset, all lines'}]},
+    {who:'user', text:"US only, our new anti-VEGF (AXPAXLI), all lines of therapy.", assump:[{k:'Scope', v:'US, (AXPAXLI), all lines'}]},
     {who:'ai', text:"Got it. For epidemiology I'll anchor on a US diagnosed prevalence of about 1.75M patients, based on published claims and NHANES-derived estimates. Does that align with your internal numbers?"},
     {who:'user', text:"Yes, that aligns with our internal numbers.", assump:[{k:'Diagnosed prevalence (US)', v:'1,750,000 patients'}]},
     {who:'ai', text:"How should we handle the diagnosis and treatment funnel? Default: 85% of prevalent patients are diagnosed, and 92% of diagnosed patients initiate anti-VEGF therapy. I'll utilize this for starters does this align to your expectations?"},
@@ -77,9 +79,9 @@ export default function ForecastApp() {
     {who:'ai', text:"What is the dosing of your product?"},
     {who:'user', text:"q16-week maintenance dosing after a loading phase.", assump:[]},
     {who:'ai', text:"Eylea HD lists around $2,625 WAC — do you want to price in line with that, or discount to drive share?"},
-    {who:'user', text:"Price in line with that at $2,625.", assump:[{k:'Net price per injection', v:'$2,625'}]},
+    {who:'user', text:"Price in line with that at $2,625.", assump:[{k:'Net price per injection', v:'$5,125'}]},
     {who:'ai', text:"What is the average patient compliance you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
-    {who:'user', text:"We expect 6 injections per year with 85% patient compliance.", assump:[{k:'Injections / year', v:'6'},{k:'Patient compliance', v:'85%'}]}
+    {who:'user', text:"We expect 6 injections per year with 85% patient compliance.", assump:[{k:'Injections / year', v:'2'},{k:'Patient compliance', v:'85%'}]}
   ];
 
   const runChat = () => {
@@ -248,11 +250,12 @@ export default function ForecastApp() {
   // Compare scenarios
   const down = { ...state, peakShare: state.peakShare * 0.6, netPrice: state.netPrice * 0.85, yearsToPeak: state.yearsToPeak + 1 };
   const up = { ...state, peakShare: Math.min(0.6, state.peakShare * 1.4), netPrice: state.netPrice * 1.1, yearsToPeak: Math.max(2, state.yearsToPeak - 1) };
-  const scenarios = [
+  const defaultScenarios = [
     { name: 'Downside', tag: 'tag-down', s: down },
     { name: 'Base', tag: 'tag-base', s: state },
     { name: 'Upside', tag: 'tag-up', s: up }
   ];
+  const scenarios = savedScenarios.length > 0 ? savedScenarios : defaultScenarios;
 
   return (
     <>
@@ -330,11 +333,27 @@ export default function ForecastApp() {
           <p className="lead">The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
 
           <div className="chat-wrap">
-            <div className="card chat-thread" id="chatThread" ref={chatRef}>
+            <div className="card chat-thread" id="chatThread" ref={chatRef} style={{ background: '#f9fafb' }}>
               {chatMessages.map((msg, i) => (
-                <div key={i} className={`bubble ${msg.who === 'ai' ? 'ai' : 'user'}`} style={{ animationDelay: '0s' }}>
-                  <span className="who">{msg.who === 'ai' ? 'Forecast.ai' : 'You'}</span>
-                  {msg.text}
+                <div key={i} style={{ display: 'flex', gap: '12px', justifyContent: msg.who === 'user' ? 'flex-end' : 'flex-start', marginBottom: '16px' }}>
+                  <div className={`bubble ${msg.who === 'ai' ? 'ai' : 'user'}`} style={{ 
+                    animationDelay: '0s', 
+                    margin: 0, 
+                    border: msg.who === 'ai' ? '1px solid #e5e7eb' : 'none', 
+                    background: msg.who === 'ai' ? '#ffffff' : '#0f7696', 
+                    color: msg.who === 'ai' ? '#374151' : '#ffffff',
+                    boxShadow: msg.who === 'ai' ? '0 1px 2px rgba(0,0,0,0.02)' : 'none',
+                    borderRadius: '12px',
+                    borderTopRightRadius: msg.who === 'user' ? '2px' : '12px',
+                    borderTopLeftRadius: msg.who === 'ai' ? '2px' : '12px'
+                  }}>
+                    {msg.text}
+                  </div>
+                  {msg.who === 'user' && (
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fef0e7', color: '#e78c52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -509,7 +528,7 @@ export default function ForecastApp() {
           <h1>Forecast dashboard</h1>
           <p className="lead">Seven-year revenue and patient forecast based on your current assumptions.</p>
 
-          <div className="grid4" id="dashMetrics">
+          <div className="grid3" id="dashMetrics">
             <div className="metric">
               <div className="label">Peak-year net revenue</div>
               <div className="value">{fmtM(f.peakRevenue)}</div>
@@ -526,9 +545,19 @@ export default function ForecastApp() {
               <div className="sub">At steady state</div>
             </div>
             <div className="metric">
-              <div className="label">7-year cumulative revenue</div>
-              <div className="value">{fmtM(f.cumulative)}</div>
-              <div className="sub">Undiscounted</div>
+              <div className="label">Year 1 revenue</div>
+              <div className="value">{fmtM(f.revenue[0])}</div>
+              <div className="sub">Launch year</div>
+            </div>
+            <div className="metric">
+              <div className="label">Year 2 revenue</div>
+              <div className="value">{fmtM(f.revenue[1])}</div>
+              <div className="sub">Full year 1</div>
+            </div>
+            <div className="metric">
+              <div className="label">Year 3 revenue</div>
+              <div className="value">{fmtM(f.revenue[2])}</div>
+              <div className="sub">Growth phase</div>
             </div>
           </div>
 
@@ -667,8 +696,10 @@ export default function ForecastApp() {
 
         {/* PAGE 6 : SCENARIOS */}
         <section className={`page ${activeTab === 6 ? 'active' : ''}`} id="page-6">
-          <h1>Scenario &amp; sensitivity analysis</h1>
-          <p className="lead">Drag any assumption and the forecast, peak metrics, and sensitivity ranking recalculate instantly.</p>
+          <div>
+            <h1>Scenario &amp; sensitivity analysis</h1>
+            <p className="lead">Drag any assumption and the forecast, peak metrics, and sensitivity ranking recalculate instantly.</p>
+          </div>
 
           <div className="grid2">
             <div className="card">
@@ -689,11 +720,42 @@ export default function ForecastApp() {
                 <input type="range" min="60" max="98" step="1" value={Math.round(state.compliance * 100)} onChange={e => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
               </div>
             </div>
-            <div className="grid4" style={{ gridTemplateColumns: '1fr 1fr', alignContent: 'start' }} id="scenarioMetrics">
-              <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(f.peakRevenue)}</div></div>
-              <div className="metric"><div className="label">7-yr cumulative revenue</div><div className="value">{fmtM(f.cumulative)}</div></div>
-              <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(f.addressable * state.peakShare)}</div></div>
-              <div className="metric"><div className="label">Addressable pool</div><div className="value">{fmtNum(f.addressable)}</div></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', marginBottom: 0 }}>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap' }}>Save scenario:</span>
+                <input 
+                  type="text" 
+                  placeholder="E.g., High Price" 
+                  value={scenarioNameInput} 
+                  onChange={e => setScenarioNameInput(e.target.value)}
+                  style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '4px', outline: 'none', fontSize: '13px', flex: 1 }}
+                />
+                <button className="btn" style={{ padding: '8px 18px', fontSize: '14px', background: 'var(--accent)', color: '#fff', border: 'none' }} disabled={!scenarioNameInput.trim()} onClick={() => {
+                  if (scenarioNameInput.trim()) {
+                    const tagTypes = ['tag-base', 'tag-down', 'tag-up'];
+                    const randomTag = tagTypes[savedScenarios.length % 3];
+                    setSavedScenarios([...savedScenarios, { name: scenarioNameInput, tag: randomTag, s: {...state} }]);
+                    setScenarioNameInput('');
+                  }
+                }}>Save</button>
+              </div>
+              
+              {savedScenarios.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '-6px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Saved versions:</span>
+                  {savedScenarios.map((sc, i) => (
+                    <span key={i} className={`scenario-tag ${sc.tag}`}>{sc.name}</span>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid4" style={{ gridTemplateColumns: '1fr 1fr', alignContent: 'start' }} id="scenarioMetrics">
+                <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(f.peakRevenue)}</div></div>
+                <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(f.addressable * state.peakShare)}</div></div>
+                <div className="metric"><div className="label">Year 1 revenue</div><div className="value">{fmtM(f.revenue[0])}</div></div>
+                <div className="metric"><div className="label">Year 2 revenue</div><div className="value">{fmtM(f.revenue[1])}</div></div>
+                <div className="metric"><div className="label">Year 3 revenue</div><div className="value">{fmtM(f.revenue[2])}</div></div>
+              </div>
             </div>
           </div>
 
@@ -727,7 +789,7 @@ export default function ForecastApp() {
             </div>
           </div>
 
-          <div style={{ textAlign: 'right' }}>
+          <div style={{ textAlign: 'right', marginTop: '16px' }}>
             <button className="btn secondary" onClick={resetAssumptions} style={{ marginRight: '12px' }}>Reset sliders to base case</button>
             <button className="btn" onClick={() => goPage(7)}>Compare scenarios →</button>
           </div>
@@ -736,13 +798,13 @@ export default function ForecastApp() {
         {/* PAGE 7 : COMPARE */}
         <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
           <h1>Scenario comparison</h1>
-          <p className="lead">Downside and upside cases, derived from your base assumptions, side by side.</p>
+          <p className="lead">{savedScenarios.length > 0 ? "Your custom saved scenarios side by side." : "Downside and upside cases, derived from your base assumptions, side by side."}</p>
 
           <div className="card">
             <h3>Summary</h3>
             <table id="compareTable">
               <thead>
-                <tr><th>Scenario</th><th>Peak share</th><th>Net price</th><th>Years to peak</th><th>Peak revenue</th><th>7-yr cumulative</th></tr>
+                <tr><th>Scenario</th><th>Peak share</th><th>Net price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1</th><th>Year 2</th><th>Year 3</th></tr>
               </thead>
               <tbody>
                 {scenarios.map((sc, i) => {
@@ -754,7 +816,9 @@ export default function ForecastApp() {
                       <td>{fmtM(sc.s.netPrice)}</td>
                       <td>{Math.ceil(sc.s.yearsToPeak)}</td>
                       <td>{fmtM(fc.peakRevenue)}</td>
-                      <td>{fmtM(fc.cumulative)}</td>
+                      <td>{fmtM(fc.revenue[0])}</td>
+                      <td>{fmtM(fc.revenue[1])}</td>
+                      <td>{fmtM(fc.revenue[2])}</td>
                     </tr>
                   );
                 })}
@@ -816,7 +880,6 @@ export default function ForecastApp() {
             <button className="btn secondary" disabled>Coming soon in full build</button>
           </div>
 
-          <p className="footer-note">End of prototype walkthrough. Use the tabs above to revisit any page.</p>
         </section>
 
         {isAiModalOpen && (
