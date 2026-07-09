@@ -142,7 +142,9 @@ input[type=number], input[type=text] {
   font-size: 14px;
   background: #fff;
 }
-input[type=range] { width: 100%; }
+input[type=range] { width: 100%; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { cursor: grab; }
+input[type=range]:active::-webkit-slider-thumb { cursor: grabbing; }
 .field-group { margin-bottom: 16px; }
 .row-flex { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
 .row-flex .val { font-weight: 700; color: var(--navy); font-size: 14px; }

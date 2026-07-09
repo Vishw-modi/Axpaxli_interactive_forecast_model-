@@ -705,7 +705,7 @@ export default function ForecastApp() {
             <div className="card">
               <div className="field-group">
                 <div className="row-flex"><label className="field" style={{ margin: 0 }}>Peak market share</label><span className="val">{fmtPct(state.peakShare * 100)}</span></div>
-                <input type="range" min="5" max="45" step="1" value={Math.round(state.peakShare * 100)} onChange={e => handleStateChange('peakShare', parseFloat(e.target.value) / 100)} />
+                <input type="range" min="0" max="100" step="1" value={Math.round(state.peakShare * 100)} onChange={e => handleStateChange('peakShare', parseFloat(e.target.value) / 100)} />
               </div>
               <div className="field-group">
                 <div className="row-flex"><label className="field" style={{ margin: 0 }}>Net price per injection</label><span className="val">{fmtM(state.netPrice)}</span></div>
