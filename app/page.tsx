@@ -541,7 +541,6 @@ export default function ForecastApp() {
             </div>
 
             <div className="card">
-              <h3>Competitive landscape</h3>
              
               <h3 style={{ marginTop: '18px' }}>Product profile</h3>
               <div className="field-group">
