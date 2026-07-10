@@ -71,12 +71,10 @@ export default function ForecastApp() {
     {who:'user', text:"Yes, that aligns with our internal numbers.", assump:[{k:'Diagnosed prevalence (US)', v:'1,750,000 patients'}]},
     {who:'ai', text:"How should we handle the diagnosis and treatment funnel? Default: 85% of prevalent patients are diagnosed, and 92% of diagnosed patients initiate anti-VEGF therapy. I'll utilize this for starters does this align to your expectations?"},
     {who:'user', text:"Yes, that aligns to our expectations.", assump:[{k:'Diagnosis rate', v:'85%'},{k:'Treatment initiation rate', v:'92%'}]},
-    {who:'ai', text:"To arrive at the addressable pool were there any prior tests involved? if yes then what % patients are over expressing the biomarker. If no I'll not apply filter."},
-    {who:'user', text:"No prior tests involved. Do not apply a filter.", assump:[]},
     {who:'ai', text:"Are there any other filters to be applied to arrive at the addressable pool?"},
     {who:'user', text:"No.", assump:[]},
-    {who:'ai', text:"Noted. Now the competitive set — your asset launches against Eylea, Eylea HD, Vabysmo, Susvimo, Lucentis/Cimerli, and the aflibercept biosimilars (Yesafili, Opuviz). What's the core differentiator for your product: efficacy, durability, or delivery?"},
-    {who:'user', text:"Durability.", assump:[{k:'Key differentiator', v:'Durability'}]},
+    {who:'ai', text:"Noted. Now the competitive set — your asset launches against Eylea, Eylea HD, Vabysmo, Susvimo, Lucentis/Cimerli, and the aflibercept biosimilars (Yesafili, Opuviz). What's the core differentiator for your product: efficacy, storage or administration?"},
+    {who:'user', text:"Administration.", assump:[{k:'Key differentiator', v:'Administration'}]},
     {who:'ai', text:"That's a meaningful differentiator against today's q8-week standard of care. I'll set the addressable segment at 65% of treated patients — naive starts plus patients likely to switch off a shorter-interval therapy. Reasonable?"},
     {who:'user', text:"Yes, that's reasonable.", assump:[{k:'Addressable share', v:'65% of treated patients'}]},
     {who:'ai', text:"For uptake, I'd default to 25% peak share of treated patients within 4 years, similar to how Vabysmo scaled post-launch. Want to keep that pace, or adjust?"},
@@ -85,7 +83,7 @@ export default function ForecastApp() {
     {who:'user', text:"2.", assump:[]},
     {who:'ai', text:"Eylea HD lists around $2,645 WAC Considering the dosing of AXPAXLI, would you want to price it around $5,000 WAC?"},
     {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection, post-rebate (USD)', v:'$5,125'}]},
-    {who:'ai', text:"What is the average patient adherence boost you expect on your drug."},
+    {who:'ai', text:"What is the average patient adherence boost you expect on your drug?"},
     {who:'user', text:"20%", assump:[]},
     {who:'ai', text:"Is there anything else you'd like to add or adjust?"},
     {who:'user', text:"No.", assump:[]},
@@ -113,10 +111,7 @@ export default function ForecastApp() {
       
       const prevAiMessage = chatScript[scriptStep - 1];
       if (prevAiMessage) {
-        if (prevAiMessage.text.includes("prior tests involved")) {
-          finalAssumps = finalAssumps.filter(a => a.k !== 'Test Positivity');
-          finalAssumps.push({ k: 'Test Positivity', v: '80%' });
-        } else if (prevAiMessage.text.includes("dosing of your product")) {
+        if (prevAiMessage.text.includes("dosing of your product")) {
           finalAssumps = finalAssumps.filter(a => a.k !== 'Injections / year');
           finalAssumps.push({ k: 'Injections / year', v: '2' });
         } else if (prevAiMessage.text.includes("patient adherence boost")) {
@@ -541,27 +536,27 @@ export default function ForecastApp() {
             </div>
 
             <div className="card">
-             
-              <h3 style={{ marginTop: '18px' }}>Product profile</h3>
+              <h3>Pricing &amp; adherence</h3>
               <div className="field-group">
-                <label className="field">Key differentiator</label>
-                <input type="text" defaultValue="Extended durability — q16-week maintenance dosing after loading phase" />
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Net price per injection, post-rebate (USD)
+                  <button onClick={() => openAiModal('netPrice')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
+                <input type="number" value={state.netPrice} step="50" onChange={(e) => handleStateChange('netPrice', parseFloat(e.target.value))} />
               </div>
               <div className="field-group">
-                <label className="field">Test Positivity</label>
-                <input 
-                  type="text" 
-                  value={assumptions.find(a => a.k === 'Test Positivity')?.v || ''}
-                  onChange={(e) => {
-                    const newVal = e.target.value;
-                    setAssumptions(prev => {
-                      if (prev.find(a => a.k === 'Test Positivity')) {
-                        return prev.map(a => a.k === 'Test Positivity' ? { ...a, v: newVal } : a);
-                      }
-                      return [...prev, { k: 'Test Positivity', v: newVal }];
-                    });
-                  }} 
-                />
+                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Injections per patient per year
+                  <button onClick={() => openAiModal('injectionsPerYear')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </label>
+                <input type="number" value={state.injectionsPerYear} step="0.5" onChange={(e) => handleStateChange('injectionsPerYear', parseFloat(e.target.value))} />
+              </div>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  Patient adherence boost (%)
+                  <button onClick={() => openAiModal('compliance')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
+                </div>
+                <input type="number" value={Math.round(state.compliance * 100)} step="1" onChange={(e) => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
               </div>
             </div>
           </div>
@@ -585,27 +580,10 @@ export default function ForecastApp() {
               </div>
             </div>
             <div className="card">
-              <h3>Pricing &amp; adherence</h3>
+              <h3 style={{ marginTop: '18px' }}>Product profile</h3>
               <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Net price per injection, post-rebate (USD)
-                  <button onClick={() => openAiModal('netPrice')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={state.netPrice} step="50" onChange={(e) => handleStateChange('netPrice', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Injections per patient per year
-                  <button onClick={() => openAiModal('injectionsPerYear')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={state.injectionsPerYear} step="0.5" onChange={(e) => handleStateChange('injectionsPerYear', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  Patient adherence boost (%)
-                  <button onClick={() => openAiModal('compliance')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </div>
-                <input type="number" value={Math.round(state.compliance * 100)} step="1" onChange={(e) => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
+                <label className="field">Key differentiator</label>
+                <input type="text" defaultValue="Extended Administration — q16-week maintenance dosing after loading phase" />
               </div>
             </div>
           </div>
@@ -685,14 +663,14 @@ export default function ForecastApp() {
           </div>
 
           <div className="card">
-            <h3>Cumulative revenue forecast, US ($)</h3>
+            <h3>Net year revenue forecast, US ($)</h3>
             <div className="legend-row">
-              <span><span className="legend-dot" style={{ background: '#2a78d6' }}></span>Cumulative net revenue</span>
+              <span><span className="legend-dot" style={{ background: '#2a78d6' }}></span>Net year revenue</span>
             </div>
             <div className="canvas-wrap">
               {activeTab === 4 && <Line 
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: f.years, datasets: [{ label: 'Cumulative revenue', data: f.cumulativeRevenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                data={{ labels: f.years, datasets: [{ label: 'Net year revenue', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
               />}
             </div>
           </div>
@@ -1019,27 +997,13 @@ export default function ForecastApp() {
 
           <div className="card export-card">
             <div>
-              <div className="etitle">Export to PowerPoint</div>
-              <div className="edesc">Forecast dashboard and key insights as a client-ready slide deck.</div>
+              <div className="etitle">Export Interactive Business Model</div>
+              <div className="edesc">A dynamic, high-level summary designed for executive and leadership review.</div>
             </div>
-            <button className="btn secondary" disabled>Coming soon in full build</button>
+            <button className="btn" onClick={() => {}}>Open the model</button>
           </div>
 
-          <div className="card export-card">
-            <div>
-              <div className="etitle">Share a live link</div>
-              <div className="edesc">Colleagues open the same conversation and assumptions, not a static file.</div>
-            </div>
-            <button className="btn secondary" disabled>Coming soon in full build</button>
-          </div>
 
-          <div className="card export-card">
-            <div>
-              <div className="etitle">Schedule a refresh</div>
-              <div className="edesc">Re-run the forecast monthly as epidemiology or pricing benchmarks update.</div>
-            </div>
-            <button className="btn secondary" disabled>Coming soon in full build</button>
-          </div>
 
         </section>
 
