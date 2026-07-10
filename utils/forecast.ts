@@ -19,7 +19,7 @@ export const defaultState: ForecastState = {
   yearsToPeak: 5,
   netPrice: 2200,
   injectionsPerYear: 6,
-  compliance: 0.85
+  compliance: 0.20
 };
 
 export function fmtNum(n: number): string {

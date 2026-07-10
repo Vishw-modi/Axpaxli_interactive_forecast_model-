@@ -80,8 +80,8 @@ export default function ForecastApp() {
     {who:'user', text:"q16-week maintenance dosing after a loading phase.", assump:[]},
     {who:'ai', text:"Eylea HD lists around $5,125 WAC — do you want to price in line with that, or discount to drive share?"},
     {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection', v:'$5,125'}]},
-    {who:'ai', text:"What is the average patient compliance you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
-    {who:'user', text:"We expect 6 injections per year with 85% patient compliance.", assump:[{k:'Injections / year', v:'2'},{k:'Patient compliance', v:'85%'}]}
+    {who:'ai', text:"What is the average patient adherence boost you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
+    {who:'user', text:"We expect 6 injections per year with a 20% patient adherence boost.", assump:[{k:'Injections / year', v:'2'},{k:'Patient adherence boost', v:'20%'}]}
   ];
 
   const runChat = () => {
@@ -137,7 +137,7 @@ export default function ForecastApp() {
     else if (metricKey === 'yearsToPeak') initMsg = "5 years to peak reflects typical access friction and contracting delays in this highly competitive, mature market.";
     else if (metricKey === 'netPrice') initMsg = "A net price of $5,125 positions your asset at parity with Eylea HD, assuming no deep discounting is required to drive initial uptake.";
     else if (metricKey === 'injectionsPerYear') initMsg = "6 injections per year reflects real-world clinical practice for a durable agent, assuming an initial loading phase followed by q16-week maintenance.";
-    else if (metricKey === 'compliance') initMsg = "85% patient compliance is consistent with established therapies, accounting for real-world drop-offs and switching.";
+    else if (metricKey === 'compliance') initMsg = "A 20% patient adherence boost is consistent with established therapies, accounting for real-world enhancements and switching.";
     else initMsg = "Let's review this assumption.";
 
     setAiChatMessages([
@@ -163,7 +163,7 @@ export default function ForecastApp() {
       else if (activeAiMetric === 'yearsToPeak') { newMsg += "The payer access timeline suggests it will take 6 years to reach peak share."; suggestionValue = 6; }
       else if (activeAiMetric === 'netPrice') { newMsg += "The pricing strategy deck recommends a launch net price of $2,400 to secure early formulary placement."; suggestionValue = 2400; }
       else if (activeAiMetric === 'injectionsPerYear') { newMsg += "KOL feedback indicates real-world undertreatment; average injections will likely be 5 per year."; suggestionValue = 5; }
-      else if (activeAiMetric === 'compliance') { newMsg += "The analog data shows a patient compliance of 80% for similar intervals."; suggestionValue = 0.80; }
+      else if (activeAiMetric === 'compliance') { newMsg += "The analog data shows a patient adherence boost of 15% for similar intervals."; suggestionValue = 0.15; }
       
       setAiChatMessages(prev => [...prev, { who: 'ai', text: newMsg, suggestion: suggestionValue }]);
     }, 2000);
@@ -233,27 +233,25 @@ export default function ForecastApp() {
   
   // Scenario variations
   const drivers = [
-    { name: 'Peak share', key: 'peakShare' as keyof ForecastState },
-    { name: 'Net price', key: 'netPrice' as keyof ForecastState },
-    { name: 'Diagnosis rate', key: 'diagnosisRate' as keyof ForecastState },
-    { name: 'Addressable share', key: 'addressableShare' as keyof ForecastState },
-    { name: 'Compliance', key: 'compliance' as keyof ForecastState }
+    { name: 'Peak share', key: 'peakShare' as keyof ForecastState, swing: 0.25 },
+    { name: 'Net price', key: 'netPrice' as keyof ForecastState, swing: 0.20 },
+    { name: 'Diagnosis rate', key: 'diagnosisRate' as keyof ForecastState, swing: 0.15 },
+    { name: 'Addressable share', key: 'addressableShare' as keyof ForecastState, swing: 0.10 },
+    { name: 'Adherence Boost', key: 'compliance' as keyof ForecastState, swing: 0.05 }
   ];
   const impacts = drivers.map(d => {
-    const low = { ...state, [d.key]: state[d.key] * 0.8 };
-    const high = { ...state, [d.key]: state[d.key] * 1.2 };
+    const low = { ...state, [d.key]: state[d.key] * (1 - d.swing) };
+    const high = { ...state, [d.key]: state[d.key] * (1 + d.swing) };
     const lowPeak = computeForecast(low).peakRevenue;
     const highPeak = computeForecast(high).peakRevenue;
-    return { name: d.name, low: lowPeak - f.peakRevenue, high: highPeak - f.peakRevenue, spread: Math.abs(highPeak - lowPeak) };
+    return { name: d.name, low: lowPeak - f.peakRevenue, high: highPeak - f.peakRevenue, spread: Math.abs(highPeak - lowPeak), swing: d.swing };
   }).sort((a, b) => b.spread - a.spread);
 
   // Compare scenarios
   const down = { ...state, peakShare: state.peakShare * 0.6, netPrice: state.netPrice * 0.85, yearsToPeak: state.yearsToPeak + 1 };
   const up = { ...state, peakShare: Math.min(0.6, state.peakShare * 1.4), netPrice: state.netPrice * 1.1, yearsToPeak: Math.max(2, state.yearsToPeak - 1) };
   const defaultScenarios = [
-    { name: 'Downside', tag: 'tag-down', s: down },
-    { name: 'Base', tag: 'tag-base', s: state },
-    { name: 'Upside', tag: 'tag-up', s: up }
+    { name: 'Base', tag: 'tag-base', s: state }
   ];
   const scenarios = [...defaultScenarios, ...savedScenarios];
 
@@ -321,7 +319,10 @@ export default function ForecastApp() {
           <div className="card" style={{ textAlign: 'center', padding: '32px' }}>
             <h2 style={{ marginBottom: '8px' }}>Start a new forecast</h2>
             <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '18px' }}>Geography: United States</p>
-            <button className="btn" onClick={() => goPage(2)}>Start conversation →</button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '12px' }}>
+              <button className="btn" onClick={() => goPage(2)}>Start conversation →</button>
+              <button className="btn" style={{ background: '#ffffff', color: 'var(--navy)', border: '1px solid var(--border)' }} onClick={() => { alert('This would open a file picker to upload an .xlsx file, parse the data, and populate the dashboard.'); goPage(4); }}>Upload existing model (.xlsx)</button>
+            </div>
             <div className="hint">Or jump straight to a <a href="#" onClick={(e) => { e.preventDefault(); goPage(4); }} style={{ color: 'var(--teal)' }}>sample forecast</a> built from default assumptions.</div>
           </div>
 
@@ -456,7 +457,7 @@ export default function ForecastApp() {
               </div>
             </div>
             <div className="card">
-              <h3>Pricing &amp; compliance</h3>
+              <h3>Pricing &amp; adherence</h3>
               <div className="field-group">
                 <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   Net price per injection, post-rebate (USD)
@@ -472,8 +473,8 @@ export default function ForecastApp() {
                 <input type="number" value={state.injectionsPerYear} step="0.5" onChange={(e) => handleStateChange('injectionsPerYear', parseFloat(e.target.value))} />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <div className="flex-between">
-                  Patient compliance rate (%)
+                <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  Patient adherence boost (%)
                   <button onClick={() => openAiModal('compliance')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
                 </div>
                 <input type="number" value={Math.round(state.compliance * 100)} step="1" onChange={(e) => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
@@ -532,32 +533,26 @@ export default function ForecastApp() {
             <div className="metric">
               <div className="label">Peak-year net revenue</div>
               <div className="value">{fmtM(f.peakRevenue)}</div>
-              <div className="sub">By year {Math.ceil(state.yearsToPeak)}</div>
             </div>
             <div className="metric">
               <div className="label">Peak market share</div>
               <div className="value">{fmtPct(state.peakShare * 100)}</div>
-              <div className="sub">Of treated patients</div>
             </div>
             <div className="metric">
               <div className="label">Peak patients on therapy</div>
               <div className="value">{fmtNum(f.addressable * state.peakShare)}</div>
-              <div className="sub">At steady state</div>
             </div>
             <div className="metric">
-              <div className="label">Year 1 revenue</div>
-              <div className="value">{fmtM(f.revenue[0])}</div>
-              <div className="sub">Launch year</div>
+              <div className="label">1-year revenue</div>
+              <div className="value">{fmtM(f.cumulativeRevenue[0])}</div>
             </div>
             <div className="metric">
-              <div className="label">Year 2 revenue</div>
-              <div className="value">{fmtM(f.revenue[1])}</div>
-              <div className="sub">Full year 1</div>
+              <div className="label">2-year revenue</div>
+              <div className="value">{fmtM(f.cumulativeRevenue[1])}</div>
             </div>
             <div className="metric">
-              <div className="label">Year 3 revenue</div>
-              <div className="value">{fmtM(f.revenue[2])}</div>
-              <div className="sub">Growth phase</div>
+              <div className="label">3-year revenue</div>
+              <div className="value">{fmtM(f.cumulativeRevenue[2])}</div>
             </div>
           </div>
 
@@ -716,8 +711,8 @@ export default function ForecastApp() {
                 <input type="range" min="2" max="7" step="1" value={state.yearsToPeak} onChange={e => handleStateChange('yearsToPeak', parseFloat(e.target.value))} />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Patient compliance</label><span className="val">{fmtPct(state.compliance * 100)}</span></div>
-                <input type="range" min="60" max="98" step="1" value={Math.round(state.compliance * 100)} onChange={e => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
+                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Patient Adherence Boost</label><span className="val">{fmtPct(state.compliance * 100)}</span></div>
+                <input type="range" min="0" max="100" step="1" value={Math.round(state.compliance * 100)} onChange={e => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -771,10 +766,14 @@ export default function ForecastApp() {
           </div>
 
           <div className="card">
-            <h3>Sensitivity — impact on peak revenue from a ±20% swing in each driver</h3>
-            <div className="legend-row">
-              <span><span className="legend-dot" style={{ background: '#e34948' }}></span>-20% change</span>
-              <span><span className="legend-dot" style={{ background: '#00b2a9' }}></span>+20% change</span>
+            <h3>Sensitivity — impact on peak revenue from plausible swings in key drivers</h3>
+            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '10px', height: '10px', background: '#de5252' }}></div> Negative swing
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '10px', height: '10px', background: '#0eb59a' }}></div> Positive swing
+              </div>
             </div>
             <div className="canvas-wrap" style={{ height: '260px' }}>
               {activeTab === 6 && <Bar 
@@ -799,7 +798,7 @@ export default function ForecastApp() {
         {/* PAGE 7 : COMPARE */}
         <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
           <h1>Scenario comparison</h1>
-          <p className="lead">Base, downside, and upside cases alongside any custom scenarios you've saved.</p>
+          <p className="lead">The base case alongside any custom scenarios you've saved.</p>
 
           <div className="card">
             <h3>Summary</h3>
