@@ -40,6 +40,7 @@ export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
   const [maxTab, setMaxTab] = useState(1);
   const [state, setState] = useState<ForecastState>(defaultState);
+  const [scenarioState, setScenarioState] = useState<ForecastState>(defaultState);
   const [selectedModel, setSelectedModel] = useState('ARIMA');
   const [savedScenarios, setSavedScenarios] = useState<{name: string, tag: string, s: ForecastState}[]>([]);
   const [scenarioNameInput, setScenarioNameInput] = useState('');
@@ -80,12 +81,15 @@ export default function ForecastApp() {
     {who:'user', text:"Yes, that's reasonable.", assump:[{k:'Addressable share', v:'65% of treated patients'}]},
     {who:'ai', text:"For uptake, I'd default to 25% peak share of treated patients within 4 years, similar to how Vabysmo scaled post-launch. Want to keep that pace, or adjust?"},
     {who:'user', text:"Keep that pace.", assump:[{k:'Peak share', v:'25%'},{k:'Years to peak', v:'4 years'}]},
-    {who:'ai', text:"What is the dosing of your product?"},
-    {who:'user', text:"q16-week maintenance dosing after a loading phase.", assump:[]},
+    {who:'ai', text:"What is the dosing of your product? (injections per year)"},
+    {who:'user', text:"2.", assump:[]},
     {who:'ai', text:"Eylea HD lists around $5,125 WAC — do you want to price in line with that, or discount to drive share?"},
     {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection', v:'$5,125'}]},
-    {who:'ai', text:"What is the average patient adherence boost you expect on your drug, also what is the average time on treatment for a patient on your product (this, along with dosing, will be utilized to understand how many drug units a patients utilizes in a year)."},
-    {who:'user', text:"We expect 6 injections per year with a 20% patient adherence boost.", assump:[{k:'Injections / year', v:'2'},{k:'Patient adherence boost', v:'20%'}]}
+    {who:'ai', text:"What is the average patient adherence boost you expect on your drug."},
+    {who:'user', text:"20%", assump:[]},
+    {who:'ai', text:"Is there anything else you'd like to add or adjust?"},
+    {who:'user', text:"No.", assump:[]},
+    {who:'ai', text:"Thanks! Your forecast is ready."}
   ];
 
   const runChat = () => {
@@ -104,12 +108,30 @@ export default function ForecastApp() {
     setChatMessages(prev => [...prev, { who: 'user', text: currentInput }]);
 
     const expectedUserStep = chatScript[scriptStep];
-    if (expectedUserStep && expectedUserStep.who === 'user' && expectedUserStep.assump) {
-      setAssumptions(prev => {
-        const newKeys = expectedUserStep.assump!.map(a => a.k);
-        const filtered = prev.filter(a => !newKeys.includes(a.k));
-        return [...filtered, ...expectedUserStep.assump!];
-      });
+    if (expectedUserStep && expectedUserStep.who === 'user') {
+      let finalAssumps = expectedUserStep.assump ? [...expectedUserStep.assump] : [];
+      
+      const prevAiMessage = chatScript[scriptStep - 1];
+      if (prevAiMessage) {
+        if (prevAiMessage.text.includes("prior tests involved")) {
+          finalAssumps = finalAssumps.filter(a => a.k !== 'Test Positivity');
+          finalAssumps.push({ k: 'Test Positivity', v: currentInput });
+        } else if (prevAiMessage.text.includes("dosing of your product")) {
+          finalAssumps = finalAssumps.filter(a => a.k !== 'Injections / year');
+          finalAssumps.push({ k: 'Injections / year', v: currentInput });
+        } else if (prevAiMessage.text.includes("patient adherence boost")) {
+          finalAssumps = finalAssumps.filter(a => a.k !== 'Patient adherence boost');
+          finalAssumps.push({ k: 'Patient adherence boost', v: currentInput });
+        }
+      }
+
+      if (finalAssumps.length > 0) {
+        setAssumptions(prev => {
+          const newKeys = finalAssumps.map(a => a.k);
+          const filtered = prev.filter(a => !newKeys.includes(a.k));
+          return [...filtered, ...finalAssumps];
+        });
+      }
     }
 
     const nextAiIndex = scriptStep + 1;
@@ -138,10 +160,15 @@ export default function ForecastApp() {
 
   const handleStateChange = (key: keyof ForecastState, value: number) => {
     setState(prev => ({ ...prev, [key]: value }));
+    setScenarioState(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleScenarioChange = (key: keyof ForecastState, value: number) => {
+    setScenarioState(prev => ({ ...prev, [key]: value }));
   };
 
   const resetAssumptions = () => {
-    setState(defaultState);
+    setScenarioState(state);
   };
 
   const openAiModal = (metricKey: string) => {
@@ -158,7 +185,7 @@ export default function ForecastApp() {
     else if (metricKey === 'peakShare') initMsg = "A 25% peak share is aggressive but attainable for a highly differentiated asset, mirroring the recent trajectory of Vabysmo.";
     else if (metricKey === 'yearsToPeak') initMsg = "5 years to peak reflects typical access friction and contracting delays in this highly competitive, mature market.";
     else if (metricKey === 'netPrice') initMsg = "A net price of $5,125 positions your asset at parity with Eylea HD, assuming no deep discounting is required to drive initial uptake.";
-    else if (metricKey === 'injectionsPerYear') initMsg = "6 injections per year reflects real-world clinical practice for a durable agent, assuming an initial loading phase followed by q16-week maintenance.";
+    else if (metricKey === 'injectionsPerYear') initMsg = "2 injections per year reflects real-world clinical practice for a durable agent, assuming an initial loading phase followed by q16-week maintenance.";
     else if (metricKey === 'compliance') initMsg = "A 20% patient adherence boost is consistent with established therapies, accounting for real-world enhancements and switching.";
     else initMsg = "Let's review this assumption.";
 
@@ -291,9 +318,10 @@ export default function ForecastApp() {
 
   // Forecast calculations
   const f = computeForecast(state);
+  const scenarioF = computeForecast(scenarioState);
   
   // Scenario variations (hardcoded based on peak revenue)
-  const basePeak = f.peakRevenue;
+  const basePeak = scenarioF.peakRevenue;
   const impacts = [
     { name: 'Net price (direct)', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
     { name: 'Adherence boost', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
@@ -522,6 +550,22 @@ export default function ForecastApp() {
               <div className="field-group">
                 <label className="field">Key differentiator</label>
                 <input type="text" defaultValue="Extended durability — q16-week maintenance dosing after loading phase" />
+              </div>
+              <div className="field-group">
+                <label className="field">Test Positivity</label>
+                <input 
+                  type="text" 
+                  value={assumptions.find(a => a.k === 'Test Positivity')?.v || ''}
+                  onChange={(e) => {
+                    const newVal = e.target.value;
+                    setAssumptions(prev => {
+                      if (prev.find(a => a.k === 'Test Positivity')) {
+                        return prev.map(a => a.k === 'Test Positivity' ? { ...a, v: newVal } : a);
+                      }
+                      return [...prev, { k: 'Test Positivity', v: newVal }];
+                    });
+                  }} 
+                />
               </div>
             </div>
           </div>
@@ -784,86 +828,89 @@ export default function ForecastApp() {
             <p className="lead">Drag any assumption and the forecast, peak metrics, and sensitivity ranking recalculate instantly.</p>
           </div>
 
-          <div className="grid2">
-            <div className="card">
-              <div className="field-group">
-                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Peak market share</label><span className="val">{fmtPct(state.peakShare * 100)}</span></div>
-                <input type="range" min="0" max="100" step="1" value={Math.round(state.peakShare * 100)} onChange={e => handleStateChange('peakShare', parseFloat(e.target.value) / 100)} />
-              </div>
-              <div className="field-group">
-                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Net price per injection</label><span className="val">{fmtM(state.netPrice)}</span></div>
-                <input type="range" min="1200" max="3000" step="50" value={state.netPrice} onChange={e => handleStateChange('netPrice', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group">
-                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Years to peak share</label><span className="val">{state.yearsToPeak} yrs</span></div>
-                <input type="range" min="2" max="7" step="1" value={state.yearsToPeak} onChange={e => handleStateChange('yearsToPeak', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <div className="row-flex"><label className="field" style={{ margin: 0 }}>Patient Adherence Boost</label><span className="val">{fmtPct(state.compliance * 100)}</span></div>
-                <input type="range" min="0" max="100" step="1" value={Math.round(state.compliance * 100)} onChange={e => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', marginBottom: 0 }}>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap' }}>Save scenario:</span>
-                <input 
-                  type="text" 
-                  placeholder="E.g., High Price" 
-                  value={scenarioNameInput} 
-                  onChange={e => setScenarioNameInput(e.target.value)}
-                  style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '4px', outline: 'none', fontSize: '13px', flex: 1 }}
-                />
-                <button className="btn" style={{ padding: '8px 18px', fontSize: '14px', background: 'var(--accent)', color: '#fff', border: 'none' }} disabled={!scenarioNameInput.trim()} onClick={() => {
-                  if (scenarioNameInput.trim()) {
-                    const tagTypes = ['tag-base', 'tag-down', 'tag-up'];
-                    const randomTag = tagTypes[savedScenarios.length % 3];
-                    setSavedScenarios([...savedScenarios, { name: scenarioNameInput, tag: randomTag, s: {...state} }]);
-                    setScenarioNameInput('');
-                  }
-                }}>Save</button>
-              </div>
-              
-              {savedScenarios.length > 0 && (
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '-6px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Saved versions:</span>
-                  {savedScenarios.map((sc, i) => (
-                    <span key={i} className={`scenario-tag ${sc.tag}`}>{sc.name}</span>
-                  ))}
+            <div className="grid2">
+              <div className="card">
+                <div className="field-group">
+                  <div className="row-flex"><label className="field" style={{ margin: 0 }}>Peak market share</label><span className="val">{fmtPct(scenarioState.peakShare * 100)}</span></div>
+                  <input type="range" min="0" max="100" step="1" value={Math.round(scenarioState.peakShare * 100)} onChange={e => handleScenarioChange('peakShare', parseFloat(e.target.value) / 100)} />
                 </div>
-              )}
-
-              <div className="grid3" style={{ alignContent: 'start' }} id="scenarioMetrics">
-                <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(f.peakRevenue)}</div></div>
-                <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(f.addressable * state.peakShare)}</div></div>
-                <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct(state.peakShare * 100)}</div></div>
-                <div className="metric"><div className="label">1-year cumulative revenue</div><div className="value">{fmtM(f.cumulativeRevenue[0])}</div></div>
-                <div className="metric"><div className="label">2-year cumulative revenue</div><div className="value">{fmtM(f.cumulativeRevenue[1])}</div></div>
-                <div className="metric"><div className="label">3-year cumulative revenue</div><div className="value">{fmtM(f.cumulativeRevenue[2])}</div></div>
+                <div className="field-group">
+                  <div className="row-flex"><label className="field" style={{ margin: 0 }}>Net price per injection</label><span className="val">{fmtM(scenarioState.netPrice)}</span></div>
+                  <input type="range" min="1200" max="3000" step="50" value={scenarioState.netPrice} onChange={e => handleScenarioChange('netPrice', parseFloat(e.target.value))} />
+                </div>
+                <div className="field-group">
+                  <div className="row-flex"><label className="field" style={{ margin: 0 }}>Years to peak share</label><span className="val">{scenarioState.yearsToPeak} yrs</span></div>
+                  <input type="range" min="2" max="7" step="1" value={scenarioState.yearsToPeak} onChange={e => handleScenarioChange('yearsToPeak', parseFloat(e.target.value))} />
+                </div>
+                <div className="field-group" style={{ marginBottom: 0 }}>
+                  <div className="row-flex"><label className="field" style={{ margin: 0 }}>Patient Adherence Boost</label><span className="val">{fmtPct(scenarioState.compliance * 100)}</span></div>
+                  <input type="range" min="0" max="100" step="1" value={Math.round(scenarioState.compliance * 100)} onChange={e => handleScenarioChange('compliance', parseFloat(e.target.value) / 100)} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', marginBottom: 0 }}>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap' }}>Save scenario:</span>
+                  <input 
+                    type="text" 
+                    placeholder="E.g., High Price" 
+                    value={scenarioNameInput} 
+                    onChange={e => setScenarioNameInput(e.target.value)}
+                    style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '4px', outline: 'none', fontSize: '13px', flex: 1 }}
+                  />
+                  <button className="btn" style={{ padding: '8px 18px', fontSize: '14px', background: 'var(--accent)', color: '#fff', border: 'none' }} disabled={!scenarioNameInput.trim()} onClick={() => {
+                    if (scenarioNameInput.trim()) {
+                      const tagTypes = ['tag-base', 'tag-down', 'tag-up'];
+                      const randomTag = tagTypes[savedScenarios.length % 3];
+                      setSavedScenarios([...savedScenarios, { name: scenarioNameInput, tag: randomTag, s: {...scenarioState} }]);
+                      setScenarioNameInput('');
+                    }
+                  }}>Save</button>
+                </div>
+                
+                {savedScenarios.length > 0 && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '-6px' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Saved versions:</span>
+                    {savedScenarios.map((sc, i) => (
+                      <span key={i} className={`scenario-tag ${sc.tag}`}>{sc.name}</span>
+                    ))}
+                  </div>
+                )}
+  
+                <div className="grid3" style={{ alignContent: 'start' }} id="scenarioMetrics">
+                  <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(scenarioF.peakRevenue)}</div></div>
+                  <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(scenarioF.addressable * scenarioState.peakShare)}</div></div>
+                  <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct(scenarioState.peakShare * 100)}</div></div>
+                  <div className="metric"><div className="label">1-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
+                  <div className="metric"><div className="label">2-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
+                  <div className="metric"><div className="label">3-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="card">
-            <h3>Revenue forecast under current sliders</h3>
-            <div className="canvas-wrap">
-              {activeTab === 6 && <Line 
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: f.years, datasets: [{ label: 'Net revenue', data: f.revenue, borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.12)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
-              />}
+  
+            <div className="card">
+              <h3>Revenue forecast under current sliders</h3>
+              <div className="canvas-wrap">
+                {activeTab === 6 && <Line 
+                  options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
+                  data={{ labels: scenarioF.years, datasets: [{ label: 'Net revenue', data: scenarioF.revenue, borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.12)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                />}
+              </div>
             </div>
-          </div>
 
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0 }}>Sensitivity — impact on peak revenue from plausible swings in key drivers</h3>
-              <select 
-                value={sensitivityLevel} 
-                onChange={e => setSensitivityLevel(Number(e.target.value) as 5 | 10)}
-                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '13px', outline: 'none' }}
-              >
-                <option value={5}>±5% swing</option>
-                <option value={10}>±10% swing</option>
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <em style={{ fontSize: '13px', color: 'var(--text-muted)' }}>use drop down to select the sensitivity</em>
+                <select 
+                  value={sensitivityLevel} 
+                  onChange={e => setSensitivityLevel(Number(e.target.value) as 5 | 10)}
+                  style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '13px', outline: 'none' }}
+                >
+                  <option value={5}>±5% swing</option>
+                  <option value={10}>±10% swing</option>
+                </select>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -875,7 +922,7 @@ export default function ForecastApp() {
             </div>
             <div className="canvas-wrap" style={{ height: '260px' }}>
               {activeTab === 6 && <Bar 
-                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => (Number(v) < 0 ? '-' : '') + fmtM(Math.abs(Number(v))) } } } }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min: -100000000, max: 100000000, ticks: { callback: v => (Number(v) < 0 ? '-' : '') + fmtM(Math.abs(Number(v))) } } } }}
                 data={{
                   labels: impacts.map(i => i.name),
                   datasets: [
