@@ -363,7 +363,7 @@ export default function ForecastApp() {
             </div>
             <div className="card">
               <h3>AI-generated forecast</h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: 0 }}>Your answers become a patient-flow model and a 7-year revenue and share forecast, with a narrative on what's driving it.</p>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: 0 }}>Your answers become a patient-flow model and a 5-year revenue and share forecast, with a narrative on what's driving it.</p>
             </div>
             <div className="card">
               <h3>Live scenario play</h3>
