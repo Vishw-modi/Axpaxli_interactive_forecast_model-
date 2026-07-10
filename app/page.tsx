@@ -74,7 +74,7 @@ export default function ForecastApp() {
     {who:'ai', text:"Are there any other filters to be applied to arrive at the addressable pool?"},
     {who:'user', text:"No.", assump:[]},
     {who:'ai', text:"Noted. Now the competitive set — your asset launches against Eylea, Eylea HD, Vabysmo, Susvimo, Lucentis/Cimerli, and the aflibercept biosimilars (Yesafili, Opuviz). What's the core differentiator for your product: efficacy, storage or administration?"},
-    {who:'user', text:"Administration.", assump:[{k:'Key differentiator', v:'Administration'}]},
+    {who:'user', text:"Sustained-release Administration.", assump:[{k:'Key differentiator', v:'Sustained-release Administration'}]},
     {who:'ai', text:"That's a meaningful differentiator against today's q8-week standard of care. I'll set the addressable segment at 65% of treated patients — naive starts plus patients likely to switch off a shorter-interval therapy. Reasonable?"},
     {who:'user', text:"Yes, that's reasonable.", assump:[{k:'Addressable share', v:'65% of treated patients'}]},
     {who:'ai', text:"For uptake, I'd default to 25% peak share of treated patients within 4 years, similar to how Vabysmo scaled post-launch. Want to keep that pace, or adjust?"},
@@ -583,7 +583,7 @@ export default function ForecastApp() {
               <h3 style={{ marginTop: '18px' }}>Product profile</h3>
               <div className="field-group">
                 <label className="field">Key differentiator</label>
-                <input type="text" defaultValue="Extended Administration — q16-week maintenance dosing after loading phase" />
+                <input type="text" defaultValue="Sustained-release Administration" />
               </div>
             </div>
           </div>
