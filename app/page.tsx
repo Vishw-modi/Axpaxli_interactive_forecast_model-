@@ -43,6 +43,7 @@ export default function ForecastApp() {
   const [selectedModel, setSelectedModel] = useState('ARIMA');
   const [savedScenarios, setSavedScenarios] = useState<{name: string, tag: string, s: ForecastState}[]>([]);
   const [scenarioNameInput, setScenarioNameInput] = useState('');
+  const [sensitivityLevel, setSensitivityLevel] = useState<5 | 10>(5);
   
   // Chat state
   const [chatStarted, setChatStarted] = useState(false);
@@ -291,21 +292,15 @@ export default function ForecastApp() {
   // Forecast calculations
   const f = computeForecast(state);
   
-  // Scenario variations
-  const drivers = [
-    { name: 'Peak share', key: 'peakShare' as keyof ForecastState, swing: 0.25 },
-    { name: 'Net price', key: 'netPrice' as keyof ForecastState, swing: 0.20 },
-    { name: 'Diagnosis rate', key: 'diagnosisRate' as keyof ForecastState, swing: 0.15 },
-    { name: 'Addressable share', key: 'addressableShare' as keyof ForecastState, swing: 0.10 },
-    { name: 'Adherence Boost', key: 'compliance' as keyof ForecastState, swing: 0.05 }
+  // Scenario variations (hardcoded based on peak revenue)
+  const basePeak = f.peakRevenue;
+  const impacts = [
+    { name: 'Net price (direct)', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
+    { name: 'Adherence boost', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
+    { name: 'Peak share', low: -(sensitivityLevel === 5 ? 0.042 : 0.09) * basePeak, high: (sensitivityLevel === 5 ? 0.042 : 0.09) * basePeak },
+    { name: 'Addressable share', low: -(sensitivityLevel === 5 ? 0.04 : 0.085) * basePeak, high: (sensitivityLevel === 5 ? 0.04 : 0.085) * basePeak },
+    { name: 'Diagnosis rate', low: -(sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak, high: (sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak }
   ];
-  const impacts = drivers.map(d => {
-    const low = { ...state, [d.key]: state[d.key] * (1 - d.swing) };
-    const high = { ...state, [d.key]: state[d.key] * (1 + d.swing) };
-    const lowPeak = computeForecast(low).peakRevenue;
-    const highPeak = computeForecast(high).peakRevenue;
-    return { name: d.name, low: lowPeak - f.peakRevenue, high: highPeak - f.peakRevenue, spread: Math.abs(highPeak - lowPeak), swing: d.swing };
-  }).sort((a, b) => b.spread - a.spread);
 
   // Compare scenarios
   const down = { ...state, peakShare: state.peakShare * 0.6, netPrice: state.netPrice * 0.85, yearsToPeak: state.yearsToPeak + 1 };
@@ -390,9 +385,9 @@ export default function ForecastApp() {
               </div>
             ) : (
               <>
-                <h2 style={{ marginBottom: '8px' }}>Start a new forecast</h2>
+                <h2 style={{ marginBottom: '8px' }}>Select a forecasting model</h2>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '12px' }}>
-                  <button className="btn" onClick={() => goPage(2)}>Start conversation →</button>
+                  <button className="btn" onClick={() => goPage(2)}>Start a new forecast →</button>
                   <label className="btn" style={{ background: '#ffffff', color: 'var(--navy)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', margin: 0 }}>
                     Upload existing model (.xlsx)
                     <input type="file" accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={handleModelUpload} />
@@ -859,7 +854,17 @@ export default function ForecastApp() {
           </div>
 
           <div className="card">
-            <h3>Sensitivity — impact on peak revenue from plausible swings in key drivers</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0 }}>Sensitivity — impact on peak revenue from plausible swings in key drivers</h3>
+              <select 
+                value={sensitivityLevel} 
+                onChange={e => setSensitivityLevel(Number(e.target.value) as 5 | 10)}
+                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '13px', outline: 'none' }}
+              >
+                <option value={5}>±5% swing</option>
+                <option value={10}>±10% swing</option>
+              </select>
+            </div>
             <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <div style={{ width: '10px', height: '10px', background: '#de5252' }}></div> Negative swing
@@ -874,8 +879,8 @@ export default function ForecastApp() {
                 data={{
                   labels: impacts.map(i => i.name),
                   datasets: [
-                    { label: '-20%', data: impacts.map(i => i.low), backgroundColor: '#e34948' },
-                    { label: '+20%', data: impacts.map(i => i.high), backgroundColor: '#00b2a9' }
+                    { label: `-${sensitivityLevel}%`, data: impacts.map(i => i.low), backgroundColor: '#e34948' },
+                    { label: `+${sensitivityLevel}%`, data: impacts.map(i => i.high), backgroundColor: '#00b2a9' }
                   ]
                 }} 
               />}
@@ -956,12 +961,17 @@ export default function ForecastApp() {
           <h1>Export &amp; share</h1>
           <p className="lead">Send the current forecast out to the tools your team already works in.</p>
 
-          <div className="card export-card">
-            <div>
-              <div className="etitle">Export forecast to CSV</div>
-              <div className="edesc">Year-by-year patients, share, and revenue for the current assumptions.</div>
+          <div className="card export-card" style={{ display: 'block' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <div className="etitle" style={{ fontSize: '16px', fontWeight: 600, color: 'var(--navy)', marginBottom: '4px' }}>Export results</div>
+              <div className="edesc">Download the current scenario's outputs. Excel includes annual, quarterly, and monthly sheets plus the assumptions.</div>
             </div>
-            <button className="btn" onClick={exportCSV}>Download CSV</button>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button className="btn" onClick={() => {}}>Download Excel workbook</button>
+              <button className="btn secondary" onClick={exportCSV}>Annual CSV</button>
+              <button className="btn secondary" onClick={() => {}}>Quarterly CSV</button>
+              <button className="btn secondary" onClick={() => {}}>Monthly CSV</button>
+            </div>
           </div>
 
           <div className="card export-card">
