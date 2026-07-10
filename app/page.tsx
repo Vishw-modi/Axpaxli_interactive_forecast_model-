@@ -48,14 +48,17 @@ export default function ForecastApp() {
   const [chatStarted, setChatStarted] = useState(false);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [assumptions, setAssumptions] = useState<any[]>([]);
+  const [scriptStep, setScriptStep] = useState(0);
+  const [demoInput, setDemoInput] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
   const assumpRef = useRef<HTMLDivElement>(null);
 
   // AI Modal state
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [activeAiMetric, setActiveAiMetric] = useState<string | null>(null);
-  const [aiChatMessages, setAiChatMessages] = useState<{who: string, text: string, suggestion?: number}[]>([]);
+  const [aiChatMessages, setAiChatMessages] = useState<{who: string, text: string, suggestion?: number, customAction?: string}[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingModel, setIsUploadingModel] = useState(false);
   const [hasUploaded, setHasUploaded] = useState(false);
   const [aiInputValue, setAiInputValue] = useState('');
 
@@ -85,18 +88,36 @@ export default function ForecastApp() {
   ];
 
   const runChat = () => {
-    setChatMessages([]);
+    setChatMessages([chatScript[0]]);
     setAssumptions([]);
     setChatStarted(true);
-    
-    chatScript.forEach((msg, i) => {
+    setScriptStep(1); // Point to the first user response
+  };
+
+  const handleDemoSubmit = (e?: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e && e.key !== 'Enter') return;
+    if (!demoInput.trim()) return;
+
+    const currentInput = demoInput.trim();
+    setDemoInput('');
+    setChatMessages(prev => [...prev, { who: 'user', text: currentInput }]);
+
+    const expectedUserStep = chatScript[scriptStep];
+    if (expectedUserStep && expectedUserStep.who === 'user' && expectedUserStep.assump) {
+      setAssumptions(prev => {
+        const newKeys = expectedUserStep.assump!.map(a => a.k);
+        const filtered = prev.filter(a => !newKeys.includes(a.k));
+        return [...filtered, ...expectedUserStep.assump!];
+      });
+    }
+
+    const nextAiIndex = scriptStep + 1;
+    if (nextAiIndex < chatScript.length) {
       setTimeout(() => {
-        setChatMessages(prev => [...prev, msg]);
-        if (msg.assump) {
-          setAssumptions(prev => [...prev, ...msg.assump!]);
-        }
-      }, i * 1000);
-    });
+        setChatMessages(prev => [...prev, chatScript[nextAiIndex]]);
+        setScriptStep(nextAiIndex + 1);
+      }, 800);
+    }
   };
 
   useEffect(() => {
@@ -145,6 +166,15 @@ export default function ForecastApp() {
     ]);
   };
 
+  const handleModelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setIsUploadingModel(true);
+    setTimeout(() => {
+      setIsUploadingModel(false);
+      goPage(4);
+    }, 2000);
+  };
+
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setIsUploading(true);
@@ -186,6 +216,27 @@ export default function ForecastApp() {
     });
   };
 
+  const acceptCustomAction = (action: string) => {
+    if (action === 'add_diag_code') {
+      setAssumptions(prev => {
+        const hasIt = prev.some(a => a.k === 'Diagnosis Code');
+        if (hasIt) return prev;
+        return [...prev, { k: 'Diagnosis Code', v: 'L40.9' }];
+      });
+      setAiChatMessages(prev => {
+        const withoutButtons = prev.map(m => ({ ...m, customAction: undefined, suggestion: undefined }));
+        return [...withoutButtons, { who: 'user', text: "Add it." }, { who: 'ai', text: "Done. I've added diagnosis code L40.9 to the business rules."}];
+      });
+    }
+  };
+
+  const rejectCustomAction = () => {
+    setAiChatMessages(prev => {
+      const withoutButtons = prev.map(m => ({ ...m, customAction: undefined, suggestion: undefined }));
+      return [...withoutButtons, { who: 'user', text: "Reject." }, { who: 'ai', text: "Understood. I will not add it."}];
+    });
+  };
+
   const handleAiSubmit = (e?: React.KeyboardEvent<HTMLInputElement>) => {
     if (e && e.key !== 'Enter') return;
     if (!aiInputValue.trim()) return;
@@ -196,7 +247,16 @@ export default function ForecastApp() {
     setAiChatMessages(prev => [...prev, { who: 'user', text: userText }]);
     
     setTimeout(() => {
-      setAiChatMessages(prev => [...prev, { who: 'ai', text: "I am a prototype assistant! In the full version, I will analyze your request against your custom data and update the forecast dynamically." }]);
+      const textLower = userText.toLowerCase();
+      if (textLower.includes("diagnosis code") && textLower.includes("l40.9")) {
+        setAiChatMessages(prev => [...prev, { 
+          who: 'ai', 
+          text: "I can add the diagnosis code L40.9 (Psoriasis, unspecified) to your business rules. Do you want to proceed?", 
+          customAction: 'add_diag_code'
+        }]);
+      } else {
+        setAiChatMessages(prev => [...prev, { who: 'ai', text: "I am a prototype assistant! In the full version, I will analyze your request against your custom data and update the forecast dynamically." }]);
+      }
     }, 1000);
   };
 
@@ -317,13 +377,30 @@ export default function ForecastApp() {
           </div>
 
           <div className="card" style={{ textAlign: 'center', padding: '32px' }}>
-            <h2 style={{ marginBottom: '8px' }}>Start a new forecast</h2>
-            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '18px' }}>Geography: United States</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '12px' }}>
-              <button className="btn" onClick={() => goPage(2)}>Start conversation →</button>
-              <button className="btn" style={{ background: '#ffffff', color: 'var(--navy)', border: '1px solid var(--border)' }} onClick={() => { alert('This would open a file picker to upload an .xlsx file, parse the data, and populate the dashboard.'); goPage(4); }}>Upload existing model (.xlsx)</button>
-            </div>
-            <div className="hint">Or jump straight to a <a href="#" onClick={(e) => { e.preventDefault(); goPage(4); }} style={{ color: 'var(--teal)' }}>sample forecast</a> built from default assumptions.</div>
+            {isUploadingModel ? (
+              <div style={{ padding: '40px 0' }}>
+                <div style={{ 
+                  width: '40px', height: '40px', border: '3px solid #e0f2f1', 
+                  borderTopColor: '#00b2a9', borderRadius: '50%', 
+                  animation: 'spin 1s linear infinite', margin: '0 auto 16px' 
+                }}></div>
+                <h3 style={{ margin: '0 0 8px' }}>Parsing Excel model...</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>Extracting drivers and structure.</p>
+                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : (
+              <>
+                <h2 style={{ marginBottom: '8px' }}>Start a new forecast</h2>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '12px' }}>
+                  <button className="btn" onClick={() => goPage(2)}>Start conversation →</button>
+                  <label className="btn" style={{ background: '#ffffff', color: 'var(--navy)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', margin: 0 }}>
+                    Upload existing model (.xlsx)
+                    <input type="file" accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={handleModelUpload} />
+                  </label>
+                </div>
+              </>
+            )}
+
           </div>
 
         </section>
@@ -357,6 +434,22 @@ export default function ForecastApp() {
                   )}
                 </div>
               ))}
+              <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text" 
+                  value={demoInput}
+                  onChange={e => setDemoInput(e.target.value)}
+                  onKeyDown={handleDemoSubmit}
+                  placeholder={scriptStep >= chatScript.length ? "Conversation complete" : "Type your answer..."}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                  disabled={scriptStep >= chatScript.length || !chatStarted}
+                />
+                <button 
+                  className="btn" 
+                  onClick={() => handleDemoSubmit()}
+                  disabled={scriptStep >= chatScript.length || !chatStarted}
+                >Send</button>
+              </div>
             </div>
             <div className="card assump-list" id="liveAssumptions" ref={assumpRef}>
               <h3>Assumptions captured</h3>
@@ -543,15 +636,15 @@ export default function ForecastApp() {
               <div className="value">{fmtNum(f.addressable * state.peakShare)}</div>
             </div>
             <div className="metric">
-              <div className="label">1-year revenue</div>
+              <div className="label">1-year cumulative revenue</div>
               <div className="value">{fmtM(f.cumulativeRevenue[0])}</div>
             </div>
             <div className="metric">
-              <div className="label">2-year revenue</div>
+              <div className="label">2-year cumulative revenue</div>
               <div className="value">{fmtM(f.cumulativeRevenue[1])}</div>
             </div>
             <div className="metric">
-              <div className="label">3-year revenue</div>
+              <div className="label">3-year cumulative revenue</div>
               <div className="value">{fmtM(f.cumulativeRevenue[2])}</div>
             </div>
           </div>
@@ -748,9 +841,9 @@ export default function ForecastApp() {
                 <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(f.peakRevenue)}</div></div>
                 <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(f.addressable * state.peakShare)}</div></div>
                 <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct(state.peakShare * 100)}</div></div>
-                <div className="metric"><div className="label">Year 1 revenue</div><div className="value">{fmtM(f.revenue[0])}</div></div>
-                <div className="metric"><div className="label">Year 2 revenue</div><div className="value">{fmtM(f.revenue[1])}</div></div>
-                <div className="metric"><div className="label">Year 3 revenue</div><div className="value">{fmtM(f.revenue[2])}</div></div>
+                <div className="metric"><div className="label">1-year cumulative revenue</div><div className="value">{fmtM(f.cumulativeRevenue[0])}</div></div>
+                <div className="metric"><div className="label">2-year cumulative revenue</div><div className="value">{fmtM(f.cumulativeRevenue[1])}</div></div>
+                <div className="metric"><div className="label">3-year cumulative revenue</div><div className="value">{fmtM(f.cumulativeRevenue[2])}</div></div>
               </div>
             </div>
           </div>
@@ -802,10 +895,11 @@ export default function ForecastApp() {
 
           <div className="card">
             <h3>Summary</h3>
-            <table id="compareTable">
-              <thead>
-                <tr><th>Scenario</th><th>Peak share</th><th>Net price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1</th><th>Year 2</th><th>Year 3</th></tr>
-              </thead>
+            <div style={{ overflowX: 'auto' }}>
+              <table id="compareTable" style={{ whiteSpace: 'nowrap', width: '100%' }}>
+                <thead>
+                  <tr><th>Scenario</th><th>Peak share</th><th>Net price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1 net</th><th>Year 2 net</th><th>Year 3 net</th><th>Year 4 net</th><th>Year 5 net</th></tr>
+                </thead>
               <tbody>
                 {scenarios.map((sc, i) => {
                   const fc = computeForecast(sc.s);
@@ -819,24 +913,38 @@ export default function ForecastApp() {
                       <td>{fmtM(fc.revenue[0])}</td>
                       <td>{fmtM(fc.revenue[1])}</td>
                       <td>{fmtM(fc.revenue[2])}</td>
+                      <td>{fmtM(fc.revenue[3])}</td>
+                      <td>{fmtM(fc.revenue[4])}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
-
-          <div className="card">
-            <h3>Peak-year net revenue by scenario</h3>
-            <div className="canvas-wrap">
-              {activeTab === 7 && <Bar 
-                options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: scenarios.map(s => s.name), datasets: [{ label: 'Peak revenue', data: scenarios.map(sc => computeForecast(sc.s).peakRevenue), backgroundColor: ['#e34948', '#898781', '#00b2a9'], borderRadius: 4 }] }} 
-              />}
             </div>
           </div>
 
-          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>Downside case: 60% of base peak share, 15% lower net price, one year slower to peak. Upside case: 140% of base peak share, 10% higher net price, one year faster to peak.</p>
+          <div className="card">
+            <h3>Year-by-year net revenue comparison</h3>
+            <div className="canvas-wrap">
+              {activeTab === 7 && <Bar 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false, 
+                  plugins: { legend: { position: 'bottom' } }, 
+                  scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } 
+                }}
+                data={{ 
+                  labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'], 
+                  datasets: scenarios.map((sc, i) => ({ 
+                    label: sc.name, 
+                    data: computeForecast(sc.s).revenue.slice(0, 5), 
+                    backgroundColor: ['#e34948', '#898781', '#00b2a9', '#f25621', '#3b82f6'][i % 5], 
+                    borderRadius: 4 
+                  })) 
+                }} 
+              />}
+            </div>
+          </div>
 
           <div style={{ textAlign: 'right' }}>
             <button className="btn" onClick={() => goPage(8)}>Export forecast →</button>
@@ -911,10 +1019,16 @@ export default function ForecastApp() {
                       boxShadow: msg.who === 'user' ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
                     }}>
                       <div style={{ fontSize: '13.5px', lineHeight: '1.6' }}>{msg.text}</div>
-                      {msg.suggestion && (
+                      {msg.suggestion !== undefined && (
                         <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
                           <button className="btn" style={{ padding: '6px 12px', fontSize: '12px', minWidth: '0' }} onClick={() => acceptSuggestion(msg.suggestion!)}>Use this instead</button>
                           <button className="btn secondary" style={{ padding: '6px 12px', fontSize: '12px', minWidth: '0' }} onClick={rejectSuggestion}>Reject</button>
+                        </div>
+                      )}
+                      {msg.customAction === 'add_diag_code' && (
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                          <button className="btn" style={{ padding: '6px 12px', fontSize: '12px', minWidth: '0' }} onClick={() => acceptCustomAction('add_diag_code')}>Add (Diagnosis Code: L40.9)</button>
+                          <button className="btn secondary" style={{ padding: '6px 12px', fontSize: '12px', minWidth: '0' }} onClick={rejectCustomAction}>Reject</button>
                         </div>
                       )}
                     </div>
