@@ -330,6 +330,9 @@ export default function ForecastApp() {
     { name: 'Diagnosis rate', low: -(sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak, high: (sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak }
   ];
 
+  const maxImpact = Math.max(...impacts.map(i => Math.max(Math.abs(i.low), Math.abs(i.high))));
+  const maxTornadoAxis = Math.max(100000000, Math.ceil(maxImpact / 100000000) * 100000000);
+
   // Compare scenarios
   const down = { ...state, peakShare: state.peakShare * 0.6, netPrice: state.netPrice * 0.85, yearsToPeak: state.yearsToPeak + 1 };
   const up = { ...state, peakShare: Math.min(0.6, state.peakShare * 1.4), netPrice: state.netPrice * 1.1, yearsToPeak: Math.max(2, state.yearsToPeak - 1) };
@@ -916,7 +919,7 @@ export default function ForecastApp() {
             </div>
             <div className="canvas-wrap" style={{ height: '260px' }}>
               {activeTab === 6 && <Bar 
-                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min: -100000000, max: 100000000, ticks: { callback: v => (Number(v) < 0 ? '-' : '') + fmtM(Math.abs(Number(v))) } } } }}
+                options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min: -maxTornadoAxis, max: maxTornadoAxis, ticks: { callback: v => (Number(v) < 0 ? '-' : '') + fmtM(Math.abs(Number(v))) } } } }}
                 data={{
                   labels: impacts.map(i => i.name),
                   datasets: [
