@@ -17,7 +17,7 @@ export const defaultState: ForecastState = {
   addressableShare: 0.65,
   peakShare: 0.25,
   yearsToPeak: 5,
-  netPrice: 2200,
+  netPrice: 5125,
   injectionsPerYear: 2,
   compliance: 0.20
 };

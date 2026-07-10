@@ -83,13 +83,13 @@ export default function ForecastApp() {
     {who:'user', text:"Keep that pace.", assump:[{k:'Peak share', v:'25%'},{k:'Years to peak', v:'4 years'}]},
     {who:'ai', text:"What is the dosing of your product? (injections per year)"},
     {who:'user', text:"2.", assump:[]},
-    {who:'ai', text:"Eylea HD lists around $5,125 WAC — do you want to price in line with that, or discount to drive share?"},
-    {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection', v:'$5,125'}]},
+    {who:'ai', text:"Eylea HD lists around $2,645 WAC Considering the dosing of AXPAXLI, would you want to price it around $5,000 WAC?"},
+    {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection, post-rebate (USD)', v:'$5,125'}]},
     {who:'ai', text:"What is the average patient adherence boost you expect on your drug."},
     {who:'user', text:"20%", assump:[]},
     {who:'ai', text:"Is there anything else you'd like to add or adjust?"},
     {who:'user', text:"No.", assump:[]},
-    {who:'ai', text:"Thanks! Your forecast is ready."}
+    {who:'ai', text:"Thanks for all your unputs let's review the assumptions in the next sections"}
   ];
 
   const runChat = () => {
@@ -115,13 +115,13 @@ export default function ForecastApp() {
       if (prevAiMessage) {
         if (prevAiMessage.text.includes("prior tests involved")) {
           finalAssumps = finalAssumps.filter(a => a.k !== 'Test Positivity');
-          finalAssumps.push({ k: 'Test Positivity', v: currentInput });
+          finalAssumps.push({ k: 'Test Positivity', v: '80%' });
         } else if (prevAiMessage.text.includes("dosing of your product")) {
           finalAssumps = finalAssumps.filter(a => a.k !== 'Injections / year');
-          finalAssumps.push({ k: 'Injections / year', v: currentInput });
+          finalAssumps.push({ k: 'Injections / year', v: '2' });
         } else if (prevAiMessage.text.includes("patient adherence boost")) {
           finalAssumps = finalAssumps.filter(a => a.k !== 'Patient adherence boost');
-          finalAssumps.push({ k: 'Patient adherence boost', v: currentInput });
+          finalAssumps.push({ k: 'Patient adherence boost', v: '20%' });
         }
       }
 
@@ -539,13 +539,7 @@ export default function ForecastApp() {
 
             <div className="card">
               <h3>Competitive landscape</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 10px' }}>Current standard of care your asset launches against:</p>
-              <span className="pill">SOC 1</span>
-              <span className="pill">SOC 2</span>
-              <span className="pill">SOC 3</span>
-              <span className="pill">SOC 4</span>
-              <span className="pill">Biosimilars</span>
-              <span className="pill">Off-label</span>
+             
               <h3 style={{ marginTop: '18px' }}>Product profile</h3>
               <div className="field-group">
                 <label className="field">Key differentiator</label>
@@ -675,7 +669,7 @@ export default function ForecastApp() {
               <div className="value">{fmtNum(f.addressable * state.peakShare)}</div>
             </div>
             <div className="metric">
-              <div className="label">1-year cumulative revenue</div>
+              <div className="label">1-year revenue</div>
               <div className="value">{fmtM(f.cumulativeRevenue[0])}</div>
             </div>
             <div className="metric">
@@ -726,7 +720,7 @@ export default function ForecastApp() {
             <h3>Year-by-year detail</h3>
             <table id="forecastTable">
               <thead>
-                <tr><th>Year</th><th>Patients</th><th>Share</th><th>Net revenue</th></tr>
+                <tr><th>Year</th><th>Patients</th><th>Share</th><th>Net year revenue</th></tr>
               </thead>
               <tbody>
                 {f.years.map((y, i) => (
@@ -836,7 +830,7 @@ export default function ForecastApp() {
                 </div>
                 <div className="field-group">
                   <div className="row-flex"><label className="field" style={{ margin: 0 }}>Net price per injection</label><span className="val">{fmtM(scenarioState.netPrice)}</span></div>
-                  <input type="range" min="1200" max="3000" step="50" value={scenarioState.netPrice} onChange={e => handleScenarioChange('netPrice', parseFloat(e.target.value))} />
+                  <input type="range" min="1200" max="10000" step="50" value={scenarioState.netPrice} onChange={e => handleScenarioChange('netPrice', parseFloat(e.target.value))} />
                 </div>
                 <div className="field-group">
                   <div className="row-flex"><label className="field" style={{ margin: 0 }}>Years to peak share</label><span className="val">{scenarioState.yearsToPeak} yrs</span></div>
@@ -880,7 +874,7 @@ export default function ForecastApp() {
                   <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(scenarioF.peakRevenue)}</div></div>
                   <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum(scenarioF.addressable * scenarioState.peakShare)}</div></div>
                   <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct(scenarioState.peakShare * 100)}</div></div>
-                  <div className="metric"><div className="label">1-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
+                  <div className="metric"><div className="label">1-year revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
                   <div className="metric"><div className="label">2-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
                   <div className="metric"><div className="label">3-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
                 </div>
