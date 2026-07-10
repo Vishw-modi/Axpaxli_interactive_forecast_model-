@@ -89,7 +89,7 @@ export default function ForecastApp() {
     {who:'user', text:"20%", assump:[]},
     {who:'ai', text:"Is there anything else you'd like to add or adjust?"},
     {who:'user', text:"No.", assump:[]},
-    {who:'ai', text:"Thanks for all your inputs let's review the assumptions in the next sections."}
+    {who:'ai', text:"Thanks for all your inputs. Let's review the assumptions in the next sections."}
   ];
 
   const runChat = () => {
