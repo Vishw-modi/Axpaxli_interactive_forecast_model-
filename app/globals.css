@@ -229,3 +229,132 @@ table th { color: var(--text-muted); font-weight: 600; font-size: 12px; text-tra
 .export-card .etitle { font-weight: 600; font-size: 14.5px; margin-bottom: 2px; }
 .export-card .edesc { font-size: 12.5px; color: var(--text-muted); }
 .hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* Split view shell */
+.split-view { display: flex; flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
+.split-top-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; height: 48px; border-bottom: 1px solid var(--border, #e0e0e0); background: var(--surface-1, #f8f8f6); flex-shrink: 0; }
+.split-top-bar-left { display: flex; flex-direction: column; gap: 1px; }
+.split-drug-name { font-size: 14px; font-weight: 600; color: var(--text-primary, #111); }
+.split-model-label { font-size: 11px; color: var(--text-secondary, #888); }
+.split-top-bar-right { display: flex; gap: 8px; align-items: center; }
+.split-body { display: flex; flex: 1; overflow: hidden; }
+.split-sidebar { width: 300px; min-width: 260px; border-right: 1px solid var(--border, #e0e0e0); overflow-y: auto; flex-shrink: 0; background: var(--surface-1, #f8f8f6); }
+.split-main { flex: 1; overflow-y: auto; padding: 20px 24px; background: var(--surface-2, #fff); }
+.sidebar-header-label { padding: 12px 16px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-secondary, #888); text-transform: uppercase; border-bottom: 1px solid var(--border, #e0e0e0); }
+
+/* Buttons */
+.btn-outlined { padding: 6px 14px; font-size: 12px; border: 1px solid var(--border-strong, #ccc); border-radius: 6px; background: transparent; cursor: pointer; color: var(--text-primary, #333); }
+.btn-outlined:hover { background: var(--surface-2, #f5f5f5); }
+.btn-reset { padding: 6px 14px; font-size: 12px; border: none; border-radius: 6px; background: #f5a623; color: #fff; font-weight: 500; cursor: pointer; }
+.btn-reset:hover { background: #e09510; }
+
+/* Sub-tabs */
+.dashboard-subtabs { display: flex; border-bottom: 1px solid var(--border, #e0e0e0); margin-bottom: 20px; margin-top: -8px; }
+.dashboard-subtab-btn { padding: 10px 18px; font-size: 13px; border: none; background: transparent; color: var(--text-secondary, #888); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.dashboard-subtab-btn.active { color: var(--text-primary, #333); border-bottom-color: #5b6abf; font-weight: 500; }
+
+/* KPI chips */
+.kpi-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+.kpi-chip { flex: 1; min-width: 130px; border: 1px solid var(--border, #e0e0e0); border-radius: 8px; padding: 12px 14px; background: var(--surface-1, #f8f8f6); }
+.kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-secondary, #888); text-transform: uppercase; margin-bottom: 4px; }
+.kpi-value { font-size: 20px; font-weight: 700; color: var(--text-primary, #111); line-height: 1.1; }
+.kpi-context { font-size: 11px; color: var(--text-secondary, #999); margin-top: 3px; }
+
+/* Dashboard content */
+.dashboard-content { display: flex; flex-direction: column; gap: 24px; }
+.charts-row { display: flex; gap: 20px; }
+.charts-row > * { flex: 1; min-width: 0; }
+
+/* Responsive sidebar collapse */
+@media (max-width: 768px) {
+  .split-sidebar { position: absolute; z-index: 100; left: -300px; top: 0; height: 100%; transition: left 0.25s; background: var(--surface-1); }
+  .split-sidebar.open { left: 0; }
+  .split-body { position: relative; }
+}
+
+/* Accordion */
+.accordion-section { margin-bottom: 8px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border, #e0e0e0); }
+.accordion-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--surface-1, #f8f8f6); font-weight: 500; font-size: 14px; cursor: pointer; border: none; text-align: left; }
+.accordion-header.open { background: var(--surface-2, #fff); }
+.accordion-chevron { font-size: 11px; color: var(--text-secondary, #888); }
+.accordion-body { padding: 16px; background: var(--surface-2, #fff); display: flex; flex-direction: column; gap: 20px; }
+
+/* Slider */
+.slider-control-row { display: flex; flex-direction: column; gap: 6px; }
+.slider-label-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.slider-label { font-size: 13px; color: var(--text-primary, #333); flex: 1; }
+.slider-value-chip { background: #eef2ff; color: #3b4abf; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
+.slider-input { width: 100%; accent-color: #5b6abf; cursor: pointer; }
+.slider-ticks { display: flex; justify-content: space-between; }
+.tick-label { font-size: 10px; color: var(--text-secondary, #999); }
+.tick-label.active { color: #5b6abf; font-weight: 600; }
+
+/* Toggle */
+.toggle-row { display: flex; justify-content: space-between; align-items: center; }
+.toggle-label { font-size: 13px; color: var(--text-primary, #333); }
+.toggle-switch { position: relative; display: inline-block; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track { display: block; width: 36px; height: 20px; background: #ccc; border-radius: 10px; cursor: pointer; transition: background 0.2s; position: relative; }
+.toggle-switch input:checked + .toggle-track { background: #5b6abf; }
+.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s; }
+.toggle-switch input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); }
+
+/* Segmented control (for payer access dropdown) */
+.segmented-control { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.segment-btn { padding: 5px 10px; font-size: 11px; border: 1px solid #ccc; border-radius: 16px; background: transparent; cursor: pointer; color: var(--text-secondary, #666); transition: all 0.15s; }
+.segment-btn.active { background: #5b6abf; color: white; border-color: #5b6abf; }
+
+/* Date or never */
+.date-or-never-row { display: flex; flex-direction: column; gap: 6px; }
+.date-never-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.never-checkbox-label { font-size: 12px; display: flex; align-items: center; gap: 5px; color: var(--text-secondary, #666); cursor: pointer; }
+.month-input { border: 1px solid #ccc; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+.month-input.disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Ask AI button */
+.ask-ai-btn { font-size: 11px; padding: 2px 8px; background: transparent; border: 1px solid #ccc; border-radius: 12px; cursor: pointer; color: var(--text-secondary, #888); white-space: nowrap; }
+.ask-ai-btn:hover { background: #f5f5ff; border-color: #5b6abf; color: #5b6abf; }
+
+/* Competitor subsection card */
+.competitor-card { border: 1px solid #f0e0e0; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.competitor-card-title { font-size: 13px; font-weight: 600; color: var(--text-primary, #333); margin-bottom: 4px; }
+
+/* Responsive Tick Labels */
+.slider-ticks { display: flex; justify-content: space-between; padding: 0 4px; }
+.tick-label { font-size: 11px; color: var(--text-secondary, #999); text-align: center; flex: 1; word-wrap: break-word; line-height: 1.2; margin-top: 4px; }
+.tick-label:first-child { text-align: left; }
+.tick-label:last-child { text-align: right; }
+.tick-label.active { font-weight: 600; }
+@media (max-width: 600px) {
+  .tick-label { font-size: 9.5px; }
+}
+
+
+/* Custom Slider Overrides to allow white/light-gray track */
+input[type=range].slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+}
+input[type=range].slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+input[type=range].slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}

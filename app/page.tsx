@@ -36,6 +36,308 @@ ChartJS.register(
   Filler
 );
 
+
+function AccordionSection({
+  idx, title, color, isOpen, onToggle, onQuickSet, children
+}: {
+  idx: number; title: string; color: string;
+  isOpen: boolean; onToggle: () => void;
+  onQuickSet?: (level: 0 | 2 | 4) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="accordion-section">
+      <button
+        className={`accordion-header ${isOpen ? 'open' : ''}`}
+        onClick={onToggle}
+        style={{ borderLeft: `4px solid ${color}` }}
+      >
+        <span>{title}</span>
+        <span className="accordion-chevron">{isOpen ? '▼' : '▶'}</span>
+      </button>
+      {isOpen && (
+        <div className="accordion-body">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function SliderControl({
+  label, fieldKey, stops, currentValue, unit, onAskAI,
+  onChange,
+  asDropdown
+}: {
+  asDropdown?: boolean;
+  label: string;
+  fieldKey: string;
+  stops: number[];          // exactly 5 values
+  currentValue: number;
+  unit: string;
+  onAskAI: () => void;
+  onChange: (val: number) => void;
+}) {
+  const currentIdx = stops.reduce((best, s, i) =>
+    Math.abs(s - currentValue) < Math.abs(stops[best] - currentValue) ? i : best, 0);
+
+  // Gradient colors for 5 stops
+  const getStopColor = (idx: number) => {
+    switch (idx) {
+      case 0: return '#3b82f6'; // Conservative: blue
+      case 1: return '#0ea5e9'; // Semi-Con: light blue
+      case 2: return '#10b981'; // Centered: green
+      case 3: return '#f59e0b'; // Semi-Agg: yellow-amber
+      case 4: return '#ea580c'; // Aggressive: amber-orange
+      default: return '#5b6abf';
+    }
+  };
+
+  const activeColor = getStopColor(currentIdx);
+
+  return (
+    <div className="slider-control-row">
+      <div className="slider-label-row">
+        <span className="slider-label">{label}</span>
+        <span className="slider-value-chip" style={{ backgroundColor: activeColor + '20', color: activeColor }}>
+          {unit === '$'
+            ? `$${stops[currentIdx].toLocaleString()}`
+            : `${(stops[currentIdx] * (unit === '%' ? 100 : 1)).toLocaleString()}${unit === '$' ? '' : unit}`
+          }
+        </span>
+        <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
+      </div>
+      <input
+        type="range"
+        min={0} max={4} step={1}
+        value={currentIdx}
+        className="slider-input"
+        onChange={e => onChange(stops[parseInt(e.target.value)])}
+        style={{ background: `linear-gradient(to right, ${activeColor} ${(currentIdx / 4) * 100}%, #ffffff ${(currentIdx / 4) * 100}%, #ffffff 100%)`, color: activeColor }}
+      />
+      <div className="slider-ticks">
+        {['Conservative','Semi-Conservative','Centered','Semi-Aggressive','Aggressive'].map((t,i) => (
+          <span key={i} className={`tick-label ${i === currentIdx ? 'active' : ''}`} style={i === currentIdx ? { color: activeColor } : {}}>{t}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ToggleControl({
+  label, fieldKey, value, onChange
+}: {
+  label: string; fieldKey: string;
+  value: boolean; onChange: (val: boolean) => void;
+}) {
+  return (
+    <div className="toggle-row">
+      <span className="toggle-label">{label}</span>
+      <label className="toggle-switch">
+        <input
+          type="checkbox"
+          checked={value}
+          onChange={e => onChange(e.target.checked)}
+        />
+        <span className="toggle-track">
+          <span className="toggle-thumb" />
+        </span>
+      </label>
+    </div>
+  );
+}
+
+function SelectControl({
+  label, fieldKey, options, value, onAskAI, onChange
+}: {
+  label: string; fieldKey: string;
+  options: { value: string; label: string }[];
+  value: string; onAskAI: () => void;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <div className="select-control-row">
+      <div className="slider-label-row">
+        <span className="slider-label">{label}</span>
+        <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
+      </div>
+      <div className="segmented-control">
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            className={`segment-btn ${value === opt.value ? 'active' : ''}`}
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DateOrNeverControl({
+  label, fieldKey, value, onChange
+}: {
+  label: string; fieldKey: string;
+  value: string; onChange: (val: string) => void;
+}) {
+  const isNever = value === 'does_not_launch';
+  return (
+    <div className="date-or-never-row">
+      <span className="slider-label">{label}</span>
+      <div className="date-never-controls">
+        <label className="never-checkbox-label">
+          <input
+            type="checkbox"
+            checked={isNever}
+            onChange={e => onChange(e.target.checked ? 'does_not_launch' : new Date().getFullYear() + '-01')}
+          />
+          Does Not Launch
+        </label>
+        <input
+          type="month"
+          value={isNever ? '' : value}
+          disabled={isNever}
+          className={`month-input ${isNever ? 'disabled' : ''}`}
+          onChange={e => onChange(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+}
+
+
+function ModelArchitecturePanel({ state }: { state: ForecastState }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const LAUNCH_YEAR = 2025;
+  const year = 2029; // Show peak year (Year 5)
+  const t = 4;
+  
+  // STAGE 1
+  const patientUniverse = state.prevalence;
+  
+  // STAGE 2
+  const diagnosed = patientUniverse * state.diagnosisRate * Math.pow(1 + state.diagnosisAnnualGrowthRate, year - 2016);
+  
+  // STAGE 3
+  const iasTreated = diagnosed * state.iasTreatedPctOfDiagnosed * Math.pow(1 + state.iasTreatedGrowthRate, t);
+  const promoLift = state.initialAdditionalMarketGrowth * Math.pow(1 - state.annualDecayRateOfAdditionalGrowth, t);
+  const treatedWithPromo = iasTreated * (1 + promoLift);
+  
+  // STAGE 5
+  const peakShare = state.peakShare;
+  
+  // STAGE 6
+  const papMultiplier = state.patientAssistanceProgramInPlace ? state.pricingAdjPatientAssistanceImpact : 1.0;
+  const accessAdjustedPeakShare = peakShare * state.pricingAdjFactorAccessImpact * papMultiplier;
+  
+  // STAGE 7
+  const reachFactor = (0.70 * state.pctORSReachedByYear3Plus) + (0.30 * state.pctPCPReachedByYear3Plus);
+  const rawX = Math.min((t + 1) / state.yearsToPeak, 1.0);
+  const uptakeCurve = rawX * rawX * (3 - 2 * rawX);
+  let monthlyShare = accessAdjustedPeakShare * uptakeCurve * reachFactor;
+  
+  // STAGE 8 & 9
+  if (t < state.jCodeWindowMonths / 12) monthlyShare *= state.jCodeRetentionRate;
+  if (t <= state.refrigerationDurationMonths / 12) monthlyShare *= state.refrigerationRetentionORS;
+  
+  // STAGE 11-13
+  if (state.cingalLaunchDate !== 'does_not_launch' && year >= parseInt(state.cingalLaunchDate.split('-')[0])) monthlyShare *= state.cingalRetentionOrtho;
+  if (state.ampionLaunchDate !== 'does_not_launch' && year >= parseInt(state.ampionLaunchDate.split('-')[0])) monthlyShare *= state.ampionRetentionOrtho;
+  if (state.antiNGFLaunchDate !== 'does_not_launch' && year >= parseInt(state.antiNGFLaunchDate.split('-')[0])) monthlyShare *= state.antiNGFRetentionOrtho;
+  
+  // STAGE 14-16
+  const patientsOnTherapy = treatedWithPromo * monthlyShare;
+  const rev = patientsOnTherapy * state.frequencyOfInjectionsYearly * state.wacPrice;
+
+  const getStyle = (colorStr: string) => ({ background: colorStr + '15', borderLeft: `4px solid ${colorStr}`, padding: '16px', borderRadius: '4px', marginBottom: '16px' });
+  
+  const stages = [
+    {
+      name: "Stage 1 — Patient Universe",
+      formula: "Universe = Base Prevalence",
+      inputs: `Base: ${fmtNum(state.prevalence)}`,
+      output: fmtNum(patientUniverse),
+      color: "#00b2a9" // teal
+    },
+    {
+      name: "Stage 2 — Diagnosis",
+      formula: "Diagnosed = Universe × BaseRate × (1 + CAGR)^(Year - 2016)",
+      inputs: `Rate: ${fmtPct(state.diagnosisRate * 100)}, CAGR: ${fmtPct(state.diagnosisAnnualGrowthRate * 100)}`,
+      output: fmtNum(diagnosed),
+      color: "#1a9e75" // green
+    },
+    {
+      name: "Stage 3 — Treatment Split",
+      formula: "Treated = Diagnosed × IASTreated% × (1 + PromoLift)",
+      inputs: `IAS Rate: ${fmtPct(state.iasTreatedPctOfDiagnosed * 100)}, Lift: ${fmtPct(promoLift * 100)}`,
+      output: fmtNum(treatedWithPromo),
+      color: "#e07b2a" // orange
+    },
+    {
+      name: "Stage 5 — Peak Share Preference",
+      formula: "PeakShare = Base Preference × OverstatementAdj",
+      inputs: `Stated: ${fmtPct(state.peakShare * 100)}`,
+      output: fmtPct(peakShare * 100),
+      color: "#e07b2a" // orange
+    },
+    {
+      name: "Stage 6 — Payer Access Adjustment",
+      formula: "AccessAdjShare = PeakShare × AccessRetention × PatAssistUplift",
+      inputs: `Retention: ${fmtPct(state.pricingAdjFactorAccessImpact * 100)}, PAP: ${state.patientAssistanceProgramInPlace ? 'Yes' : 'No'}`,
+      output: fmtPct(accessAdjustedPeakShare * 100),
+      color: "#F25621" // salmon/pink
+    },
+    {
+      name: "Stage 7 — Time to Peak & Reach",
+      formula: "MonthlyShare = AccessAdjShare × UptakeCurve × ReachFactor",
+      inputs: `Years to Peak: ${state.yearsToPeak}, Reach: ${fmtPct(reachFactor * 100)}`,
+      output: fmtPct((accessAdjustedPeakShare * uptakeCurve * reachFactor) * 100),
+      color: "#F25621" // salmon/pink
+    },
+    {
+      name: "Stage 8-13 — Access & Competitive Friction",
+      formula: "Share = MonthlyShare × JCodeRet × RefrigRet × CompRet",
+      inputs: `J-Code: ${fmtPct(state.jCodeRetentionRate * 100)}, Refrig: ${fmtPct(state.refrigerationRetentionORS * 100)}`,
+      output: fmtPct(monthlyShare * 100),
+      color: "#F25621" // salmon/pink
+    },
+    {
+      name: "Stage 14-16 — Volume & Revenue Output",
+      formula: "Revenue = Treated × Share × Injections/Yr × WAC",
+      inputs: `Freq: ${state.frequencyOfInjectionsYearly}, WAC: $${state.wacPrice.toLocaleString()}`,
+      output: `$${fmtM(rev)}M`,
+      color: "#8b5cf6" // purple
+    }
+  ];
+
+  return (
+    <div style={{ marginTop: '32px', borderTop: '1px solid #e5e7eb', paddingTop: '24px' }}>
+      <button className="btn secondary" onClick={() => setIsOpen(!isOpen)} style={{ width: '100%', justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}>
+        <span>{isOpen ? '▼' : '▶'} Show Model Architecture</span>
+      </button>
+      
+      {isOpen && (
+        <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '16px' }}>Showing calculation pipeline for Peak Year (Year 5).</p>
+          {stages.map((stg, i) => (
+            <div key={i} style={getStyle(stg.color)}>
+              <h4 style={{ margin: '0 0 8px 0', color: stg.color, fontSize: '14px' }}>{stg.name}</h4>
+              <div style={{ fontSize: '13px', fontFamily: 'monospace', color: 'var(--navy)', marginBottom: '8px' }}>{stg.formula}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Inputs: {stg.inputs}</span>
+                <strong style={{ color: 'var(--navy)' }}>Output: {stg.output}</strong>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
   const [maxTab, setMaxTab] = useState(1);
@@ -64,37 +366,221 @@ export default function ForecastApp() {
   const [hasUploaded, setHasUploaded] = useState(false);
   const [aiInputValue, setAiInputValue] = useState('');
 
-  const chatScript = [
-    {who:'ai', text:"Let's build your forecast together. What is the scope of the project - add country of study, drug in question, lines of therapy involved?"},
-    {who:'user', text:"US only, our new anti-VEGF (AXPAXLI), all lines of therapy.", assump:[{k:'Scope', v:'US, (AXPAXLI), all lines'}]},
-    {who:'ai', text:"Got it. For epidemiology I'll anchor on a US diagnosed prevalence of about 1.75M patients, based on published claims and NHANES-derived estimates. Does that align with your internal numbers?"},
-    {who:'user', text:"Yes, that aligns with our internal numbers.", assump:[{k:'Diagnosed prevalence (US)', v:'1,750,000 patients'}]},
-    {who:'ai', text:"How should we handle the diagnosis and treatment funnel? Default: 85% of prevalent patients are diagnosed, and 92% of diagnosed patients initiate anti-VEGF therapy. I'll utilize this for starters does this align to your expectations?"},
-    {who:'user', text:"Yes, that aligns to our expectations.", assump:[{k:'Diagnosis rate', v:'85%'},{k:'Treatment initiation rate', v:'92%'}]},
-    {who:'ai', text:"Are there any other filters to be applied to arrive at the addressable pool?"},
-    {who:'user', text:"No.", assump:[]},
-    {who:'ai', text:"Noted. Now the competitive set — your asset launches against Eylea, Eylea HD, Vabysmo, Susvimo, Lucentis/Cimerli, and the aflibercept biosimilars (Yesafili, Opuviz). What's the core differentiator for your product: efficacy, storage or administration?"},
-    {who:'user', text:"Sustained-release Administration.", assump:[{k:'Key differentiator', v:'Sustained-release Administration'}]},
-    {who:'ai', text:"That's a meaningful differentiator against today's q8-week standard of care. I'll set the addressable segment at 65% of treated patients — naive starts plus patients likely to switch off a shorter-interval therapy. Reasonable?"},
-    {who:'user', text:"Yes, that's reasonable.", assump:[{k:'Addressable share', v:'65% of treated patients'}]},
-    {who:'ai', text:"For uptake, I'd default to 25% peak share of treated patients within 4 years, similar to how Vabysmo scaled post-launch. Want to keep that pace, or adjust?"},
-    {who:'user', text:"Keep that pace.", assump:[{k:'Peak share', v:'25%'},{k:'Years to peak', v:'4 years'}]},
-    {who:'ai', text:"What is the dosing of your product? (injections per year)"},
-    {who:'user', text:"2.", assump:[]},
-    {who:'ai', text:"Eylea HD lists around $2,645 WAC Considering the dosing of AXPAXLI, would you want to price it around $5,000 WAC?"},
-    {who:'user', text:"Price in line with that at $5,125.", assump:[{k:'Net price per injection, post-rebate (USD)', v:'$5,125'}]},
-    {who:'ai', text:"What is the average patient adherence boost you expect on your drug?"},
-    {who:'user', text:"20%", assump:[]},
-    {who:'ai', text:"Is there anything else you'd like to add or adjust?"},
-    {who:'user', text:"No.", assump:[]},
-    {who:'ai', text:"Thanks for all your inputs. Let's review the assumptions in the next sections."}
-  ];
+  type ChatControl = 
+  | { type: 'slider', key: keyof ForecastState, label: string, stops: number[], unit: string }
+  | { type: 'toggle', key: keyof ForecastState, label: string }
+  | { type: 'select', key: keyof ForecastState, label: string, options: {value:string, label:string}[] }
+  | { type: 'dateOrNever', key: keyof ForecastState, label: string };
+
+type ChatStepDef = {
+  id: string;
+  who: 'ai' | 'user';
+  text: string;
+  controls?: ChatControl[];
+  getAssumptions?: (s: ForecastState) => {k:string, v:string}[];
+  getUserReply?: (s: ForecastState) => string;
+};
+
+const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleString()}` : `${(v * (unit === '%' ? 100 : 1)).toLocaleString()}${unit === '$' ? '' : unit}`;
+
+const chatScript: ChatStepDef[] = [
+  {
+    id: 'stage0_q',
+    who: 'ai',
+    text: "Let's build your forecast together. What is the scope — country of study, drug in question, indication, and lines of therapy?"
+  },
+  {
+    id: 'stage0_a',
+    who: 'user',
+    text: "US only, AXPAXLI, wet AMD, all lines of therapy.",
+    getAssumptions: () => [{k:'Scope', v:'US / AXPAXLI / wet AMD / All LoT'}]
+  },
+  {
+    id: 'stage2_q',
+    who: 'ai',
+    text: "For the patient universe, I'll anchor on a US diagnosed prevalence of ~1.75M based on claims and NHANES estimates. Claims data supports a 4.8–5.3% base diagnosis rate. Where should we set it?",
+    controls: [
+      { type: 'slider', key: 'diagnosisRate', label: 'Diagnosis rate (base year)', stops: [0.048, 0.049, 0.051, 0.052, 0.053], unit: '%' },
+      { type: 'slider', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth rate', stops: [0.019, 0.025, 0.032, 0.045, 0.055], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.diagnosisRate*100).toFixed(1)}% base diagnosis rate.`,
+    getAssumptions: (s) => [
+      {k:'Diagnosis Rate (2016 base)', v: `${(s.diagnosisRate*100).toFixed(1)}%`},
+      {k:'Diagnosis Annual Growth', v: `${(s.diagnosisAnnualGrowthRate*100).toFixed(1)}%`}
+    ]
+  },
+  {
+    id: 'stage3_q',
+    who: 'ai',
+    text: "What % of diagnosed patients get an IAS injection in the base year? Claims support 24–32%. Also, how fast should IAS treatment rates grow annually, and what ratio of HA use to IAS should we build in?",
+    controls: [
+      { type: 'slider', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed (base yr)', stops: [0.244, 0.264, 0.284, 0.304, 0.324], unit: '%' },
+      { type: 'slider', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth rate', stops: [0.01, 0.02, 0.03, 0.035, 0.04], unit: '%' },
+      { type: 'slider', key: 'haRatioToIAS', label: 'HA-to-IAS ratio', stops: [0.30, 0.40, 0.45, 0.50, 0.55], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.iasTreatedPctOfDiagnosed*100).toFixed(1)}% treated.`,
+    getAssumptions: (s) => [
+      {k:'IAS Treated % of Diagnosed', v:`${(s.iasTreatedPctOfDiagnosed*100).toFixed(1)}%`},
+      {k:'IAS Growth Rate', v:`${(s.iasTreatedGrowthRate*100).toFixed(1)}%`},
+      {k:'HA-to-IAS Ratio', v:`${(s.haRatioToIAS*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage5_q',
+    who: 'ai',
+    text: "Stated preference typically overstates real adoption. How much should we discount it? Also let's set the clinical data profile and WAC price.",
+    controls: [
+      { type: 'slider', key: 'overstatementAdjFactor', label: 'Overstatement adjustment factor', stops: [0.10, 0.16, 0.22, 0.25, 0.30], unit: '%' },
+      { type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC pain-score data available?' },
+      { type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available?' },
+      { type: 'slider', key: 'wacPrice', label: 'WAC price per injection', stops: [400, 500, 575, 800, 1000], unit: '$' }
+    ],
+    getUserReply: (s) => `WAC $${s.wacPrice.toLocaleString()} with ${(s.overstatementAdjFactor*100).toFixed(0)}% adj.`,
+    getAssumptions: (s) => [
+      {k:'Overstatement Adj.', v:`${(s.overstatementAdjFactor*100).toFixed(0)}%`},
+      {k:'WOMAC Data', v: s.womacScoreAvailable ? 'Yes' : 'No'},
+      {k:'WAC Price', v: `$${s.wacPrice.toLocaleString()}`}
+    ]
+  },
+  {
+    id: 'stage6_q',
+    who: 'ai',
+    text: "What access hurdle applies — none, prior auth only, Pre-Cert, Pre-Cert + Step Edit, or Prior Auth + Step Edit? How much share survives that hurdle?",
+    controls: [
+      { type: 'select', key: 'payerAccessRequirement', label: 'Payer access requirement', options: [{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}] },
+      { type: 'slider', key: 'pricingAdjFactorAccessImpact', label: 'Pricing adj. — access impact (% surviving)', stops: [0.90, 0.92, 0.96, 0.97, 0.98], unit: '%' },
+      { type: 'toggle', key: 'patientAssistanceProgramInPlace', label: 'Patient assistance program in place?' }
+    ],
+    getUserReply: (s) => `${s.payerAccessRequirement.replace(/_/g, ' ')} (${(s.pricingAdjFactorAccessImpact*100).toFixed(0)}% survive).`,
+    getAssumptions: (s) => [
+      {k:'Payer Access Requirement', v: s.payerAccessRequirement},
+      {k:'Access Survival Rate', v: `${(s.pricingAdjFactorAccessImpact*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage7_q',
+    who: 'ai',
+    text: "How many years until the product hits peak share? And what % of Ortho/Rheum are reached over time?",
+    controls: [
+      { type: 'slider', key: 'yearsToPeak', label: 'Years to peak share', stops: [7, 6, 5, 4, 3], unit: ' yrs' },
+      { type: 'slider', key: 'pctORSReachedByMonth12', label: 'Ortho/Rheum reached by month 12', stops: [0.60, 0.65, 0.70, 0.75, 0.80], unit: '%' },
+      { type: 'slider', key: 'pctORSReachedByYear2', label: 'Ortho/Rheum reached by year 2', stops: [0.70, 0.75, 0.80, 0.85, 0.90], unit: '%' },
+      { type: 'slider', key: 'pctORSReachedByYear3Plus', label: 'Ortho/Rheum reached by year 3+', stops: [0.75, 0.80, 0.85, 0.90, 0.95], unit: '%' }
+    ],
+    getUserReply: (s) => `Peak in ${s.yearsToPeak} years.`,
+    getAssumptions: (s) => [
+      {k:'Years to Peak', v: `${s.yearsToPeak}`},
+      {k:'ORS Reach M12/Y2/Y3+', v: `${(s.pctORSReachedByMonth12*100).toFixed(0)}% / ${(s.pctORSReachedByYear2*100).toFixed(0)}% / ${(s.pctORSReachedByYear3Plus*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage8_q',
+    who: 'ai',
+    text: "How long does the cold-chain refrigeration requirement remain an operational friction, and what % of Ortho share survives it?",
+    controls: [
+      { type: 'slider', key: 'refrigerationDurationMonths', label: 'Refrigeration requirement duration', stops: [12, 15, 18, 24, 120], unit: ' mo' },
+      { type: 'slider', key: 'refrigerationRetentionORS', label: 'Refrigeration retention — Ortho/Surgical', stops: [0.70, 0.80, 0.88, 0.92, 0.95], unit: '%' }
+    ],
+    getUserReply: (s) => `${s.refrigerationDurationMonths} months.`,
+    getAssumptions: (s) => [
+      {k:'Refrigeration Duration', v: `${s.refrigerationDurationMonths} months`},
+      {k:'Refrigeration Retention (ORS)', v: `${(s.refrigerationRetentionORS*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage11_q0',
+    who: 'ai',
+    text: "Before modeling competitive launches — what market events or competitor launches should we factor into the share curve? Based on primary research, we'd typically flag: Cingal (HA+steroid combo), Ampion (biologic), and the anti-NGF class. Do those three cover it for now?"
+  },
+  {
+    id: 'stage11_a0',
+    who: 'user',
+    text: "Yes."
+  },
+  {
+    id: 'stage11_q1',
+    who: 'ai',
+    text: "Starting with Cingal — when, if ever, does it launch? And what % of share do we retain once it does?",
+    controls: [
+      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Cingal Launch Date' },
+      { type: 'slider', key: 'cingalRetentionOrtho', label: 'Retention Ortho', stops: [0.70, 0.72, 0.74, 0.78, 0.90], unit: '%' },
+      { type: 'slider', key: 'cingalRetentionPCP', label: 'Retention PCP', stops: [0.80, 0.82, 0.85, 0.90, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${s.cingalLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.cingalLaunchDate}`,
+    getAssumptions: (s) => [
+      {k:'Cingal Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate},
+      {k:'Cingal Retention ORS', v: `${(s.cingalRetentionOrtho*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage11_q2',
+    who: 'ai',
+    text: "Next, Ampion (biologic) — base case is typically Does Not Launch.",
+    controls: [
+      { type: 'dateOrNever', key: 'ampionLaunchDate', label: 'Ampion Launch Date' },
+      { type: 'slider', key: 'ampionRetentionOrtho', label: 'Retention Ortho', stops: [0.75, 0.80, 0.865, 0.90, 0.95], unit: '%' },
+      { type: 'slider', key: 'ampionRetentionPCP', label: 'Retention PCP', stops: [0.75, 0.80, 0.84, 0.90, 0.95], unit: '%' }
+    ],
+    getUserReply: (s) => `${s.ampionLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.ampionLaunchDate}`,
+    getAssumptions: (s) => [
+      {k:'Ampion Launch', v: s.ampionLaunchDate === 'does_not_launch' ? 'Never' : s.ampionLaunchDate}
+    ]
+  },
+  {
+    id: 'stage11_q3',
+    who: 'ai',
+    text: "Finally, the Anti-NGF class.",
+    controls: [
+      { type: 'dateOrNever', key: 'antiNGFLaunchDate', label: 'Anti-NGF Launch Date' },
+      { type: 'slider', key: 'antiNGFRetentionOrtho', label: 'Retention Ortho', stops: [0.80, 0.85, 0.90, 0.95, 1.00], unit: '%' },
+      { type: 'slider', key: 'antiNGFRetentionPCP', label: 'Retention PCP', stops: [0.90, 0.92, 0.95, 0.97, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${s.antiNGFLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.antiNGFLaunchDate}`,
+    getAssumptions: (s) => [
+      {k:'Anti-NGF Launch', v: s.antiNGFLaunchDate === 'does_not_launch' ? 'Never' : s.antiNGFLaunchDate}
+    ]
+  },
+  {
+    id: 'stage14_q',
+    who: 'ai',
+    text: "How many injections per patient per year should we model?",
+    controls: [
+      { type: 'slider', key: 'frequencyOfInjectionsYearly', label: 'Injection frequency (per patient/year)', stops: [1.0, 1.3, 1.5, 1.7, 2.0], unit: '/yr' }
+    ],
+    getUserReply: (s) => `${s.frequencyOfInjectionsYearly}/year.`,
+    getAssumptions: (s) => [
+      {k:'Injection Frequency', v: `${s.frequencyOfInjectionsYearly}/year`}
+    ]
+  },
+  {
+    id: 'final',
+    who: 'ai',
+    text: "Thanks — I've captured all assumptions across the 16 model stages. Let's review them in the Model tab before running the full forecast."
+  }
+];
 
   const runChat = () => {
     setChatMessages([chatScript[0]]);
     setAssumptions([]);
     setChatStarted(true);
-    setScriptStep(1); // Point to the first user response
+    setScriptStep(0); 
+  };
+
+  const advanceScript = (currentStepIdx: number) => {
+    const nextIdx = currentStepIdx + 1;
+    if (nextIdx < chatScript.length) {
+      const nextStep = chatScript[nextIdx];
+      
+      // If the next step is a pre-written user text (no controls, just text), 
+      // we don't automatically show it yet, we wait for user to type. 
+      // Unless it's an AI message, then we show it automatically.
+      if (nextStep.who === 'ai') {
+        setTimeout(() => {
+          setChatMessages(prev => [...prev, nextStep]);
+          setScriptStep(nextIdx);
+        }, 600);
+      }
+    }
   };
 
   const handleDemoSubmit = (e?: React.KeyboardEvent<HTMLInputElement>) => {
@@ -105,44 +591,36 @@ export default function ForecastApp() {
     setDemoInput('');
     setChatMessages(prev => [...prev, { who: 'user', text: currentInput }]);
 
-    const expectedUserStep = chatScript[scriptStep];
-    if (expectedUserStep && expectedUserStep.who === 'user') {
-      let finalAssumps = expectedUserStep.assump ? [...expectedUserStep.assump] : [];
-      
-      const prevAiMessage = chatScript[scriptStep - 1];
-      if (prevAiMessage) {
-        if (prevAiMessage.text.includes("dosing of your product")) {
-          finalAssumps = finalAssumps.filter(a => a.k !== 'Injections / year');
-          finalAssumps.push({ k: 'Injections / year', v: '2' });
-        } else if (prevAiMessage.text.includes("patient adherence boost")) {
-          finalAssumps = finalAssumps.filter(a => a.k !== 'Patient adherence boost');
-          finalAssumps.push({ k: 'Patient adherence boost', v: '20%' });
-        }
+    const nextIdx = scriptStep + 1;
+    const expectedStep = chatScript[nextIdx];
+    
+    if (expectedStep && expectedStep.who === 'user') {
+      if (expectedStep.getAssumptions) {
+        setAssumptions(prev => [...prev, ...expectedStep.getAssumptions!(state)]);
       }
-
-      if (finalAssumps.length > 0) {
-        setAssumptions(prev => {
-          const newKeys = finalAssumps.map(a => a.k);
-          const filtered = prev.filter(a => !newKeys.includes(a.k));
-          return [...filtered, ...finalAssumps];
-        });
-      }
+      setScriptStep(nextIdx);
+      advanceScript(nextIdx); // triggers next AI message
     }
+  };
 
-    const nextAiIndex = scriptStep + 1;
-    if (nextAiIndex < chatScript.length) {
-      setTimeout(() => {
-        setChatMessages(prev => [...prev, chatScript[nextAiIndex]]);
-        setScriptStep(nextAiIndex + 1);
-      }, 800);
+  const handleControlConfirm = () => {
+    const currentStep = chatScript[scriptStep];
+    
+    if (currentStep.getAssumptions) {
+      setAssumptions(prev => [...prev, ...currentStep.getAssumptions!(state)]);
     }
+    
+    const userReplyText = currentStep.getUserReply ? currentStep.getUserReply(state) : 'Confirmed.';
+    setChatMessages(prev => [...prev, { who: 'user', text: userReplyText }]);
+    
+    advanceScript(scriptStep); // advances to the next AI message
   };
 
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
-  }, [chatMessages]);
+  }, [chatMessages, state]);
 
   const goPage = (n: number) => {
     if (n > maxTab) {
@@ -153,9 +631,295 @@ export default function ForecastApp() {
     window.scrollTo(0, 0);
   };
 
-  const handleStateChange = (key: keyof ForecastState, value: number) => {
-    setState(prev => ({ ...prev, [key]: value }));
-    setScenarioState(prev => ({ ...prev, [key]: value }));
+  const [openSections, setOpenSections] = useState<Set<number>>(new Set([1]));
+
+  const quickSetStops: Record<number, Record<string, number[]>> = {
+  "1": {
+    "prevalence": [
+      1500000.0,
+      1620000.0,
+      1750000.0,
+      1880000.0,
+      2000000.0
+    ],
+    "diagnosisRate": [
+      0.048,
+      0.049,
+      0.051,
+      0.052,
+      0.053
+    ],
+    "diagnosisAnnualGrowthRate": [
+      0.019,
+      0.025,
+      0.032,
+      0.045,
+      0.055
+    ]
+  },
+  "2": {
+    "iasTreatedPctOfDiagnosed": [
+      0.244,
+      0.264,
+      0.284,
+      0.304,
+      0.324
+    ],
+    "iasTreatedGrowthRate": [
+      0.01,
+      0.02,
+      0.03,
+      0.035,
+      0.04
+    ],
+    "haRatioToIAS": [
+      0.3,
+      0.4,
+      0.45,
+      0.5,
+      0.55
+    ],
+    "haRatioGrowthRate": [
+      -0.02,
+      -0.015,
+      -0.01,
+      -0.005,
+      0.0
+    ],
+    "iasAndHATreatedBoth": [
+      0.1,
+      0.125,
+      0.15,
+      0.175,
+      0.2
+    ],
+    "initialAdditionalMarketGrowth": [
+      0.025,
+      0.035,
+      0.045,
+      0.055,
+      0.065
+    ],
+    "annualDecayRateOfAdditionalGrowth": [
+      0.15,
+      0.175,
+      0.2,
+      0.225,
+      0.25
+    ]
+  },
+  "3": {
+    "overstatementAdjFactor": [
+      0.1,
+      0.16,
+      0.22,
+      0.25,
+      0.3
+    ],
+    "wacPrice": [
+      400.0,
+      500.0,
+      575.0,
+      800.0,
+      1000.0
+    ],
+    "newMarketResearchAdjOrtho": [
+      0.95,
+      1.1,
+      1.25,
+      1.4,
+      1.55
+    ],
+    "newMarketResearchAdjRheum": [
+      0.9,
+      0.95,
+      1.0,
+      1.05,
+      1.1
+    ]
+  },
+  "4": {
+    "pricingAdjFactorAccessImpact": [
+      0.9,
+      0.92,
+      0.96,
+      0.97,
+      0.98
+    ],
+    "pricingAdjPatientAssistanceImpact": [
+      1.0,
+      1.05,
+      1.1,
+      1.15,
+      1.2
+    ]
+  },
+  "5": {
+    "yearsToPeak": [
+      7.0,
+      6.0,
+      5.0,
+      4.0,
+      3.0
+    ],
+    "pctORSReachedByMonth12": [
+      0.6,
+      0.65,
+      0.7,
+      0.75,
+      0.8
+    ],
+    "pctORSReachedByYear2": [
+      0.7,
+      0.75,
+      0.8,
+      0.85,
+      0.9
+    ],
+    "pctORSReachedByYear3Plus": [
+      0.75,
+      0.8,
+      0.85,
+      0.9,
+      0.95
+    ],
+    "pctPCPReachedByMonth12": [
+      0.4,
+      0.46,
+      0.524,
+      0.58,
+      0.64
+    ],
+    "pctPCPReachedByYear2": [
+      0.52,
+      0.56,
+      0.6,
+      0.64,
+      0.68
+    ],
+    "pctPCPReachedByYear3Plus": [
+      0.56,
+      0.6,
+      0.65,
+      0.7,
+      0.75
+    ]
+  },
+  "6": {
+    "jCodeWindowMonths": [
+      6.0,
+      9.0,
+      12.0,
+      15.0,
+      18.0
+    ],
+    "jCodeRetentionRate": [
+      0.8,
+      0.84,
+      0.88,
+      0.91,
+      0.94
+    ],
+    "refrigerationDurationMonths": [
+      12.0,
+      15.0,
+      18.0,
+      24.0,
+      120.0
+    ],
+    "refrigerationRetentionORS": [
+      0.7,
+      0.8,
+      0.88,
+      0.92,
+      0.95
+    ],
+    "refrigerationRetentionRheumOther": [
+      0.7,
+      0.8,
+      0.88,
+      0.92,
+      0.95
+    ]
+  },
+  "7": {
+    "cingalRetentionOrtho": [
+      0.7,
+      0.72,
+      0.74,
+      0.78,
+      0.9
+    ],
+    "cingalRetentionPCP": [
+      0.8,
+      0.82,
+      0.85,
+      0.9,
+      1.0
+    ],
+    "ampionRetentionOrtho": [
+      0.75,
+      0.8,
+      0.865,
+      0.9,
+      0.95
+    ],
+    "ampionRetentionPCP": [
+      0.75,
+      0.8,
+      0.84,
+      0.9,
+      0.95
+    ],
+    "antiNGFRetentionOrtho": [
+      0.8,
+      0.85,
+      0.9,
+      0.95,
+      1.0
+    ],
+    "antiNGFRetentionPCP": [
+      0.9,
+      0.92,
+      0.95,
+      0.97,
+      1.0
+    ]
+  },
+  "8": {
+    "frequencyOfInjectionsYearly": [
+      1.0,
+      1.3,
+      1.5,
+      1.7,
+      2.0
+    ]
+  }
+};
+  const handleQuickSet = (sectionIdx: number, level: 0 | 2 | 4) => {
+    const sectionMap = quickSetStops[sectionIdx];
+    if (!sectionMap) return;
+    
+    const updates: Partial<ForecastState> = {};
+    for (const [key, stops] of Object.entries(sectionMap)) {
+      updates[key as keyof ForecastState] = stops[level] as never;
+    }
+    
+    setState(prev => ({ ...prev, ...updates }));
+    setScenarioState(prev => ({ ...prev, ...updates }));
+  };
+
+  function toggleSection(idx: number) {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  }
+
+  const handleStateChange = (key: keyof ForecastState, value: number | string | boolean) => {
+    setState(prev => ({ ...prev, [key]: value as never }));
+    setScenarioState(prev => ({ ...prev, [key]: value as never }));
   };
 
   const handleScenarioChange = (key: keyof ForecastState, value: number) => {
@@ -335,6 +1099,123 @@ export default function ForecastApp() {
     { name: 'Base', tag: 'tag-base', s: state }
   ];
   const scenarios = [...defaultScenarios, ...savedScenarios];
+  const renderAssumptions = (asDropdown = false) => (
+    <>
+      <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
+            <SliderControl asDropdown={asDropdown} label="Prevalence (diagnosed patients)" fieldKey="prevalence" stops={[1500000, 1620000, 1750000, 1880000, 2000000]} currentValue={state.prevalence} unit=" pts" onAskAI={() => openAiModal('prevalence')} onChange={v => handleStateChange('prevalence', v)} />
+            <SliderControl asDropdown={asDropdown} label="Diagnosis rate (base year)" fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={state.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => handleStateChange('diagnosisRate', v)} />
+            <SliderControl asDropdown={asDropdown} label="Diagnosis annual growth rate" fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={state.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => handleStateChange('diagnosisAnnualGrowthRate', v)} />
+          </AccordionSection>
+
+          <AccordionSection idx={2} title="Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
+            <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
+            <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
+            <SliderControl asDropdown={asDropdown} label="HA-to-IAS ratio" fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={state.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => handleStateChange('haRatioToIAS', v)} />
+            <SliderControl asDropdown={asDropdown} label="HA ratio annual growth rate" fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={state.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => handleStateChange('haRatioGrowthRate', v)} />
+            <SliderControl asDropdown={asDropdown} label="IAS+HA treated (both) %" fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={state.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => handleStateChange('iasAndHATreatedBoth', v)} />
+            <SliderControl asDropdown={asDropdown} label="Initial promotional market lift" fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={state.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => handleStateChange('initialAdditionalMarketGrowth', v)} />
+            <SliderControl asDropdown={asDropdown} label="Annual decay of promo lift" fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={state.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => handleStateChange('annualDecayRateOfAdditionalGrowth', v)} />
+          </AccordionSection>
+
+          <AccordionSection idx={3} title="Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
+            <SliderControl asDropdown={asDropdown} label="Overstatement adjustment factor" fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={state.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => handleStateChange('overstatementAdjFactor', v)} />
+            <ToggleControl label="WOMAC pain-score data available?" fieldKey="womacScoreAvailable" value={state.womacScoreAvailable} onChange={v => handleStateChange('womacScoreAvailable', v)} />
+            <ToggleControl label="Diabetes/glycemic data available?" fieldKey="diabetesGlycemicDataAvailable" value={state.diabetesGlycemicDataAvailable} onChange={v => handleStateChange('diabetesGlycemicDataAvailable', v)} />
+            <SliderControl asDropdown={asDropdown} label="WAC price per injection" fieldKey="wacPrice" stops={[400, 500, 575, 800, 1000]} currentValue={state.wacPrice} unit="$" onAskAI={() => openAiModal('wacPrice')} onChange={v => handleStateChange('wacPrice', v)} />
+            <SliderControl asDropdown={asDropdown} label="Market research adj. — Ortho" fieldKey="newMarketResearchAdjOrtho" stops={[0.95, 1.10, 1.25, 1.40, 1.55]} currentValue={state.newMarketResearchAdjOrtho} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjOrtho')} onChange={v => handleStateChange('newMarketResearchAdjOrtho', v)} />
+            <SliderControl asDropdown={asDropdown} label="Market research adj. — Rheum/PCP" fieldKey="newMarketResearchAdjRheum" stops={[0.90, 0.95, 1.00, 1.05, 1.10]} currentValue={state.newMarketResearchAdjRheum} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjRheum')} onChange={v => handleStateChange('newMarketResearchAdjRheum', v)} />
+          </AccordionSection>
+
+          <AccordionSection idx={4} title="Payer Access" color="#d9534f" isOpen={openSections.has(4)} onQuickSet={(level) => handleQuickSet(4, level)} onToggle={() => toggleSection(4)}>
+            <SelectControl label="Payer access requirement" fieldKey="payerAccessRequirement" options={[{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}]} value={state.payerAccessRequirement} onAskAI={() => openAiModal('payerAccessRequirement')} onChange={v => handleStateChange('payerAccessRequirement', v)} />
+            <SliderControl asDropdown={asDropdown} label="Pricing adj. — access impact (% surviving)" fieldKey="pricingAdjFactorAccessImpact" stops={[0.90, 0.92, 0.96, 0.97, 0.98]} currentValue={state.pricingAdjFactorAccessImpact} unit="%" onAskAI={() => openAiModal('pricingAdjFactorAccessImpact')} onChange={v => handleStateChange('pricingAdjFactorAccessImpact', v)} />
+            <ToggleControl label="Patient assistance program in place?" fieldKey="patientAssistanceProgramInPlace" value={state.patientAssistanceProgramInPlace} onChange={v => handleStateChange('patientAssistanceProgramInPlace', v)} />
+            <SliderControl asDropdown={asDropdown} label="Pricing adj. — PAP lift" fieldKey="pricingAdjPatientAssistanceImpact" stops={[1.00, 1.05, 1.10, 1.15, 1.20]} currentValue={state.pricingAdjPatientAssistanceImpact} unit="%" onAskAI={() => openAiModal('pricingAdjPatientAssistanceImpact')} onChange={v => handleStateChange('pricingAdjPatientAssistanceImpact', v)} />
+          </AccordionSection>
+
+          <AccordionSection idx={5} title="Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
+            <SliderControl asDropdown={asDropdown} label="Years to peak share" fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={state.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => handleStateChange('yearsToPeak', v)} />
+            <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by month 12" fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={state.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => handleStateChange('pctORSReachedByMonth12', v)} />
+            <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by year 2" fieldKey="pctORSReachedByYear2" stops={[0.70, 0.75, 0.80, 0.85, 0.90]} currentValue={state.pctORSReachedByYear2} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear2')} onChange={v => handleStateChange('pctORSReachedByYear2', v)} />
+            <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by year 3+" fieldKey="pctORSReachedByYear3Plus" stops={[0.75, 0.80, 0.85, 0.90, 0.95]} currentValue={state.pctORSReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear3Plus')} onChange={v => handleStateChange('pctORSReachedByYear3Plus', v)} />
+            <SliderControl asDropdown={asDropdown} label="PCP/Other reached by month 12" fieldKey="pctPCPReachedByMonth12" stops={[0.40, 0.46, 0.524, 0.58, 0.64]} currentValue={state.pctPCPReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctPCPReachedByMonth12')} onChange={v => handleStateChange('pctPCPReachedByMonth12', v)} />
+            <SliderControl asDropdown={asDropdown} label="PCP/Other reached by year 2" fieldKey="pctPCPReachedByYear2" stops={[0.52, 0.56, 0.60, 0.64, 0.68]} currentValue={state.pctPCPReachedByYear2} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear2')} onChange={v => handleStateChange('pctPCPReachedByYear2', v)} />
+            <SliderControl asDropdown={asDropdown} label="PCP/Other reached by year 3+" fieldKey="pctPCPReachedByYear3Plus" stops={[0.56, 0.60, 0.65, 0.70, 0.75]} currentValue={state.pctPCPReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear3Plus')} onChange={v => handleStateChange('pctPCPReachedByYear3Plus', v)} />
+          </AccordionSection>
+
+          <AccordionSection idx={6} title="Access Friction" color="#d9534f" isOpen={openSections.has(6)} onQuickSet={(level) => handleQuickSet(6, level)} onToggle={() => toggleSection(6)}>
+            <SliderControl asDropdown={asDropdown} label="J-Code window duration" fieldKey="jCodeWindowMonths" stops={[6, 9, 12, 15, 18]} currentValue={state.jCodeWindowMonths} unit=" mo" onAskAI={() => openAiModal('jCodeWindowMonths')} onChange={v => handleStateChange('jCodeWindowMonths', v)} />
+            <SliderControl asDropdown={asDropdown} label="J-Code retention rate (misc code)" fieldKey="jCodeRetentionRate" stops={[0.80, 0.84, 0.88, 0.91, 0.94]} currentValue={state.jCodeRetentionRate} unit="%" onAskAI={() => openAiModal('jCodeRetentionRate')} onChange={v => handleStateChange('jCodeRetentionRate', v)} />
+            <SliderControl asDropdown={asDropdown} label="Refrigeration requirement duration" fieldKey="refrigerationDurationMonths" stops={[12, 15, 18, 24, 120]} currentValue={state.refrigerationDurationMonths} unit=" mo" onAskAI={() => openAiModal('refrigerationDurationMonths')} onChange={v => handleStateChange('refrigerationDurationMonths', v)} />
+            <SliderControl asDropdown={asDropdown} label="Refrigeration retention — Ortho/Surgical" fieldKey="refrigerationRetentionORS" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={state.refrigerationRetentionORS} unit="%" onAskAI={() => openAiModal('refrigerationRetentionORS')} onChange={v => handleStateChange('refrigerationRetentionORS', v)} />
+            <SliderControl asDropdown={asDropdown} label="Refrigeration retention — Rheum/Other" fieldKey="refrigerationRetentionRheumOther" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={state.refrigerationRetentionRheumOther} unit="%" onAskAI={() => openAiModal('refrigerationRetentionRheumOther')} onChange={v => handleStateChange('refrigerationRetentionRheumOther', v)} />
+          </AccordionSection>
+
+          <AccordionSection idx={7} title="Competitive Events" color="#c0392b" isOpen={openSections.has(7)} onQuickSet={(level) => handleQuickSet(7, level)} onToggle={() => toggleSection(7)}>
+            <div className="competitor-card">
+              <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
+              <DateOrNeverControl label="Launch Date" fieldKey="cingalLaunchDate" value={state.cingalLaunchDate} onChange={v => handleStateChange('cingalLaunchDate', v)} />
+              <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={state.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => handleStateChange('cingalRetentionOrtho', v)} />
+              <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={state.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => handleStateChange('cingalRetentionPCP', v)} />
+            </div>
+            
+            <div className="competitor-card">
+              <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
+              <DateOrNeverControl label="Launch Date" fieldKey="ampionLaunchDate" value={state.ampionLaunchDate} onChange={v => handleStateChange('ampionLaunchDate', v)} />
+              <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={state.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => handleStateChange('ampionRetentionOrtho', v)} />
+              <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={state.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => handleStateChange('ampionRetentionPCP', v)} />
+            </div>
+
+            <div className="competitor-card">
+              <div className="competitor-card-title">Anti-NGF class</div>
+              <DateOrNeverControl label="Launch Date" fieldKey="antiNGFLaunchDate" value={state.antiNGFLaunchDate} onChange={v => handleStateChange('antiNGFLaunchDate', v)} />
+              <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="antiNGFRetentionOrtho" stops={[0.80, 0.85, 0.90, 0.95, 1.00]} currentValue={state.antiNGFRetentionOrtho} unit="%" onAskAI={() => openAiModal('antiNGFRetentionOrtho')} onChange={v => handleStateChange('antiNGFRetentionOrtho', v)} />
+              <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="antiNGFRetentionPCP" stops={[0.90, 0.92, 0.95, 0.97, 1.00]} currentValue={state.antiNGFRetentionPCP} unit="%" onAskAI={() => openAiModal('antiNGFRetentionPCP')} onChange={v => handleStateChange('antiNGFRetentionPCP', v)} />
+            </div>
+          </AccordionSection>
+
+          <AccordionSection idx={8} title="Volume & Revenue" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
+            <SliderControl asDropdown={asDropdown} label="Injection frequency (per patient/year)" fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={state.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => handleStateChange('frequencyOfInjectionsYearly', v)} />
+          </AccordionSection>
+
+          <div className="card">
+            <h3>Patient flow funnel</h3>
+            <div className="funnel funnelBody">
+              {funnelRows.map((r, i) => {
+                const pct = Math.max(2, (r.val / r.max) * 100);
+                return (
+                  <div key={i} className="funnel-row">
+                    <div className="flabel">
+                      <span className="fname">{r.name}</span>
+                      <span className="fval">{fmtNum(r.val)}</span>
+                    </div>
+                    <div className="funnel-bar-bg">
+                      <div className="funnel-bar-fill" style={{ width: `${pct}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>Forecasting algorithm</h3>
+            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>Select the algorithm to be used for generating the forecast.</p>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <select 
+                value={selectedModel} 
+                onChange={e => setSelectedModel(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '400px', background: '#fff' }}
+              >
+                <option value="SMA">SMA</option>
+                <option value="Exponential Smoothing">Exponential Smoothing</option>
+                <option value="ARIMA">ARIMA</option>
+              </select>
+            </div>
+          </div>
+    </>
+  );
+
 
   return (
     <>
@@ -376,7 +1257,7 @@ export default function ForecastApp() {
         })}
       </nav>
 
-      <main>
+      <main style={{ maxWidth: activeTab === 4 ? '100%' : '1080px', transition: 'max-width 0.3s ease', padding: activeTab === 4 ? '28px' : '28px 24px 80px' }}>
         {/* PAGE 1 : WELCOME */}
         <section className={`page ${activeTab === 1 ? 'active' : ''}`} id="page-1">
           <h1>Forecast through conversation, not spreadsheets</h1>
@@ -433,46 +1314,67 @@ export default function ForecastApp() {
 
           <div className="chat-wrap">
             <div className="card chat-thread" id="chatThread" ref={chatRef} style={{ background: '#f9fafb' }}>
-              {chatMessages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', gap: '12px', justifyContent: msg.who === 'user' ? 'flex-end' : 'flex-start', marginBottom: '16px' }}>
-                  <div className={`bubble ${msg.who === 'ai' ? 'ai' : 'user'}`} style={{ 
-                    animationDelay: '0s', 
-                    margin: 0, 
-                    border: msg.who === 'ai' ? '1px solid #e5e7eb' : 'none', 
-                    background: msg.who === 'ai' ? '#ffffff' : '#0f7696', 
-                    color: msg.who === 'ai' ? '#374151' : '#ffffff',
-                    boxShadow: msg.who === 'ai' ? '0 1px 2px rgba(0,0,0,0.02)' : 'none',
-                    borderRadius: '12px',
-                    borderTopRightRadius: msg.who === 'user' ? '2px' : '12px',
-                    borderTopLeftRadius: msg.who === 'ai' ? '2px' : '12px'
-                  }}>
-                    {msg.text}
-                  </div>
-                  {msg.who === 'user' && (
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fef0e7', color: '#e78c52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                {chatMessages.map((msg, i) => {
+                  const isLast = i === chatMessages.length - 1;
+                  const isAiControlStep = msg.who === 'ai' && msg.controls && isLast;
+                  
+                  return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.who === 'user' ? 'flex-end' : 'flex-start', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: msg.who === 'user' ? 'flex-end' : 'flex-start', width: '100%' }}>
+                      <div className={`bubble ${msg.who === 'ai' ? 'ai' : 'user'}`} style={{ 
+                        margin: 0, 
+                        border: msg.who === 'ai' ? '1px solid #e5e7eb' : 'none', 
+                        background: msg.who === 'ai' ? '#ffffff' : '#0f7696', 
+                        color: msg.who === 'ai' ? '#374151' : '#ffffff',
+                        boxShadow: msg.who === 'ai' ? '0 1px 2px rgba(0,0,0,0.02)' : 'none',
+                        borderRadius: '12px',
+                        borderTopRightRadius: msg.who === 'user' ? '2px' : '12px',
+                        borderTopLeftRadius: msg.who === 'ai' ? '2px' : '12px'
+                      }}>
+                        {msg.text}
+                        
+                        {isAiControlStep && (
+                          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {msg.controls.map((ctrl: any, idx: number) => {
+                              if (ctrl.type === 'slider') return <SliderControl asDropdown={asDropdown} key={idx} label={ctrl.label} fieldKey={ctrl.key} stops={ctrl.stops} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
+                              if (ctrl.type === 'toggle') return <ToggleControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as boolean} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
+                              if (ctrl.type === 'select') return <SelectControl key={idx} label={ctrl.label} fieldKey={ctrl.key} options={ctrl.options} value={state[ctrl.key as keyof ForecastState] as string} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
+                              if (ctrl.type === 'dateOrNever') return <DateOrNeverControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as string} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
+                              return null;
+                            })}
+                            <button className="btn" onClick={handleControlConfirm} style={{ alignSelf: 'flex-end', marginTop: '8px' }}>Confirm</button>
+                          </div>
+                        )}
+                      </div>
+                      {msg.who === 'user' && (
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fef0e7', color: '#e78c52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-              <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
-                <input 
-                  type="text" 
-                  value={demoInput}
-                  onChange={e => setDemoInput(e.target.value)}
-                  onKeyDown={handleDemoSubmit}
-                  placeholder={scriptStep >= chatScript.length ? "Conversation complete" : "Type your answer..."}
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
-                  disabled={scriptStep >= chatScript.length || !chatStarted}
-                />
-                <button 
-                  className="btn" 
-                  onClick={() => handleDemoSubmit()}
-                  disabled={scriptStep >= chatScript.length || !chatStarted}
-                >Send</button>
+                  </div>
+                )})}
+                
+                {(!chatMessages.length || (chatMessages[chatMessages.length-1].who === 'ai' && !chatMessages[chatMessages.length-1].controls && chatScript[scriptStep+1]?.who === 'user')) && (
+                  <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      value={demoInput}
+                      onChange={e => setDemoInput(e.target.value)}
+                      onKeyDown={handleDemoSubmit}
+                      placeholder={scriptStep >= chatScript.length ? "Conversation complete" : "Type your answer..."}
+                      style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                      disabled={scriptStep >= chatScript.length || !chatStarted}
+                    />
+                    <button 
+                      className="btn" 
+                      onClick={() => handleDemoSubmit()}
+                      disabled={scriptStep >= chatScript.length || !chatStarted}
+                    >Send</button>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="card assump-list" id="liveAssumptions" ref={assumpRef}>
+              <div className="card assump-list" id="liveAssumptions" ref={assumpRef}>
               <h3>Assumptions captured</h3>
               <div id="liveAssumptionsBody" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {assumptions.length === 0 ? 'Waiting for conversation to start…' : (
@@ -502,127 +1404,7 @@ export default function ForecastApp() {
             <strong>What is ✨ Ask AI?</strong> Click this button next to any assumption to open the AI assistant. You can use it to validate your inputs against market research, ask for suggested values based on recent data, or even upload documents to automatically extract the right number.
           </div>
 
-          <div className="grid2">
-            <div className="card">
-              <h3>Epidemiology &amp; treatment funnel (US)</h3>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Diagnosed prevalence
-                  <button onClick={() => openAiModal('prevalence')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={state.prevalence} step="10000" onChange={(e) => handleStateChange('prevalence', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Diagnosis rate (% of prevalence diagnosed)
-                  <button onClick={() => openAiModal('diagnosisRate')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={Math.round(state.diagnosisRate * 100)} step="1" onChange={(e) => handleStateChange('diagnosisRate', parseFloat(e.target.value) / 100)} />
-              </div>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Treatment initiation rate (% of diagnosed treated)
-                  <button onClick={() => openAiModal('treatmentRate')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={Math.round(state.treatmentRate * 100)} step="1" onChange={(e) => handleStateChange('treatmentRate', parseFloat(e.target.value) / 100)} />
-              </div>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Addressable share (naive + switch-eligible, % of treated)
-                  <button onClick={() => openAiModal('addressableShare')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={Math.round(state.addressableShare * 100)} step="1" onChange={(e) => handleStateChange('addressableShare', parseFloat(e.target.value) / 100)} />
-              </div>
-            </div>
-
-            <div className="card">
-              <h3>Pricing &amp; adherence</h3>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Net price per injection, post-rebate (USD)
-                  <button onClick={() => openAiModal('netPrice')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={state.netPrice} step="50" onChange={(e) => handleStateChange('netPrice', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Injections per patient per year
-                  <button onClick={() => openAiModal('injectionsPerYear')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={state.injectionsPerYear} step="0.5" onChange={(e) => handleStateChange('injectionsPerYear', parseFloat(e.target.value))} />
-              </div>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <div className="flex-between" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  Patient adherence boost (%)
-                  <button onClick={() => openAiModal('compliance')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </div>
-                <input type="number" value={Math.round(state.compliance * 100)} step="1" onChange={(e) => handleStateChange('compliance', parseFloat(e.target.value) / 100)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid2">
-            <div className="card">
-              <h3>Uptake &amp; share</h3>
-              <div className="field-group">
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Peak market share of treated patients (%)
-                  <button onClick={() => openAiModal('peakShare')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={Math.round(state.peakShare * 100)} step="1" onChange={(e) => handleStateChange('peakShare', parseFloat(e.target.value) / 100)} />
-              </div>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Years to reach peak share
-                  <button onClick={() => openAiModal('yearsToPeak')} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'var(--teal-light)', color: 'var(--teal)', border: 'none', cursor: 'pointer' }}>✨ Ask AI</button>
-                </label>
-                <input type="number" value={state.yearsToPeak} step="1" onChange={(e) => handleStateChange('yearsToPeak', parseFloat(e.target.value))} />
-              </div>
-            </div>
-            <div className="card">
-              <h3 style={{ marginTop: '18px' }}>Product profile</h3>
-              <div className="field-group">
-                <label className="field">Key differentiator</label>
-                <input type="text" defaultValue="Sustained-release Administration" />
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Patient flow funnel</h3>
-            <div className="funnel" id="funnelBody">
-              {funnelRows.map((r, i) => {
-                const pct = Math.max(2, (r.val / r.max) * 100);
-                return (
-                  <div key={i} className="funnel-row">
-                    <div className="flabel">
-                      <span className="fname">{r.name}</span>
-                      <span className="fval">{fmtNum(r.val)}</span>
-                    </div>
-                    <div className="funnel-bar-bg">
-                      <div className="funnel-bar-fill" style={{ width: `${pct}%` }}></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Forecasting algorithm</h3>
-            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>Select the algorithm to be used for generating the forecast.</p>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <select 
-                value={selectedModel} 
-                onChange={e => setSelectedModel(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', outline: 'none', width: '100%', maxWidth: '400px', background: '#fff' }}
-              >
-                <option value="SMA">SMA</option>
-                <option value="Exponential Smoothing">Exponential Smoothing</option>
-                <option value="ARIMA">ARIMA</option>
-              </select>
-            </div>
-          </div>
+          {renderAssumptions(activeTab === 4)}
 
           <div style={{ textAlign: 'right', marginTop: '24px' }}>
             <button className="btn secondary" onClick={resetAssumptions} style={{ marginRight: '8px' }}>Reset to conversation defaults</button>
@@ -632,35 +1414,37 @@ export default function ForecastApp() {
 
         {/* PAGE 4 : FORECAST DASHBOARD */}
         <section className={`page ${activeTab === 4 ? 'active' : ''}`} id="page-4">
-          <h1>Forecast dashboard</h1>
-          <p className="lead">Seven-year revenue and patient forecast based on your current assumptions.</p>
-
-          <div className="grid3" id="dashMetrics">
-            <div className="metric">
-              <div className="label">Peak-year net revenue</div>
-              <div className="value">{fmtM(f.peakRevenue)}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start' }}>
+            <div style={{ position: 'sticky', top: '24px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', paddingRight: '8px' }}>
+              {renderAssumptions(activeTab === 4)}
             </div>
-            <div className="metric">
-              <div className="label">Peak market share</div>
-              <div className="value">{fmtPct(state.peakShare * 100)}</div>
+            <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '24px' }} id="dashMetrics">
+              <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Peak</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.peakRevenue)}</div>
+              </div>
+              <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Peak Share</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtPct(state.peakShare * 100)}</div>
+              </div>
+              <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Peak Patients</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtNum(f.addressable * state.peakShare)}</div>
+              </div>
+              <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 1</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.cumulativeRevenue[0])}</div>
+              </div>
+              <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 2</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.cumulativeRevenue[1])}</div>
+              </div>
+              <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 3</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.cumulativeRevenue[2])}</div>
+              </div>
             </div>
-            <div className="metric">
-              <div className="label">Peak patients on therapy</div>
-              <div className="value">{fmtNum(f.addressable * state.peakShare)}</div>
-            </div>
-            <div className="metric">
-              <div className="label">1-year revenue</div>
-              <div className="value">{fmtM(f.cumulativeRevenue[0])}</div>
-            </div>
-            <div className="metric">
-              <div className="label">2-year cumulative revenue</div>
-              <div className="value">{fmtM(f.cumulativeRevenue[1])}</div>
-            </div>
-            <div className="metric">
-              <div className="label">3-year cumulative revenue</div>
-              <div className="value">{fmtM(f.cumulativeRevenue[2])}</div>
-            </div>
-          </div>
 
           <div className="card">
             <h3>Net year revenue forecast, US ($)</h3>
@@ -715,9 +1499,14 @@ export default function ForecastApp() {
             </table>
           </div>
 
+          <ModelArchitecturePanel state={state} />
+          <div style={{ marginTop: '24px' }}></div>
+
           <div style={{ textAlign: 'right' }}>
             <button className="btn secondary" onClick={() => goPage(6)} style={{ marginRight: '8px' }}>Explore scenarios</button>
             <button className="btn" onClick={() => goPage(5)}>View key insights →</button>
+          </div>
+                    </div>
           </div>
         </section>
 
