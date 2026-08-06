@@ -217,7 +217,7 @@ export function computeForecast(s: ForecastState) {
   const papMultiplier = s.patientAssistanceProgramInPlace ? s.pricingAdjPatientAssistanceImpact : 1.0;
   const adjustedPeakShare = basePeakShare * s.pricingAdjFactorAccessImpact * papMultiplier;
   
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     const year = LAUNCH_YEAR + i;
     const t = i; // years since launch, 0-indexed
 
@@ -327,8 +327,16 @@ export function computeForecast(s: ForecastState) {
     254686453,
     600051917,
     836669581,
-    911430289,
-    null // Year 7
+    911430289
+  ];
+
+  const zilrettaTreatments = [
+    567,
+    70391,
+    442933,
+    1043569,
+    1455078,
+    1585096
   ];
   
   return {
@@ -342,6 +350,7 @@ export function computeForecast(s: ForecastState) {
     cumulative,
     adjustedPeakShare,
     adjustedPeakPatients,
-    zilrettaActuals
+    zilrettaActuals,
+    zilrettaTreatments
   };
 }

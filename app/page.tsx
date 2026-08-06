@@ -132,7 +132,7 @@ function SliderControl({
         value={currentIdx}
         className="slider-input"
         onChange={e => onChange(stops[parseInt(e.target.value)])}
-        style={{ background: `linear-gradient(to right, ${activeColor} ${(currentIdx / 4) * 100}%, #ffffff ${(currentIdx / 4) * 100}%, #ffffff 100%)`, color: activeColor }}
+        style={{ background: `linear-gradient(to right, ${activeColor} ${(currentIdx / 4) * 100}%, #e2e8f0 ${(currentIdx / 4) * 100}%, #e2e8f0 100%)`, color: activeColor }}
       />
       <div className="slider-ticks">
         {['Conservative','Semi-Conservative','Centered','Semi-Aggressive','Aggressive'].map((t,i) => (
@@ -516,8 +516,8 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage0_a4',
     who: 'user',
-    text: "Launch through Year 7.",
-    getAssumptions: () => [{k:'Forecast Horizon', v:'7 years post-launch'}]
+    text: "Launch through Year 6.",
+    getAssumptions: () => [{k:'Forecast Horizon', v:'6 years post-launch'}]
   },
   {
     id: 'stage0_q5',
@@ -2226,7 +2226,7 @@ const chatScript: ChatStepDef[] = [
             <h3>Year-by-year detail</h3>
             <table id="forecastTable">
               <thead>
-                <tr><th>Year</th><th>Patients</th><th>Share</th><th>Modeled Net Rev</th><th>Actual Net Rev (Zilretta)</th></tr>
+                <tr><th>Year</th><th>Treatments</th><th>Actual Net Rev (Zilretta)</th></tr>
               </thead>
               <tbody>
                 {f.years.map((y, i) => {
@@ -2239,9 +2239,7 @@ const chatScript: ChatStepDef[] = [
                   return (
                     <tr key={i}>
                       <td>{y}</td>
-                      <td>{fmtNum(f.patients[i])}</td>
-                      <td>{fmtPct(f.share[i])}</td>
-                      <td>{fmtM(f.revenue[i])}</td>
+                      <td>{fmtNum((f as any).zilrettaTreatments[i])}</td>
                       <td style={{ fontWeight: 600, color: 'var(--teal)' }}>{actualDisplay}</td>
                     </tr>
                   );
