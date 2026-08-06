@@ -1,0 +1,11 @@
+const fs = require('fs');
+let content = fs.readFileSync('app/page.tsx', 'utf8');
+content = content.replace(/title=.SECTION 1[^P]*Patient Universe & Diagnosis[^\"]*\"/g, 'title=\"Patient Universe & Diagnosis\"');
+content = content.replace(/title=.SECTION 2[^T]*Treatment Split[^\"]*\"/g, 'title=\"Treatment Split\"');
+content = content.replace(/title=.SECTION 3[^P]*Product Profile & Preference[^\"]*\"/g, 'title=\"Product Profile & Preference\"');
+content = content.replace(/title=.SECTION 4[^P]*Payer Access[^\"]*\"/g, 'title=\"Payer Access\"');
+content = content.replace(/title=.SECTION 5[^M]*Market Uptake & Reach[^\"]*\"/g, 'title=\"Market Uptake & Reach\"');
+content = content.replace(/title=.SECTION 6[^A]*Access Friction[^\"]*\"/g, 'title=\"Access Friction\"');
+content = content.replace(/title=.SECTION 7[^C]*Competitive Events[^\"]*\"/g, 'title=\"Competitive Events\"');
+content = content.replace(/title=.SECTION 8[^V]*Volume & Revenue[^\"]*\"/g, 'title=\"Volume & Revenue\"');
+fs.writeFileSync('app/page.tsx', content);
