@@ -9,6 +9,11 @@ export type ForecastState = {
   injectionsPerYear: number;
   compliance: number;
 
+  // STAGE 0 — Scoping
+  launchDate: string;
+  availabilityDate: string;
+  forecastHorizonYears: number;
+
   // STAGE 2
   diagnosisAnnualGrowthRate: number;
 
@@ -69,6 +74,17 @@ export type ForecastState = {
 
   // STAGE 14
   frequencyOfInjectionsYearly: number;
+
+  // STAGE 15
+  peakSamplingIntensity: number;
+  steadyStateSampleRate: number;
+
+  // STAGE 18
+  q1OverrideAdj: number;
+  q2OverrideAdj: number;
+  q3OverrideAdj: number;
+  q4OverrideAdj: number;
+  q5OverrideAdj: number;
 };
 
 export const DEFAULT_FORECAST_STATE: ForecastState = {
@@ -81,6 +97,11 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   netPrice: 5125,
   injectionsPerYear: 2,
   compliance: 0.20,
+
+  // STAGE 0 — Scoping
+  launchDate: '2017-12',
+  availabilityDate: '2017-12',
+  forecastHorizonYears: 7,
 
   // STAGE 2
   diagnosisAnnualGrowthRate: 0.032,
@@ -141,7 +162,18 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   antiNGFRetentionPCP: 0.95,
 
   // STAGE 14
-  frequencyOfInjectionsYearly: 1.5,
+  frequencyOfInjectionsYearly: 1.3,
+
+  // STAGE 15
+  peakSamplingIntensity: 0.15,
+  steadyStateSampleRate: 0.05,
+
+  // STAGE 18
+  q1OverrideAdj: 0.0,
+  q2OverrideAdj: 0.0,
+  q3OverrideAdj: 0.0,
+  q4OverrideAdj: 0.0,
+  q5OverrideAdj: 0.0,
 };
 
 export const defaultState: ForecastState = DEFAULT_FORECAST_STATE;

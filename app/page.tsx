@@ -96,14 +96,32 @@ function SliderControl({
 
   const activeColor = getStopColor(currentIdx);
 
+  if (asDropdown) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{label}</span>
+        <select
+          value={currentIdx}
+          onChange={e => onChange(stops[parseInt(e.target.value)])}
+          style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', fontSize: '13px', outline: 'none', minWidth: '180px', flexShrink: 0 }}
+        >
+          {['Conservative','Semi-Cons.','Centered','Semi-Agg.','Aggressive'].map((t,i) => {
+            const valStr = unit === '$' ? '$' + stops[i].toLocaleString('en-US') : (stops[i] * (unit === '%' ? 100 : 1)).toLocaleString('en-US') + (unit === '$' ? '' : unit);
+            return <option key={i} value={i}>{t} ({valStr})</option>;
+          })}
+        </select>
+      </div>
+    );
+  }
+
   return (
     <div className="slider-control-row">
       <div className="slider-label-row">
         <span className="slider-label">{label}</span>
         <span className="slider-value-chip" style={{ backgroundColor: activeColor + '20', color: activeColor }}>
           {unit === '$'
-            ? `$${stops[currentIdx].toLocaleString()}`
-            : `${(stops[currentIdx] * (unit === '%' ? 100 : 1)).toLocaleString()}${unit === '$' ? '' : unit}`
+            ? `$${stops[currentIdx].toLocaleString('en-US')}`
+            : `${(stops[currentIdx] * (unit === '%' ? 100 : 1)).toLocaleString('en-US')}${unit === '$' ? '' : unit}`
           }
         </span>
         <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
@@ -377,6 +395,8 @@ type ChatStepDef = {
   who: 'ai' | 'user';
   text: string;
   controls?: ChatControl[];
+  dataSnippet?: { headers: string[], rows: string[][] };
+  hasUpload?: boolean;
   getAssumptions?: (s: ForecastState) => {k:string, v:string}[];
   getUserReply?: (s: ForecastState) => string;
 };
@@ -385,131 +405,529 @@ const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleStr
 
 const chatScript: ChatStepDef[] = [
   {
-    id: 'stage0_q',
+    id: 'stage0_q1',
     who: 'ai',
-    text: "Let's build your forecast together. What is the scope — country of study, drug in question, indication, and lines of therapy?"
+    text: "Before I pull any data, let's align on scope. Which product are we forecasting?"
   },
   {
-    id: 'stage0_a',
+    id: 'stage0_a1',
     who: 'user',
-    text: "US only, AXPAXLI, wet AMD, all lines of therapy.",
-    getAssumptions: () => [{k:'Scope', v:'US / AXPAXLI / wet AMD / All LoT'}]
+    text: "Zilretta — triamcinolone acetonide extended-release for osteoarthritis knee pain.",
+    getAssumptions: () => [{k:'Product', v:'Zilretta (triamcinolone acetonide ER)'}]
   },
   {
-    id: 'stage2_q',
+    id: 'stage0_q2',
     who: 'ai',
-    text: "For the patient universe, I'll anchor on a US diagnosed prevalence of ~1.75M based on claims and NHANES estimates. Claims data supports a 4.8–5.3% base diagnosis rate. Where should we set it?",
+    text: "Got it. Should this cover Knee only, or do you want Hip/Shoulder layered in as well?"
+  },
+  {
+    id: 'stage0_a2',
+    who: 'user',
+    text: "Knee only for now.",
+    getAssumptions: () => [{k:'Indication', v:'OA Knee only'}]
+  },
+  {
+    id: 'stage0_q3',
+    who: 'ai',
+    text: "And geography — US only, or do you also need an ex-US view?"
+  },
+  {
+    id: 'stage0_a3',
+    who: 'user',
+    text: "US only.",
+    getAssumptions: () => [{k:'Geography', v:'US only'}]
+  },
+  {
+    id: 'stage0_q4',
+    who: 'ai',
+    text: "What forecast horizon should we build to — typically teams run from launch year through 5–7 years post-launch?"
+  },
+  {
+    id: 'stage0_a4',
+    who: 'user',
+    text: "Launch through Year 7.",
+    getAssumptions: () => [{k:'Forecast Horizon', v:'7 years post-launch'}]
+  },
+  {
+    id: 'stage0_q5',
+    who: 'ai',
+    text: "1A. When does the product gain approval — which also sets the start of promotion?",
     controls: [
-      { type: 'slider', key: 'diagnosisRate', label: 'Diagnosis rate (base year)', stops: [0.048, 0.049, 0.051, 0.052, 0.053], unit: '%' },
-      { type: 'slider', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth rate', stops: [0.019, 0.025, 0.032, 0.045, 0.055], unit: '%' }
+      { type: 'dateOrNever', key: 'launchDate', label: 'Product Approval / Promotion Start Date' }
+    ],
+    getUserReply: (s) => s.launchDate === 'does_not_launch' ? 'TBD' : s.launchDate,
+    getAssumptions: (s) => [{k:'Launch Date (1A)', v: s.launchDate === 'does_not_launch' ? 'TBD' : s.launchDate}]
+  },
+  {
+    id: 'stage0_q6',
+    who: 'ai',
+    text: "1B. And does availability start that same month, or later?",
+    controls: [
+      { type: 'dateOrNever', key: 'availabilityDate', label: 'Product Availability Start Date' }
+    ],
+    getUserReply: (s) => s.availabilityDate === 'does_not_launch' ? 'TBD' : `Same month — ${s.availabilityDate}`,
+    getAssumptions: (s) => [{k:'Availability Date (1B)', v: s.availabilityDate === 'does_not_launch' ? 'TBD' : s.availabilityDate}]
+  },
+  {
+    id: 'stage0_summary',
+    who: 'ai',
+    text: "Perfect — Zilretta, OA Knee, US, 7-year post-launch horizon, launch date December 2017. That date anchors the J-code transition window and everything downstream. Let's move into building the patient funnel, starting with the population base."
+  },
+  {
+    id: 'stage1_q1',
+    who: 'ai',
+    text: "For the patient universe, our base input is US Census population projections by age bracket — 0-24, 25-44, 45-64, 65+ — running 2014 through 2027 and interpolated monthly. That's the default we hold this at unless told otherwise.",
+    dataSnippet: {
+      headers: ['AGE BUCKET', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026', '2027'],
+      rows: [
+        ['0–24 yrs', '105,038,867', '104,849,632', '104,649,904', '104,527,711', '104,515,765', '104,560,451', '104,683,424', '104,891,881', '105,124,160', '105,360,138', '105,592,075', '105,751,263', '105,968,336', '106,279,887'],
+        ['25–44 yrs', '83,977,415', '84,656,925', '85,442,042', '86,419,998', '87,495,098', '88,596,533', '89,517,706', '90,489,007', '91,332,345', '92,140,654', '92,878,502', '93,429,132', '94,003,461', '94,432,778'],
+        ['45–64 yrs', '83,476,514', '84,032,062', '84,483,199', '84,623,030', '84,479,136', '84,170,088', '83,861,301', '83,435,982', '83,020,199', '82,639,565', '82,355,850', '82,234,965', '82,105,687', '82,113,212'],
+        ['65+ yrs', '46,255,221', '47,830,245', '49,420,383', '51,055,052', '52,766,466', '54,556,914', '56,441,027', '58,292,098', '60,221,375', '62,126,945', '63,987,872', '65,919,552', '67,748,101', '69,455,598'],
+        ['All ages', '318,748,017', '321,368,864', '323,995,528', '326,625,791', '329,256,465', '331,883,986', '334,503,458', '337,108,968', '339,698,079', '342,267,302', '344,814,299', '347,334,912', '349,825,585', '352,281,475']
+      ]
+    }
+  },
+  {
+    id: 'stage1_q2',
+    who: 'ai',
+    text: "Do you have a more recent Census projection release, or an updated population estimate for OA Knee, that you'd like me to upload and use instead?",
+    hasUpload: true
+  },
+  {
+    id: 'stage1_a1',
+    who: 'user',
+    text: "The existing Census projections are fine for now.",
+    getAssumptions: () => [{k:'Base Population Data', v:'2014 US Census projections (Default)'}]
+  },
+  {
+    id: 'stage1_summary',
+    who: 'ai',
+    text: "Good — locking in the Census projections as the base input. I'll apply the diagnosis rate next to size the diagnosed population."
+  },
+  {
+    id: 'stage2_q1',
+    who: 'ai',
+    text: "Before we set a diagnosis rate, let's validate the underlying data. Here's the 2016 IMS PharMetrics count of insured OA Knee diagnosed patients by age bracket, plus our uninsured estimate.",
+    dataSnippet: {
+      headers: ['IMS 2016 Data', 'OAK patients insured', 'OAK patients w/o insured'],
+      rows: [
+        ['0-24 years', '1,925,340', '2,133,967'],
+        ['25-44 years', '2,570,888', '2,849,466'],
+        ['45-64 years', '6,368,404', '7,058,476'],
+        ['65+ years', '4,661,570', '5,166,692'],
+        ['All ages', '15,526,202', '17,208,601']
+      ]
+    }
+  },
+  {
+    id: 'stage2_q2',
+    who: 'ai',
+    text: "The Conservative—Aggressive range comes directly from this: Conservative assumes 0% of uninsured patients are diagnosed. Aggressive assumes uninsured patients are diagnosed at the same rate as insured ones."
+  },
+  {
+    id: 'stage2_q3',
+    who: 'ai',
+    text: "Do you have a newer insured/uninsured IMS cut you'd like me to use to refresh that range?",
+    hasUpload: true
+  },
+  {
+    id: 'stage2_a1',
+    who: 'user',
+    text: "Not right now — use what's on file.",
+    getAssumptions: () => [{k:'Diagnosis Data Source', v:'2016 IMS PharMetrics (Default)'}]
+  },
+  {
+    id: 'stage2_q4',
+    who: 'ai',
+    text: "2A. Given that range, where should we set the base diagnosis rate — Conservative, Centered, or Aggressive?",
+    controls: [
+      { type: 'slider', key: 'diagnosisRate', label: 'Diagnosis rate (base year)', stops: [0.048, 0.049, 0.051, 0.052, 0.053], unit: '%' }
     ],
     getUserReply: (s) => `${(s.diagnosisRate*100).toFixed(1)}% base diagnosis rate.`,
     getAssumptions: (s) => [
-      {k:'Diagnosis Rate (2016 base)', v: `${(s.diagnosisRate*100).toFixed(1)}%`},
+      {k:'Diagnosis Rate (2016 base)', v: `${(s.diagnosisRate*100).toFixed(1)}%`}
+    ]
+  },
+  {
+    id: 'stage2_q5',
+    who: 'ai',
+    text: "2B. And how fast should diagnosis rates climb each year as campaign awareness broadens?",
+    controls: [
+      { type: 'slider', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth rate', stops: [0.019, 0.025, 0.032, 0.045, 0.055], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.diagnosisAnnualGrowthRate*100).toFixed(1)}% annual growth.`,
+    getAssumptions: (s) => [
       {k:'Diagnosis Annual Growth', v: `${(s.diagnosisAnnualGrowthRate*100).toFixed(1)}%`}
     ]
   },
   {
-    id: 'stage3_q',
+    id: 'stage3_q1',
     who: 'ai',
-    text: "What % of diagnosed patients get an IAS injection in the base year? Claims support 24–32%. Also, how fast should IAS treatment rates grow annually, and what ratio of HA use to IAS should we build in?",
+    text: "These seven inputs are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
+    hasUpload: true
+  },
+  {
+    id: 'stage3_a1',
+    who: 'user',
+    text: "No, use the existing research.",
+    getAssumptions: () => [{k:'Market Research Source', v:'Existing primary market research (Default)'}]
+  },
+  {
+    id: 'stage3_q4A',
+    who: 'ai',
+    text: "4A: What % of diagnosed patients get an IAS injection in the base year?",
     controls: [
-      { type: 'slider', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed (base yr)', stops: [0.244, 0.264, 0.284, 0.304, 0.324], unit: '%' },
-      { type: 'slider', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth rate', stops: [0.01, 0.02, 0.03, 0.035, 0.04], unit: '%' },
-      { type: 'slider', key: 'haRatioToIAS', label: 'HA-to-IAS ratio', stops: [0.30, 0.40, 0.45, 0.50, 0.55], unit: '%' }
+      { type: 'slider', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed (base yr)', stops: [0.244, 0.264, 0.284, 0.304, 0.324], unit: '%' }
     ],
     getUserReply: (s) => `${(s.iasTreatedPctOfDiagnosed*100).toFixed(1)}% treated.`,
-    getAssumptions: (s) => [
-      {k:'IAS Treated % of Diagnosed', v:`${(s.iasTreatedPctOfDiagnosed*100).toFixed(1)}%`},
-      {k:'IAS Growth Rate', v:`${(s.iasTreatedGrowthRate*100).toFixed(1)}%`},
-      {k:'HA-to-IAS Ratio', v:`${(s.haRatioToIAS*100).toFixed(0)}%`}
-    ]
+    getAssumptions: (s) => [{k:'IAS Treated % of Diagnosed', v:`${(s.iasTreatedPctOfDiagnosed*100).toFixed(1)}%`}]
   },
   {
-    id: 'stage5_q',
+    id: 'stage3_q4B',
     who: 'ai',
-    text: "Stated preference typically overstates real adoption. How much should we discount it? Also let's set the clinical data profile and WAC price.",
+    text: "4B: How fast should IAS treatment rates grow?",
     controls: [
-      { type: 'slider', key: 'overstatementAdjFactor', label: 'Overstatement adjustment factor', stops: [0.10, 0.16, 0.22, 0.25, 0.30], unit: '%' },
-      { type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC pain-score data available?' },
-      { type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available?' },
-      { type: 'slider', key: 'wacPrice', label: 'WAC price per injection', stops: [400, 500, 575, 800, 1000], unit: '$' }
+      { type: 'slider', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth rate', stops: [0.01, 0.02, 0.03, 0.035, 0.04], unit: '%' }
     ],
-    getUserReply: (s) => `WAC $${s.wacPrice.toLocaleString()} with ${(s.overstatementAdjFactor*100).toFixed(0)}% adj.`,
-    getAssumptions: (s) => [
-      {k:'Overstatement Adj.', v:`${(s.overstatementAdjFactor*100).toFixed(0)}%`},
-      {k:'WOMAC Data', v: s.womacScoreAvailable ? 'Yes' : 'No'},
-      {k:'WAC Price', v: `$${s.wacPrice.toLocaleString()}`}
-    ]
+    getUserReply: (s) => `${(s.iasTreatedGrowthRate*100).toFixed(1)}% annual growth.`,
+    getAssumptions: (s) => [{k:'IAS Growth Rate', v:`${(s.iasTreatedGrowthRate*100).toFixed(1)}%`}]
   },
   {
-    id: 'stage6_q',
+    id: 'stage3_q4C',
     who: 'ai',
-    text: "What access hurdle applies — none, prior auth only, Pre-Cert, Pre-Cert + Step Edit, or Prior Auth + Step Edit? How much share survives that hurdle?",
+    text: "4C: What ratio of HA use to IAS use should we build in?",
     controls: [
-      { type: 'select', key: 'payerAccessRequirement', label: 'Payer access requirement', options: [{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}] },
-      { type: 'slider', key: 'pricingAdjFactorAccessImpact', label: 'Pricing adj. — access impact (% surviving)', stops: [0.90, 0.92, 0.96, 0.97, 0.98], unit: '%' },
-      { type: 'toggle', key: 'patientAssistanceProgramInPlace', label: 'Patient assistance program in place?' }
+      { type: 'slider', key: 'haRatioToIAS', label: 'HA-to-IAS ratio', stops: [0.30, 0.40, 0.45, 0.50, 0.55], unit: '%' }
     ],
-    getUserReply: (s) => `${s.payerAccessRequirement.replace(/_/g, ' ')} (${(s.pricingAdjFactorAccessImpact*100).toFixed(0)}% survive).`,
-    getAssumptions: (s) => [
-      {k:'Payer Access Requirement', v: s.payerAccessRequirement},
-      {k:'Access Survival Rate', v: `${(s.pricingAdjFactorAccessImpact*100).toFixed(0)}%`}
-    ]
+    getUserReply: (s) => `${(s.haRatioToIAS*100).toFixed(0)}% HA-to-IAS ratio.`,
+    getAssumptions: (s) => [{k:'HA-to-IAS Ratio', v:`${(s.haRatioToIAS*100).toFixed(0)}%`}]
   },
   {
-    id: 'stage7_q',
+    id: 'stage3_q4D',
     who: 'ai',
-    text: "How many years until the product hits peak share? And what % of Ortho/Rheum are reached over time?",
+    text: "4D: Is HA share shrinking or holding flat relative to IAS over time?",
     controls: [
-      { type: 'slider', key: 'yearsToPeak', label: 'Years to peak share', stops: [7, 6, 5, 4, 3], unit: ' yrs' },
+      { type: 'slider', key: 'haRatioGrowthRate', label: 'HA share growth relative to IAS', stops: [-0.02, -0.01, 0, 0.01, 0.02], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.haRatioGrowthRate*100).toFixed(1)}% HA share growth.`,
+    getAssumptions: (s) => [{k:'HA Share Growth Rate', v:`${(s.haRatioGrowthRate*100).toFixed(1)}%`}]
+  },
+  {
+    id: 'stage3_q4E',
+    who: 'ai',
+    text: "4E: What share of treated patients use both HA and IAS?",
+    controls: [
+      { type: 'slider', key: 'iasAndHATreatedBoth', label: 'Share using both HA and IAS', stops: [0.05, 0.10, 0.15, 0.20, 0.25], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.iasAndHATreatedBoth*100).toFixed(1)}% using both.`,
+    getAssumptions: (s) => [{k:'Share using both HA & IAS', v:`${(s.iasAndHATreatedBoth*100).toFixed(1)}%`}]
+  },
+  {
+    id: 'stage3_q4F',
+    who: 'ai',
+    text: "4F: How much market growth should we credit to added promotional spend at launch?",
+    controls: [
+      { type: 'slider', key: 'initialAdditionalMarketGrowth', label: 'Promo market growth at launch', stops: [0, 0.01, 0.02, 0.03, 0.05], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.initialAdditionalMarketGrowth*100).toFixed(1)}% initial promo lift.`,
+    getAssumptions: (s) => [{k:'Initial Promo Market Growth', v:`${(s.initialAdditionalMarketGrowth*100).toFixed(1)}%`}]
+  },
+  {
+    id: 'stage3_q4G',
+    who: 'ai',
+    text: "4G: How quickly does that promotional lift fade each year?",
+    controls: [
+      { type: 'slider', key: 'annualDecayRateOfAdditionalGrowth', label: 'Annual promo lift decay', stops: [-0.30, -0.25, -0.20, -0.15, -0.10], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.annualDecayRateOfAdditionalGrowth*100).toFixed(1)}% decay rate.`,
+    getAssumptions: (s) => [{k:'Promo Lift Decay Rate', v:`${(s.annualDecayRateOfAdditionalGrowth*100).toFixed(1)}%`}]
+  },
+  {
+    id: 'stage4_q1',
+    who: 'ai',
+    text: "Here's the current Rx-based physician split — IAS/HA/Both share by Ortho Surgeon, Rheumatologist, and PCP/Other, from claims analysis.",
+    dataSnippet: {
+      headers: ['Physician Type', 'IAS Share', 'HA Share', 'Both Share'],
+      rows: [
+        ['Ortho Surgeon', '55%', '60%', '50%'],
+        ['Rheumatologist', '20%', '15%', '25%'],
+        ['PCP / Other', '25%', '25%', '25%']
+      ]
+    }
+  },
+  {
+    id: 'stage4_q2',
+    who: 'ai',
+    text: "This step itself is a fixed calculation, but the split can shift year to year — do you have a more recent Rx cut you'd like me to upload and apply instead?",
+    hasUpload: true
+  },
+  {
+    id: 'stage4_a1',
+    who: 'user',
+    text: "The current split is fine.",
+    getAssumptions: () => [{k:'Physician Type Split Source', v:'Current Rx Claims Analysis (Default)'}]
+  },
+  {
+    id: 'stage4_summary',
+    who: 'ai',
+    text: "Good — applying the existing physician split. Next, let's talk product profile and physician preference."
+  },
+  {
+    id: 'stage5_q1',
+    who: 'ai',
+    text: "Stated preference typically overstates real adoption — how much should we discount it?",
+    controls: [
+      { type: 'slider', key: 'overstatementAdjFactor', label: 'Overstatement discount', stops: [0.30, 0.40, 0.50, 0.60, 0.70], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.overstatementAdjFactor*100).toFixed(0)}% discount.`,
+    getAssumptions: (s) => [{k:'Overstatement Discount', v:`${(s.overstatementAdjFactor*100).toFixed(0)}%`}]
+  },
+  {
+    id: 'stage5_q2',
+    who: 'ai',
+    text: "Do we have WOMAC pain-score data to support the clinical value story?",
+    controls: [
+      { type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC score data available' }
+    ],
+    getUserReply: (s) => s.womacScoreAvailable ? 'Yes' : 'No',
+    getAssumptions: (s) => [{k:'WOMAC Data', v: s.womacScoreAvailable ? 'Yes' : 'No'}]
+  },
+  {
+    id: 'stage5_q3',
+    who: 'ai',
+    text: "Do we have diabetes/blood-sugar safety data to differentiate on?",
+    controls: [
+      { type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes data available' }
+    ],
+    getUserReply: (s) => s.diabetesGlycemicDataAvailable ? 'Yes' : 'No',
+    getAssumptions: (s) => [{k:'Diabetes Data', v: s.diabetesGlycemicDataAvailable ? 'Yes' : 'No'}]
+  },
+  {
+    id: 'stage5_q4',
+    who: 'ai',
+    text: "What list price should we model?",
+    controls: [
+      { type: 'slider', key: 'wacPrice', label: 'WAC Price', stops: [400, 500, 570, 600, 700], unit: '$' }
+    ],
+    getUserReply: (s) => `$${s.wacPrice.toLocaleString()}`,
+    getAssumptions: (s) => [{k:'WAC Price', v:`$${s.wacPrice.toLocaleString()}`}]
+  },
+  {
+    id: 'stage5_q5',
+    who: 'ai',
+    text: "If newer peak-share market research is available — in the same format as our Knee Preference Share lookup — upload it and I'll refresh the matrix.",
+    hasUpload: true
+  },
+  {
+    id: 'stage5_a1',
+    who: 'user',
+    text: "Use the existing research.",
+    getAssumptions: () => [{k:'Preference Share Matrix', v:'Existing Primary Market Research'}]
+  },
+  {
+    id: 'stage5_q6',
+    who: 'ai',
+    text: "How should the newest market research shift Ortho Surgeon preference?",
+    controls: [
+      { type: 'slider', key: 'newMarketResearchAdjOrtho', label: 'Ortho Surgeon Preference Shift', stops: [-0.05, 0, 0.05, 0.1, 0.15], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.newMarketResearchAdjOrtho > 0 ? '+' : '')}${(s.newMarketResearchAdjOrtho*100).toFixed(1)}% shift.`,
+    getAssumptions: (s) => [{k:'Ortho Preference Shift', v:`${(s.newMarketResearchAdjOrtho > 0 ? '+' : '')}${(s.newMarketResearchAdjOrtho*100).toFixed(1)}%`}]
+  },
+  {
+    id: 'stage5_q7',
+    who: 'ai',
+    text: "Same question for Rheumatologists and PCPs — shift up or down?",
+    controls: [
+      { type: 'slider', key: 'newMarketResearchAdjRheum', label: 'Rheum/PCP Preference Shift', stops: [-0.05, 0, 0.05, 0.1, 0.15], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.newMarketResearchAdjRheum > 0 ? '+' : '')}${(s.newMarketResearchAdjRheum*100).toFixed(1)}% shift.`,
+    getAssumptions: (s) => [{k:'Rheum/PCP Preference Shift', v:`${(s.newMarketResearchAdjRheum > 0 ? '+' : '')}${(s.newMarketResearchAdjRheum*100).toFixed(1)}%`}]
+  },
+  {
+    id: 'stage6_q1',
+    who: 'ai',
+    text: "What access hurdle applies — none, prior auth only, or prior auth plus step edit?",
+    controls: [
+      { type: 'select', key: 'payerAccessRequirement', label: 'Payer access requirement', options: [{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}] }
+    ],
+    getUserReply: (s) => `${s.payerAccessRequirement.replace(/_/g, ' ')}.`,
+    getAssumptions: (s) => [{k:'Payer Access Requirement', v: s.payerAccessRequirement}]
+  },
+  {
+    id: 'stage6_q2',
+    who: 'ai',
+    text: "How much share survives that access hurdle?",
+    controls: [
+      { type: 'slider', key: 'pricingAdjFactorAccessImpact', label: 'Access survival rate', stops: [0.90, 0.92, 0.95, 0.97, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.pricingAdjFactorAccessImpact*100).toFixed(0)}% survive.`,
+    getAssumptions: (s) => [{k:'Access Survival Rate', v: `${(s.pricingAdjFactorAccessImpact*100).toFixed(0)}%`}]
+  },
+  {
+    id: 'stage6_q3',
+    who: 'ai',
+    text: "Is a patient assistance / copay program in place to offset access friction?",
+    controls: [
+      { type: 'toggle', key: 'patientAssistanceProgramInPlace', label: 'Patient assistance program in place' }
+    ],
+    getUserReply: (s) => s.patientAssistanceProgramInPlace ? 'Yes' : 'No',
+    getAssumptions: (s) => [{k:'Patient Assistance Program', v: s.patientAssistanceProgramInPlace ? 'Yes' : 'No'}]
+  },
+  {
+    id: 'stage6_q4',
+    who: 'ai',
+    text: "How much lift does that assistance program add back, if any?",
+    controls: [
+      { type: 'slider', key: 'pricingAdjPatientAssistanceImpact', label: 'Patient assistance lift', stops: [0, 0.05, 0.10, 0.15, 0.20], unit: '%' }
+    ],
+    getUserReply: (s) => `+${(s.pricingAdjPatientAssistanceImpact*100).toFixed(0)}% lift.`,
+    getAssumptions: (s) => [{k:'Patient Assistance Lift', v: `+${(s.pricingAdjPatientAssistanceImpact*100).toFixed(0)}%`}]
+  },
+  {
+    id: 'stage7_q1',
+    who: 'ai',
+    text: "How many years until the product hits peak share?",
+    controls: [
+      { type: 'slider', key: 'yearsToPeak', label: 'Years to peak share', stops: [3, 4, 5, 6, 7], unit: ' yrs' }
+    ],
+    getUserReply: (s) => `${s.yearsToPeak} years.`,
+    getAssumptions: (s) => [{k:'Years to Peak', v: `${s.yearsToPeak} years`}]
+  },
+  {
+    id: 'stage7_q2',
+    who: 'ai',
+    text: "Per the launch plan, what % of Ortho/Rheum are reached by month 12, within 2 yrs, within 3+?",
+    controls: [
       { type: 'slider', key: 'pctORSReachedByMonth12', label: 'Ortho/Rheum reached by month 12', stops: [0.60, 0.65, 0.70, 0.75, 0.80], unit: '%' },
       { type: 'slider', key: 'pctORSReachedByYear2', label: 'Ortho/Rheum reached by year 2', stops: [0.70, 0.75, 0.80, 0.85, 0.90], unit: '%' },
       { type: 'slider', key: 'pctORSReachedByYear3Plus', label: 'Ortho/Rheum reached by year 3+', stops: [0.75, 0.80, 0.85, 0.90, 0.95], unit: '%' }
     ],
-    getUserReply: (s) => `Peak in ${s.yearsToPeak} years.`,
-    getAssumptions: (s) => [
-      {k:'Years to Peak', v: `${s.yearsToPeak}`},
-      {k:'ORS Reach M12/Y2/Y3+', v: `${(s.pctORSReachedByMonth12*100).toFixed(0)}% / ${(s.pctORSReachedByYear2*100).toFixed(0)}% / ${(s.pctORSReachedByYear3Plus*100).toFixed(0)}%`}
-    ]
+    getUserReply: (s) => `Month 12: ${(s.pctORSReachedByMonth12*100).toFixed(0)}%, Year 2: ${(s.pctORSReachedByYear2*100).toFixed(0)}%, Year 3+: ${(s.pctORSReachedByYear3Plus*100).toFixed(0)}%.`,
+    getAssumptions: (s) => [{k:'Ortho/Rheum Reach', v: `${(s.pctORSReachedByMonth12*100).toFixed(0)}% / ${(s.pctORSReachedByYear2*100).toFixed(0)}% / ${(s.pctORSReachedByYear3Plus*100).toFixed(0)}%`}]
   },
   {
-    id: 'stage8_q',
+    id: 'stage7_q3',
     who: 'ai',
-    text: "How long does the cold-chain refrigeration requirement remain an operational friction, and what % of Ortho share survives it?",
+    text: "Same reach question for PCP/Other prescribers.",
     controls: [
-      { type: 'slider', key: 'refrigerationDurationMonths', label: 'Refrigeration requirement duration', stops: [12, 15, 18, 24, 120], unit: ' mo' },
-      { type: 'slider', key: 'refrigerationRetentionORS', label: 'Refrigeration retention — Ortho/Surgical', stops: [0.70, 0.80, 0.88, 0.92, 0.95], unit: '%' }
+      { type: 'slider', key: 'pctPCPReachedByMonth12', label: 'PCP reached by month 12', stops: [0.30, 0.40, 0.50, 0.60, 0.70], unit: '%' },
+      { type: 'slider', key: 'pctPCPReachedByYear2', label: 'PCP reached by year 2', stops: [0.50, 0.60, 0.70, 0.80, 0.90], unit: '%' },
+      { type: 'slider', key: 'pctPCPReachedByYear3Plus', label: 'PCP reached by year 3+', stops: [0.60, 0.70, 0.80, 0.90, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `Month 12: ${(s.pctPCPReachedByMonth12*100).toFixed(0)}%, Year 2: ${(s.pctPCPReachedByYear2*100).toFixed(0)}%, Year 3+: ${(s.pctPCPReachedByYear3Plus*100).toFixed(0)}%.`,
+    getAssumptions: (s) => [{k:'PCP Reach', v: `${(s.pctPCPReachedByMonth12*100).toFixed(0)}% / ${(s.pctPCPReachedByYear2*100).toFixed(0)}% / ${(s.pctPCPReachedByYear3Plus*100).toFixed(0)}%`}]
+  },
+  {
+    id: 'stage8_q1',
+    who: 'ai',
+    text: "This is auto-derived from your launch date — no separate input needed."
+  },
+  {
+    id: 'stage8_a1',
+    who: 'user',
+    text: "Okay, understood."
+  },
+  {
+    id: 'stage8_q2',
+    who: 'ai',
+    text: "What % of share is retained while billing under the temporary J-code?",
+    controls: [
+      { type: 'slider', key: 'jCodeRetentionRate', label: 'J-Code retention rate', stops: [0.60, 0.70, 0.80, 0.90, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.jCodeRetentionRate*100).toFixed(0)}% retention.`,
+    getAssumptions: (s) => [{k:'J-Code Retention', v: `${(s.jCodeRetentionRate*100).toFixed(0)}%`}]
+  },
+  {
+    id: 'stage9_q1',
+    who: 'ai',
+    text: "How long does the cold-chain requirement remain an operational friction?",
+    controls: [
+      { type: 'slider', key: 'refrigerationDurationMonths', label: 'Refrigeration friction duration', stops: [6, 12, 18, 24, 36], unit: ' mo' }
     ],
     getUserReply: (s) => `${s.refrigerationDurationMonths} months.`,
-    getAssumptions: (s) => [
-      {k:'Refrigeration Duration', v: `${s.refrigerationDurationMonths} months`},
-      {k:'Refrigeration Retention (ORS)', v: `${(s.refrigerationRetentionORS*100).toFixed(0)}%`}
-    ]
+    getAssumptions: (s) => [{k:'Refrigeration Duration', v: `${s.refrigerationDurationMonths} months`}]
+  },
+  {
+    id: 'stage9_q2',
+    who: 'ai',
+    text: "What % of Ortho share survives the refrigeration friction?",
+    controls: [
+      { type: 'slider', key: 'refrigerationRetentionORS', label: 'Ortho/Surgical retention', stops: [0.70, 0.80, 0.90, 0.95, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.refrigerationRetentionORS*100).toFixed(0)}% survive.`,
+    getAssumptions: (s) => [{k:'Ortho Refrigeration Retention', v: `${(s.refrigerationRetentionORS*100).toFixed(0)}%`}]
+  },
+  {
+    id: 'stage9_q3',
+    who: 'ai',
+    text: "Same question for Rheum/Other channels.",
+    controls: [
+      { type: 'slider', key: 'refrigerationRetentionRheumOther', label: 'Rheum/Other retention', stops: [0.60, 0.70, 0.80, 0.90, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.refrigerationRetentionRheumOther*100).toFixed(0)}% survive.`,
+    getAssumptions: (s) => [{k:'Rheum/Other Refrigeration Retention', v: `${(s.refrigerationRetentionRheumOther*100).toFixed(0)}%`}]
   },
   {
     id: 'stage11_q0',
     who: 'ai',
-    text: "Before modeling competitive launches — what market events or competitor launches should we factor into the share curve? Based on primary research, we'd typically flag: Cingal (HA+steroid combo), Ampion (biologic), and the anti-NGF class. Do those three cover it for now?"
+    text: "Before we model specific competitive launches, what market events or competitor launches should we factor into the share curve?"
+  },
+  {
+    id: 'stage11_summary1',
+    who: 'ai',
+    text: "Based on primary research and competitive intelligence, we'd typically flag three: Cingal (HA+steroid combo), Ampion (biologic), and the anti-NGF class (e.g., tanezumab-type agents)."
+  },
+  {
+    id: 'stage11_summary2',
+    who: 'ai',
+    text: "Are there any other market events you'd like considered — a new generic entrant, a guideline change, another pipeline asset? We can model up to three additional competitors alongside these."
   },
   {
     id: 'stage11_a0',
     who: 'user',
-    text: "Yes."
+    text: "Those three cover it for now."
   },
   {
-    id: 'stage11_q1',
+    id: 'stage11_summary3',
     who: 'ai',
-    text: "Starting with Cingal — when, if ever, does it launch? And what % of share do we retain once it does?",
+    text: "Good — I'll model Cingal, Ampion, and the anti-NGF class. Starting with Cingal..."
+  },
+  {
+    id: 'stage11_q1a',
+    who: 'ai',
+    text: "When — if ever — does Cingal launch?",
     controls: [
-      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Cingal Launch Date' },
-      { type: 'slider', key: 'cingalRetentionOrtho', label: 'Retention Ortho', stops: [0.70, 0.72, 0.74, 0.78, 0.90], unit: '%' },
-      { type: 'slider', key: 'cingalRetentionPCP', label: 'Retention PCP', stops: [0.80, 0.82, 0.85, 0.90, 1.00], unit: '%' }
+      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Cingal Launch Date' }
     ],
     getUserReply: (s) => `${s.cingalLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.cingalLaunchDate}`,
     getAssumptions: (s) => [
-      {k:'Cingal Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate},
+      {k:'Cingal Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate}
+    ]
+  },
+  {
+    id: 'stage11_q1b',
+    who: 'ai',
+    text: "Once Cingal launches, what % of Ortho/Rheum share do we retain?",
+    controls: [
+      { type: 'slider', key: 'cingalRetentionOrtho', label: 'Retention Ortho', stops: [0.70, 0.72, 0.74, 0.78, 0.90], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.cingalRetentionOrtho*100).toFixed(0)}% retention.`,
+    getAssumptions: (s) => [
       {k:'Cingal Retention ORS', v: `${(s.cingalRetentionOrtho*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage11_q1c',
+    who: 'ai',
+    text: "Same question for PCP/Other channels.",
+    controls: [
+      { type: 'slider', key: 'cingalRetentionPCP', label: 'Retention PCP', stops: [0.80, 0.82, 0.85, 0.90, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.cingalRetentionPCP*100).toFixed(0)}% retention.`,
+    getAssumptions: (s) => [
+      {k:'Cingal Retention PCP', v: `${(s.cingalRetentionPCP*100).toFixed(0)}%`}
     ]
   },
   {
@@ -527,17 +945,44 @@ const chatScript: ChatStepDef[] = [
     ]
   },
   {
-    id: 'stage11_q3',
+    id: 'stage13_intro',
     who: 'ai',
-    text: "Finally, the Anti-NGF class.",
+    text: "Continuing the competitive landscape scoped in Step 11 — last one, the anti-NGF class."
+  },
+  {
+    id: 'stage13_q1a',
+    who: 'ai',
+    text: "When — if ever — does an anti-NGF competitor launch?",
     controls: [
-      { type: 'dateOrNever', key: 'antiNGFLaunchDate', label: 'Anti-NGF Launch Date' },
-      { type: 'slider', key: 'antiNGFRetentionOrtho', label: 'Retention Ortho', stops: [0.80, 0.85, 0.90, 0.95, 1.00], unit: '%' },
-      { type: 'slider', key: 'antiNGFRetentionPCP', label: 'Retention PCP', stops: [0.90, 0.92, 0.95, 0.97, 1.00], unit: '%' }
+      { type: 'dateOrNever', key: 'antiNGFLaunchDate', label: 'Anti-NGF Launch Date' }
     ],
     getUserReply: (s) => `${s.antiNGFLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.antiNGFLaunchDate}`,
     getAssumptions: (s) => [
       {k:'Anti-NGF Launch', v: s.antiNGFLaunchDate === 'does_not_launch' ? 'Never' : s.antiNGFLaunchDate}
+    ]
+  },
+  {
+    id: 'stage13_q1b',
+    who: 'ai',
+    text: "What % share retained by Ortho/Rheum once the anti-NGF class is live?",
+    controls: [
+      { type: 'slider', key: 'antiNGFRetentionOrtho', label: 'Retention Ortho', stops: [0.80, 0.85, 0.90, 0.95, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.antiNGFRetentionOrtho*100).toFixed(0)}% retention.`,
+    getAssumptions: (s) => [
+      {k:'Anti-NGF Retention ORS', v: `${(s.antiNGFRetentionOrtho*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage13_q1c',
+    who: 'ai',
+    text: "Same question for PCP/Other channels.",
+    controls: [
+      { type: 'slider', key: 'antiNGFRetentionPCP', label: 'Retention PCP', stops: [0.90, 0.92, 0.95, 0.97, 1.00], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.antiNGFRetentionPCP*100).toFixed(0)}% retention.`,
+    getAssumptions: (s) => [
+      {k:'Anti-NGF Retention PCP', v: `${(s.antiNGFRetentionPCP*100).toFixed(0)}%`}
     ]
   },
   {
@@ -553,9 +998,99 @@ const chatScript: ChatStepDef[] = [
     ]
   },
   {
+    id: 'stage15_q1a',
+    who: 'ai',
+    text: "What starting peak sampling intensity should we assume right after launch?",
+    controls: [
+      { type: 'slider', key: 'peakSamplingIntensity', label: 'Peak sampling intensity', stops: [0.05, 0.10, 0.15, 0.20, 0.25], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.peakSamplingIntensity*100).toFixed(0)}%.`,
+    getAssumptions: (s) => [
+      {k:'Peak Sampling Intensity', v: `${(s.peakSamplingIntensity*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage15_q1b',
+    who: 'ai',
+    text: "What long-run steady-state sample rate should the curve settle to?",
+    controls: [
+      { type: 'slider', key: 'steadyStateSampleRate', label: 'Steady-state sample rate', stops: [0.01, 0.03, 0.05, 0.08, 0.10], unit: '%' }
+    ],
+    getUserReply: (s) => `${(s.steadyStateSampleRate*100).toFixed(0)}%.`,
+    getAssumptions: (s) => [
+      {k:'Steady-State Sample Rate', v: `${(s.steadyStateSampleRate*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage16_intro',
+    who: 'ai',
+    text: "For seasonality, the default pattern is modeled on Synvisc's actual 2013-15 monthly volumes, since Zileria has no launch history of its own yet."
+  },
+  {
+    id: 'stage16_q1',
+    who: 'ai',
+    text: "Is there a more relevant analog product, or actual observed Zileria data, you'd like me to upload and use instead?",
+    hasUpload: true
+  },
+  {
+    id: 'stage16_a1',
+    who: 'user',
+    text: "Use the Synvisc pattern for now."
+  },
+  {
+    id: 'stage16_summary',
+    who: 'ai',
+    text: "Good — applying the Synvisc-based seasonality index across all months."
+  },
+  {
+    id: 'stage17_summary',
+    who: 'ai',
+    text: "This step corrects for the actual number of selling days in each specific month — it's a fixed calendar calculation, no input needed unless your business day assumptions change."
+  },
+  {
+    id: 'stage18_intro',
+    who: 'ai',
+    text: "Are there specific quarters — especially the first few post-launch — where you have actuals or updated guidance that should override the model's raw output?"
+  },
+  {
+    id: 'stage18_a1',
+    who: 'user',
+    text: "Yes, the first five quarters have actuals."
+  },
+  {
+    id: 'stage18_q1',
+    who: 'ai',
+    text: "Got it — what % adjustment should I apply to each of those quarters, and I'll reconcile the monthly detail underneath automatically.",
+    controls: [
+      { type: 'slider', key: 'q1OverrideAdj', label: 'Q1 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
+      { type: 'slider', key: 'q2OverrideAdj', label: 'Q2 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
+      { type: 'slider', key: 'q3OverrideAdj', label: 'Q3 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
+      { type: 'slider', key: 'q4OverrideAdj', label: 'Q4 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
+      { type: 'slider', key: 'q5OverrideAdj', label: 'Q5 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' }
+    ],
+    getUserReply: (s) => `Applied adjustments: Q1 (${(s.q1OverrideAdj*100).toFixed(0)}%), Q2 (${(s.q2OverrideAdj*100).toFixed(0)}%), Q3 (${(s.q3OverrideAdj*100).toFixed(0)}%), Q4 (${(s.q4OverrideAdj*100).toFixed(0)}%), Q5 (${(s.q5OverrideAdj*100).toFixed(0)}%)`,
+    getAssumptions: (s) => [
+      {k:'Q1 Override', v: `${(s.q1OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q2 Override', v: `${(s.q2OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q3 Override', v: `${(s.q3OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q4 Override', v: `${(s.q4OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q5 Override', v: `${(s.q5OverrideAdj*100).toFixed(0)}%`}
+    ]
+  },
+  {
+    id: 'stage19_summary',
+    who: 'ai',
+    text: "This step is a fixed calculation — no new assumption needed from you here."
+  },
+  {
+    id: 'stage20_summary',
+    who: 'ai',
+    text: "Revenue = annual volume × the price we already set — no new input here."
+  },
+  {
     id: 'final',
     who: 'ai',
-    text: "Thanks — I've captured all assumptions across the 16 model stages. Let's review them in the Model tab before running the full forecast."
+    text: "Thanks — I've captured all assumptions across the 20 model stages. Let's review them in the Model tab before running the full forecast."
   }
 ];
 
@@ -571,13 +1106,15 @@ const chatScript: ChatStepDef[] = [
     if (nextIdx < chatScript.length) {
       const nextStep = chatScript[nextIdx];
       
-      // If the next step is a pre-written user text (no controls, just text), 
-      // we don't automatically show it yet, we wait for user to type. 
-      // Unless it's an AI message, then we show it automatically.
       if (nextStep.who === 'ai') {
         setTimeout(() => {
           setChatMessages(prev => [...prev, nextStep]);
           setScriptStep(nextIdx);
+          // If this AI message has no controls, keep advancing
+          // (handles summary messages followed by another AI question)
+          if (!nextStep.controls) {
+            advanceScript(nextIdx);
+          }
         }, 600);
       }
     }
@@ -632,16 +1169,18 @@ const chatScript: ChatStepDef[] = [
   };
 
   const [openSections, setOpenSections] = useState<Set<number>>(new Set([1]));
+  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set(['Core Demand Modeling', 'Access & Competitive Friction Adjustment', 'Volume & Revenue Output']));
+  const toggleMainGroup = (groupName: string) => {
+    setOpenMainGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupName)) next.delete(groupName);
+      else next.add(groupName);
+      return next;
+    });
+  };
 
   const quickSetStops: Record<number, Record<string, number[]>> = {
   "1": {
-    "prevalence": [
-      1500000.0,
-      1620000.0,
-      1750000.0,
-      1880000.0,
-      2000000.0
-    ],
     "diagnosisRate": [
       0.048,
       0.049,
@@ -1099,84 +1638,116 @@ const chatScript: ChatStepDef[] = [
     { name: 'Base', tag: 'tag-base', s: state }
   ];
   const scenarios = [...defaultScenarios, ...savedScenarios];
+  const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: string, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
+    <div style={{ marginBottom: '24px' }}>
+      <div 
+        onClick={onToggle}
+        style={{ 
+          marginTop: '32px', marginBottom: '16px', color: 'var(--navy)', 
+          fontSize: '18px', paddingBottom: '8px', borderBottom: '2px solid var(--border)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        }}
+      >
+        <span>{title}</span>
+        <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
+      </div>
+      {isOpen && <div>{children}</div>}
+    </div>
+  );
+
   const renderAssumptions = (asDropdown = false) => (
     <>
-      <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
-            <SliderControl asDropdown={asDropdown} label="Prevalence (diagnosed patients)" fieldKey="prevalence" stops={[1500000, 1620000, 1750000, 1880000, 2000000]} currentValue={state.prevalence} unit=" pts" onAskAI={() => openAiModal('prevalence')} onChange={v => handleStateChange('prevalence', v)} />
-            <SliderControl asDropdown={asDropdown} label="Diagnosis rate (base year)" fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={state.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => handleStateChange('diagnosisRate', v)} />
-            <SliderControl asDropdown={asDropdown} label="Diagnosis annual growth rate" fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={state.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => handleStateChange('diagnosisAnnualGrowthRate', v)} />
-          </AccordionSection>
+      <CollapsibleMainGroup title="Core Demand Modeling" isOpen={openMainGroups.has('Core Demand Modeling')} onToggle={() => toggleMainGroup('Core Demand Modeling')}>
+        <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
+              <SliderControl asDropdown={asDropdown} label="Diagnosis rate (base year)" fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={state.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => handleStateChange('diagnosisRate', v)} />
+              <SliderControl asDropdown={asDropdown} label="Diagnosis annual growth rate" fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={state.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => handleStateChange('diagnosisAnnualGrowthRate', v)} />
+            </AccordionSection>
 
-          <AccordionSection idx={2} title="Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
-            <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
-            <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
-            <SliderControl asDropdown={asDropdown} label="HA-to-IAS ratio" fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={state.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => handleStateChange('haRatioToIAS', v)} />
-            <SliderControl asDropdown={asDropdown} label="HA ratio annual growth rate" fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={state.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => handleStateChange('haRatioGrowthRate', v)} />
-            <SliderControl asDropdown={asDropdown} label="IAS+HA treated (both) %" fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={state.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => handleStateChange('iasAndHATreatedBoth', v)} />
-            <SliderControl asDropdown={asDropdown} label="Initial promotional market lift" fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={state.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => handleStateChange('initialAdditionalMarketGrowth', v)} />
-            <SliderControl asDropdown={asDropdown} label="Annual decay of promo lift" fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={state.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => handleStateChange('annualDecayRateOfAdditionalGrowth', v)} />
-          </AccordionSection>
+            <AccordionSection idx={2} title="Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
+              <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
+              <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
+              <SliderControl asDropdown={asDropdown} label="HA-to-IAS ratio" fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={state.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => handleStateChange('haRatioToIAS', v)} />
+              <SliderControl asDropdown={asDropdown} label="HA ratio annual growth rate" fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={state.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => handleStateChange('haRatioGrowthRate', v)} />
+              <SliderControl asDropdown={asDropdown} label="IAS+HA treated (both) %" fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={state.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => handleStateChange('iasAndHATreatedBoth', v)} />
+              <SliderControl asDropdown={asDropdown} label="Initial promotional market lift" fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={state.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => handleStateChange('initialAdditionalMarketGrowth', v)} />
+              <SliderControl asDropdown={asDropdown} label="Annual decay of promo lift" fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={state.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => handleStateChange('annualDecayRateOfAdditionalGrowth', v)} />
+            </AccordionSection>
 
-          <AccordionSection idx={3} title="Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
-            <SliderControl asDropdown={asDropdown} label="Overstatement adjustment factor" fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={state.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => handleStateChange('overstatementAdjFactor', v)} />
-            <ToggleControl label="WOMAC pain-score data available?" fieldKey="womacScoreAvailable" value={state.womacScoreAvailable} onChange={v => handleStateChange('womacScoreAvailable', v)} />
-            <ToggleControl label="Diabetes/glycemic data available?" fieldKey="diabetesGlycemicDataAvailable" value={state.diabetesGlycemicDataAvailable} onChange={v => handleStateChange('diabetesGlycemicDataAvailable', v)} />
-            <SliderControl asDropdown={asDropdown} label="WAC price per injection" fieldKey="wacPrice" stops={[400, 500, 575, 800, 1000]} currentValue={state.wacPrice} unit="$" onAskAI={() => openAiModal('wacPrice')} onChange={v => handleStateChange('wacPrice', v)} />
-            <SliderControl asDropdown={asDropdown} label="Market research adj. — Ortho" fieldKey="newMarketResearchAdjOrtho" stops={[0.95, 1.10, 1.25, 1.40, 1.55]} currentValue={state.newMarketResearchAdjOrtho} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjOrtho')} onChange={v => handleStateChange('newMarketResearchAdjOrtho', v)} />
-            <SliderControl asDropdown={asDropdown} label="Market research adj. — Rheum/PCP" fieldKey="newMarketResearchAdjRheum" stops={[0.90, 0.95, 1.00, 1.05, 1.10]} currentValue={state.newMarketResearchAdjRheum} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjRheum')} onChange={v => handleStateChange('newMarketResearchAdjRheum', v)} />
-          </AccordionSection>
+            <AccordionSection idx={3} title="Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
+              <SliderControl asDropdown={asDropdown} label="Overstatement adjustment factor" fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={state.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => handleStateChange('overstatementAdjFactor', v)} />
+              <ToggleControl label="WOMAC pain-score data available?" fieldKey="womacScoreAvailable" value={state.womacScoreAvailable} onChange={v => handleStateChange('womacScoreAvailable', v)} />
+              <ToggleControl label="Diabetes/glycemic data available?" fieldKey="diabetesGlycemicDataAvailable" value={state.diabetesGlycemicDataAvailable} onChange={v => handleStateChange('diabetesGlycemicDataAvailable', v)} />
+              <SliderControl asDropdown={asDropdown} label="WAC price per injection" fieldKey="wacPrice" stops={[400, 500, 575, 800, 1000]} currentValue={state.wacPrice} unit="$" onAskAI={() => openAiModal('wacPrice')} onChange={v => handleStateChange('wacPrice', v)} />
+              <SliderControl asDropdown={asDropdown} label="Market research adj. — Ortho" fieldKey="newMarketResearchAdjOrtho" stops={[0.95, 1.10, 1.25, 1.40, 1.55]} currentValue={state.newMarketResearchAdjOrtho} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjOrtho')} onChange={v => handleStateChange('newMarketResearchAdjOrtho', v)} />
+              <SliderControl asDropdown={asDropdown} label="Market research adj. — Rheum/PCP" fieldKey="newMarketResearchAdjRheum" stops={[0.90, 0.95, 1.00, 1.05, 1.10]} currentValue={state.newMarketResearchAdjRheum} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjRheum')} onChange={v => handleStateChange('newMarketResearchAdjRheum', v)} />
+            </AccordionSection>
 
-          <AccordionSection idx={4} title="Payer Access" color="#d9534f" isOpen={openSections.has(4)} onQuickSet={(level) => handleQuickSet(4, level)} onToggle={() => toggleSection(4)}>
-            <SelectControl label="Payer access requirement" fieldKey="payerAccessRequirement" options={[{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}]} value={state.payerAccessRequirement} onAskAI={() => openAiModal('payerAccessRequirement')} onChange={v => handleStateChange('payerAccessRequirement', v)} />
-            <SliderControl asDropdown={asDropdown} label="Pricing adj. — access impact (% surviving)" fieldKey="pricingAdjFactorAccessImpact" stops={[0.90, 0.92, 0.96, 0.97, 0.98]} currentValue={state.pricingAdjFactorAccessImpact} unit="%" onAskAI={() => openAiModal('pricingAdjFactorAccessImpact')} onChange={v => handleStateChange('pricingAdjFactorAccessImpact', v)} />
-            <ToggleControl label="Patient assistance program in place?" fieldKey="patientAssistanceProgramInPlace" value={state.patientAssistanceProgramInPlace} onChange={v => handleStateChange('patientAssistanceProgramInPlace', v)} />
-            <SliderControl asDropdown={asDropdown} label="Pricing adj. — PAP lift" fieldKey="pricingAdjPatientAssistanceImpact" stops={[1.00, 1.05, 1.10, 1.15, 1.20]} currentValue={state.pricingAdjPatientAssistanceImpact} unit="%" onAskAI={() => openAiModal('pricingAdjPatientAssistanceImpact')} onChange={v => handleStateChange('pricingAdjPatientAssistanceImpact', v)} />
-          </AccordionSection>
+            <AccordionSection idx={4} title="Payer Access" color="#d9534f" isOpen={openSections.has(4)} onQuickSet={(level) => handleQuickSet(4, level)} onToggle={() => toggleSection(4)}>
+              <SelectControl label="Payer access requirement" fieldKey="payerAccessRequirement" options={[{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}]} value={state.payerAccessRequirement} onAskAI={() => openAiModal('payerAccessRequirement')} onChange={v => handleStateChange('payerAccessRequirement', v)} />
+              <SliderControl asDropdown={asDropdown} label="Pricing adj. — access impact (% surviving)" fieldKey="pricingAdjFactorAccessImpact" stops={[0.90, 0.92, 0.96, 0.97, 0.98]} currentValue={state.pricingAdjFactorAccessImpact} unit="%" onAskAI={() => openAiModal('pricingAdjFactorAccessImpact')} onChange={v => handleStateChange('pricingAdjFactorAccessImpact', v)} />
+              <ToggleControl label="Patient assistance program in place?" fieldKey="patientAssistanceProgramInPlace" value={state.patientAssistanceProgramInPlace} onChange={v => handleStateChange('patientAssistanceProgramInPlace', v)} />
+              <SliderControl asDropdown={asDropdown} label="Pricing adj. — PAP lift" fieldKey="pricingAdjPatientAssistanceImpact" stops={[1.00, 1.05, 1.10, 1.15, 1.20]} currentValue={state.pricingAdjPatientAssistanceImpact} unit="%" onAskAI={() => openAiModal('pricingAdjPatientAssistanceImpact')} onChange={v => handleStateChange('pricingAdjPatientAssistanceImpact', v)} />
+            </AccordionSection>
+      </CollapsibleMainGroup>
 
-          <AccordionSection idx={5} title="Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
-            <SliderControl asDropdown={asDropdown} label="Years to peak share" fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={state.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => handleStateChange('yearsToPeak', v)} />
-            <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by month 12" fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={state.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => handleStateChange('pctORSReachedByMonth12', v)} />
-            <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by year 2" fieldKey="pctORSReachedByYear2" stops={[0.70, 0.75, 0.80, 0.85, 0.90]} currentValue={state.pctORSReachedByYear2} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear2')} onChange={v => handleStateChange('pctORSReachedByYear2', v)} />
-            <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by year 3+" fieldKey="pctORSReachedByYear3Plus" stops={[0.75, 0.80, 0.85, 0.90, 0.95]} currentValue={state.pctORSReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear3Plus')} onChange={v => handleStateChange('pctORSReachedByYear3Plus', v)} />
-            <SliderControl asDropdown={asDropdown} label="PCP/Other reached by month 12" fieldKey="pctPCPReachedByMonth12" stops={[0.40, 0.46, 0.524, 0.58, 0.64]} currentValue={state.pctPCPReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctPCPReachedByMonth12')} onChange={v => handleStateChange('pctPCPReachedByMonth12', v)} />
-            <SliderControl asDropdown={asDropdown} label="PCP/Other reached by year 2" fieldKey="pctPCPReachedByYear2" stops={[0.52, 0.56, 0.60, 0.64, 0.68]} currentValue={state.pctPCPReachedByYear2} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear2')} onChange={v => handleStateChange('pctPCPReachedByYear2', v)} />
-            <SliderControl asDropdown={asDropdown} label="PCP/Other reached by year 3+" fieldKey="pctPCPReachedByYear3Plus" stops={[0.56, 0.60, 0.65, 0.70, 0.75]} currentValue={state.pctPCPReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear3Plus')} onChange={v => handleStateChange('pctPCPReachedByYear3Plus', v)} />
-          </AccordionSection>
+      <CollapsibleMainGroup title="Access & Competitive Friction Adjustment" isOpen={openMainGroups.has('Access & Competitive Friction Adjustment')} onToggle={() => toggleMainGroup('Access & Competitive Friction Adjustment')}>
+            <AccordionSection idx={5} title="Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
+              <SliderControl asDropdown={asDropdown} label="Years to peak share" fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={state.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => handleStateChange('yearsToPeak', v)} />
+              <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by month 12" fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={state.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => handleStateChange('pctORSReachedByMonth12', v)} />
+              <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by year 2" fieldKey="pctORSReachedByYear2" stops={[0.70, 0.75, 0.80, 0.85, 0.90]} currentValue={state.pctORSReachedByYear2} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear2')} onChange={v => handleStateChange('pctORSReachedByYear2', v)} />
+              <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by year 3+" fieldKey="pctORSReachedByYear3Plus" stops={[0.75, 0.80, 0.85, 0.90, 0.95]} currentValue={state.pctORSReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear3Plus')} onChange={v => handleStateChange('pctORSReachedByYear3Plus', v)} />
+              <SliderControl asDropdown={asDropdown} label="PCP/Other reached by month 12" fieldKey="pctPCPReachedByMonth12" stops={[0.40, 0.46, 0.524, 0.58, 0.64]} currentValue={state.pctPCPReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctPCPReachedByMonth12')} onChange={v => handleStateChange('pctPCPReachedByMonth12', v)} />
+              <SliderControl asDropdown={asDropdown} label="PCP/Other reached by year 2" fieldKey="pctPCPReachedByYear2" stops={[0.52, 0.56, 0.60, 0.64, 0.68]} currentValue={state.pctPCPReachedByYear2} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear2')} onChange={v => handleStateChange('pctPCPReachedByYear2', v)} />
+              <SliderControl asDropdown={asDropdown} label="PCP/Other reached by year 3+" fieldKey="pctPCPReachedByYear3Plus" stops={[0.56, 0.60, 0.65, 0.70, 0.75]} currentValue={state.pctPCPReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear3Plus')} onChange={v => handleStateChange('pctPCPReachedByYear3Plus', v)} />
+            </AccordionSection>
 
-          <AccordionSection idx={6} title="Access Friction" color="#d9534f" isOpen={openSections.has(6)} onQuickSet={(level) => handleQuickSet(6, level)} onToggle={() => toggleSection(6)}>
-            <SliderControl asDropdown={asDropdown} label="J-Code window duration" fieldKey="jCodeWindowMonths" stops={[6, 9, 12, 15, 18]} currentValue={state.jCodeWindowMonths} unit=" mo" onAskAI={() => openAiModal('jCodeWindowMonths')} onChange={v => handleStateChange('jCodeWindowMonths', v)} />
-            <SliderControl asDropdown={asDropdown} label="J-Code retention rate (misc code)" fieldKey="jCodeRetentionRate" stops={[0.80, 0.84, 0.88, 0.91, 0.94]} currentValue={state.jCodeRetentionRate} unit="%" onAskAI={() => openAiModal('jCodeRetentionRate')} onChange={v => handleStateChange('jCodeRetentionRate', v)} />
-            <SliderControl asDropdown={asDropdown} label="Refrigeration requirement duration" fieldKey="refrigerationDurationMonths" stops={[12, 15, 18, 24, 120]} currentValue={state.refrigerationDurationMonths} unit=" mo" onAskAI={() => openAiModal('refrigerationDurationMonths')} onChange={v => handleStateChange('refrigerationDurationMonths', v)} />
-            <SliderControl asDropdown={asDropdown} label="Refrigeration retention — Ortho/Surgical" fieldKey="refrigerationRetentionORS" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={state.refrigerationRetentionORS} unit="%" onAskAI={() => openAiModal('refrigerationRetentionORS')} onChange={v => handleStateChange('refrigerationRetentionORS', v)} />
-            <SliderControl asDropdown={asDropdown} label="Refrigeration retention — Rheum/Other" fieldKey="refrigerationRetentionRheumOther" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={state.refrigerationRetentionRheumOther} unit="%" onAskAI={() => openAiModal('refrigerationRetentionRheumOther')} onChange={v => handleStateChange('refrigerationRetentionRheumOther', v)} />
-          </AccordionSection>
+            <AccordionSection idx={6} title="Access Friction" color="#d9534f" isOpen={openSections.has(6)} onQuickSet={(level) => handleQuickSet(6, level)} onToggle={() => toggleSection(6)}>
+              <SliderControl asDropdown={asDropdown} label="J-Code window duration" fieldKey="jCodeWindowMonths" stops={[6, 9, 12, 15, 18]} currentValue={state.jCodeWindowMonths} unit=" mo" onAskAI={() => openAiModal('jCodeWindowMonths')} onChange={v => handleStateChange('jCodeWindowMonths', v)} />
+              <SliderControl asDropdown={asDropdown} label="J-Code retention rate (misc code)" fieldKey="jCodeRetentionRate" stops={[0.80, 0.84, 0.88, 0.91, 0.94]} currentValue={state.jCodeRetentionRate} unit="%" onAskAI={() => openAiModal('jCodeRetentionRate')} onChange={v => handleStateChange('jCodeRetentionRate', v)} />
+              <SliderControl asDropdown={asDropdown} label="Refrigeration requirement duration" fieldKey="refrigerationDurationMonths" stops={[12, 15, 18, 24, 120]} currentValue={state.refrigerationDurationMonths} unit=" mo" onAskAI={() => openAiModal('refrigerationDurationMonths')} onChange={v => handleStateChange('refrigerationDurationMonths', v)} />
+              <SliderControl asDropdown={asDropdown} label="Refrigeration retention — Ortho/Surgical" fieldKey="refrigerationRetentionORS" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={state.refrigerationRetentionORS} unit="%" onAskAI={() => openAiModal('refrigerationRetentionORS')} onChange={v => handleStateChange('refrigerationRetentionORS', v)} />
+              <SliderControl asDropdown={asDropdown} label="Refrigeration retention — Rheum/Other" fieldKey="refrigerationRetentionRheumOther" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={state.refrigerationRetentionRheumOther} unit="%" onAskAI={() => openAiModal('refrigerationRetentionRheumOther')} onChange={v => handleStateChange('refrigerationRetentionRheumOther', v)} />
+            </AccordionSection>
 
-          <AccordionSection idx={7} title="Competitive Events" color="#c0392b" isOpen={openSections.has(7)} onQuickSet={(level) => handleQuickSet(7, level)} onToggle={() => toggleSection(7)}>
-            <div className="competitor-card">
-              <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
-              <DateOrNeverControl label="Launch Date" fieldKey="cingalLaunchDate" value={state.cingalLaunchDate} onChange={v => handleStateChange('cingalLaunchDate', v)} />
-              <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={state.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => handleStateChange('cingalRetentionOrtho', v)} />
-              <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={state.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => handleStateChange('cingalRetentionPCP', v)} />
-            </div>
-            
-            <div className="competitor-card">
-              <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
-              <DateOrNeverControl label="Launch Date" fieldKey="ampionLaunchDate" value={state.ampionLaunchDate} onChange={v => handleStateChange('ampionLaunchDate', v)} />
-              <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={state.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => handleStateChange('ampionRetentionOrtho', v)} />
-              <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={state.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => handleStateChange('ampionRetentionPCP', v)} />
-            </div>
+            <AccordionSection idx={7} title="Competitive Events" color="#c0392b" isOpen={openSections.has(7)} onQuickSet={(level) => handleQuickSet(7, level)} onToggle={() => toggleSection(7)}>
+              <div className="competitor-card">
+                <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
+                <DateOrNeverControl label="Launch Date" fieldKey="cingalLaunchDate" value={state.cingalLaunchDate} onChange={v => handleStateChange('cingalLaunchDate', v)} />
+                <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={state.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => handleStateChange('cingalRetentionOrtho', v)} />
+                <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={state.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => handleStateChange('cingalRetentionPCP', v)} />
+              </div>
+              
+              <div className="competitor-card">
+                <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
+                <DateOrNeverControl label="Launch Date" fieldKey="ampionLaunchDate" value={state.ampionLaunchDate} onChange={v => handleStateChange('ampionLaunchDate', v)} />
+                <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={state.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => handleStateChange('ampionRetentionOrtho', v)} />
+                <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={state.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => handleStateChange('ampionRetentionPCP', v)} />
+              </div>
 
-            <div className="competitor-card">
-              <div className="competitor-card-title">Anti-NGF class</div>
-              <DateOrNeverControl label="Launch Date" fieldKey="antiNGFLaunchDate" value={state.antiNGFLaunchDate} onChange={v => handleStateChange('antiNGFLaunchDate', v)} />
-              <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="antiNGFRetentionOrtho" stops={[0.80, 0.85, 0.90, 0.95, 1.00]} currentValue={state.antiNGFRetentionOrtho} unit="%" onAskAI={() => openAiModal('antiNGFRetentionOrtho')} onChange={v => handleStateChange('antiNGFRetentionOrtho', v)} />
-              <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="antiNGFRetentionPCP" stops={[0.90, 0.92, 0.95, 0.97, 1.00]} currentValue={state.antiNGFRetentionPCP} unit="%" onAskAI={() => openAiModal('antiNGFRetentionPCP')} onChange={v => handleStateChange('antiNGFRetentionPCP', v)} />
-            </div>
-          </AccordionSection>
+              <div className="competitor-card">
+                <div className="competitor-card-title">Anti-NGF class</div>
+                <DateOrNeverControl label="Launch Date" fieldKey="antiNGFLaunchDate" value={state.antiNGFLaunchDate} onChange={v => handleStateChange('antiNGFLaunchDate', v)} />
+                <SliderControl asDropdown={asDropdown} label="Retention Ortho" fieldKey="antiNGFRetentionOrtho" stops={[0.80, 0.85, 0.90, 0.95, 1.00]} currentValue={state.antiNGFRetentionOrtho} unit="%" onAskAI={() => openAiModal('antiNGFRetentionOrtho')} onChange={v => handleStateChange('antiNGFRetentionOrtho', v)} />
+                <SliderControl asDropdown={asDropdown} label="Retention PCP" fieldKey="antiNGFRetentionPCP" stops={[0.90, 0.92, 0.95, 0.97, 1.00]} currentValue={state.antiNGFRetentionPCP} unit="%" onAskAI={() => openAiModal('antiNGFRetentionPCP')} onChange={v => handleStateChange('antiNGFRetentionPCP', v)} />
+              </div>
+            </AccordionSection>
+      </CollapsibleMainGroup>
 
-          <AccordionSection idx={8} title="Volume & Revenue" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
-            <SliderControl asDropdown={asDropdown} label="Injection frequency (per patient/year)" fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={state.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => handleStateChange('frequencyOfInjectionsYearly', v)} />
-          </AccordionSection>
+      <CollapsibleMainGroup title="Volume & Revenue Output" isOpen={openMainGroups.has('Volume & Revenue Output')} onToggle={() => toggleMainGroup('Volume & Revenue Output')}>
+            <AccordionSection idx={8} title="Volume & Sampling" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
+              <SliderControl asDropdown={asDropdown} label="Injection frequency (per patient/year)" fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={state.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => handleStateChange('frequencyOfInjectionsYearly', v)} />
+              <SliderControl asDropdown={asDropdown} label="Peak sampling intensity" fieldKey="peakSamplingIntensity" stops={[0.05, 0.10, 0.15, 0.20, 0.25]} currentValue={state.peakSamplingIntensity} unit="%" onAskAI={() => openAiModal('peakSamplingIntensity')} onChange={v => handleStateChange('peakSamplingIntensity', v)} />
+              <SliderControl asDropdown={asDropdown} label="Steady-state sample rate" fieldKey="steadyStateSampleRate" stops={[0.01, 0.03, 0.05, 0.08, 0.10]} currentValue={state.steadyStateSampleRate} unit="%" onAskAI={() => openAiModal('steadyStateSampleRate')} onChange={v => handleStateChange('steadyStateSampleRate', v)} />
+            </AccordionSection>
+
+            <AccordionSection idx={9} title="Quarterly Overrides" color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
+              <SliderControl asDropdown={asDropdown} label="Q1 Override Adjustment" fieldKey="q1OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q1OverrideAdj} unit="%" onAskAI={() => openAiModal('q1OverrideAdj')} onChange={v => handleStateChange('q1OverrideAdj', v)} />
+              <SliderControl asDropdown={asDropdown} label="Q2 Override Adjustment" fieldKey="q2OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q2OverrideAdj} unit="%" onAskAI={() => openAiModal('q2OverrideAdj')} onChange={v => handleStateChange('q2OverrideAdj', v)} />
+              <SliderControl asDropdown={asDropdown} label="Q3 Override Adjustment" fieldKey="q3OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q3OverrideAdj} unit="%" onAskAI={() => openAiModal('q3OverrideAdj')} onChange={v => handleStateChange('q3OverrideAdj', v)} />
+              <SliderControl asDropdown={asDropdown} label="Q4 Override Adjustment" fieldKey="q4OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q4OverrideAdj} unit="%" onAskAI={() => openAiModal('q4OverrideAdj')} onChange={v => handleStateChange('q4OverrideAdj', v)} />
+              <SliderControl asDropdown={asDropdown} label="Q5 Override Adjustment" fieldKey="q5OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q5OverrideAdj} unit="%" onAskAI={() => openAiModal('q5OverrideAdj')} onChange={v => handleStateChange('q5OverrideAdj', v)} />
+            </AccordionSection>
+      </CollapsibleMainGroup>
 
           <div className="card">
             <h3>Patient flow funnel</h3>
@@ -1331,12 +1902,44 @@ const chatScript: ChatStepDef[] = [
                         borderTopRightRadius: msg.who === 'user' ? '2px' : '12px',
                         borderTopLeftRadius: msg.who === 'ai' ? '2px' : '12px'
                       }}>
+                        {msg.dataSnippet && (
+                          <div style={{ marginBottom: '12px', overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', lineHeight: '1.4' }}>
+                              <thead>
+                                <tr>
+                                  {msg.dataSnippet.headers.map((h: string, hi: number) => (
+                                    <th key={hi} style={{ padding: '6px 8px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', textAlign: 'left', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {msg.dataSnippet.rows.map((row: string[], ri: number) => (
+                                  <tr key={ri} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    {row.map((cell: string, ci: number) => (
+                                      <td key={ci} style={{ padding: '5px 8px', color: ci === 0 ? '#0f7696' : '#374151', fontWeight: ci === 0 ? 600 : 400, whiteSpace: ci <= 1 ? 'nowrap' : 'normal' }}>{cell}</td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                         {msg.text}
                         
+                        {msg.hasUpload && (
+                          <div style={{ marginTop: '12px', marginBottom: '4px' }}>
+                            <button className="btn secondary" onClick={() => document.getElementById(`dummy-upload-${msg.id}`)?.click()}>
+                              <span style={{ marginRight: '6px' }}>📎</span>
+                              Upload File (.xlsx, .csv)
+                            </button>
+                            <input type="file" id={`dummy-upload-${msg.id}`} accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                          </div>
+                        )}
+
                         {isAiControlStep && (
                           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {msg.controls.map((ctrl: any, idx: number) => {
-                              if (ctrl.type === 'slider') return <SliderControl asDropdown={asDropdown} key={idx} label={ctrl.label} fieldKey={ctrl.key} stops={ctrl.stops} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
+                              if (ctrl.type === 'slider') return <SliderControl asDropdown={false} key={idx} label={ctrl.label} fieldKey={ctrl.key} stops={ctrl.stops} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
                               if (ctrl.type === 'toggle') return <ToggleControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as boolean} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
                               if (ctrl.type === 'select') return <SelectControl key={idx} label={ctrl.label} fieldKey={ctrl.key} options={ctrl.options} value={state[ctrl.key as keyof ForecastState] as string} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
                               if (ctrl.type === 'dateOrNever') return <DateOrNeverControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as string} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
@@ -1355,7 +1958,18 @@ const chatScript: ChatStepDef[] = [
                   </div>
                 )})}
                 
-                {(!chatMessages.length || (chatMessages[chatMessages.length-1].who === 'ai' && !chatMessages[chatMessages.length-1].controls && chatScript[scriptStep+1]?.who === 'user')) && (
+                {(() => {
+                  // Show input if: last message is AI without controls AND there's a user step coming
+                  const lastMsg = chatMessages[chatMessages.length - 1];
+                  const isLastAiNoControls = lastMsg?.who === 'ai' && !lastMsg?.controls;
+                  // Look ahead from current scriptStep to find next user step
+                  let hasUpcomingUserStep = false;
+                  for (let i = scriptStep + 1; i < chatScript.length; i++) {
+                    if (chatScript[i].who === 'user') { hasUpcomingUserStep = true; break; }
+                    if (chatScript[i].who === 'ai' && chatScript[i].controls) break;
+                  }
+                  return (!chatMessages.length || (isLastAiNoControls && hasUpcomingUserStep));
+                })() && (
                   <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
                     <input 
                       type="text" 
@@ -1404,7 +2018,7 @@ const chatScript: ChatStepDef[] = [
             <strong>What is ✨ Ask AI?</strong> Click this button next to any assumption to open the AI assistant. You can use it to validate your inputs against market research, ask for suggested values based on recent data, or even upload documents to automatically extract the right number.
           </div>
 
-          {renderAssumptions(activeTab === 4)}
+          {renderAssumptions(false)}
 
           <div style={{ textAlign: 'right', marginTop: '24px' }}>
             <button className="btn secondary" onClick={resetAssumptions} style={{ marginRight: '8px' }}>Reset to conversation defaults</button>
@@ -1416,7 +2030,7 @@ const chatScript: ChatStepDef[] = [
         <section className={`page ${activeTab === 4 ? 'active' : ''}`} id="page-4">
           <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start' }}>
             <div style={{ position: 'sticky', top: '24px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', paddingRight: '8px' }}>
-              {renderAssumptions(activeTab === 4)}
+              {renderAssumptions(true)}
             </div>
             <div style={{ minWidth: 0 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '24px' }} id="dashMetrics">
