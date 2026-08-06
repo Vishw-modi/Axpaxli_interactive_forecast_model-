@@ -211,6 +211,12 @@ export function computeForecast(s: ForecastState) {
   const revenue: number[] = [];
   const share: number[] = [];
   
+  let basePeakShare = s.peakShare * (1 - s.overstatementAdjFactor);
+  if (s.womacScoreAvailable) basePeakShare += 0.02;
+  if (s.diabetesGlycemicDataAvailable) basePeakShare += 0.02;
+  const papMultiplier = s.patientAssistanceProgramInPlace ? s.pricingAdjPatientAssistanceImpact : 1.0;
+  const adjustedPeakShare = basePeakShare * s.pricingAdjFactorAccessImpact * papMultiplier;
+  
   for (let i = 0; i < 7; i++) {
     const year = LAUNCH_YEAR + i;
     const t = i; // years since launch, 0-indexed
@@ -226,22 +232,19 @@ export function computeForecast(s: ForecastState) {
     const promoLift = s.initialAdditionalMarketGrowth * Math.pow(1 - s.annualDecayRateOfAdditionalGrowth, t);
     const treatedWithPromo = iasTreated * (1 + promoLift);
 
-    // STAGE 5
-    const peakShare = s.peakShare; 
-
-    // STAGE 6
-    const papMultiplier = s.patientAssistanceProgramInPlace ? s.pricingAdjPatientAssistanceImpact : 1.0;
-    const accessAdjustedPeakShare = peakShare * s.pricingAdjFactorAccessImpact * papMultiplier;
+    // STAGE 5 & 6 (Calculated outside loop to track the absolute adjusted peak)
+    const accessAdjustedPeakShare = adjustedPeakShare;
 
     // STAGE 7
     let reachFactor = 0;
-    if (t === 0) {
-      reachFactor = (ORS_WEIGHT * s.pctORSReachedByMonth12) + (PCP_WEIGHT * s.pctPCPReachedByMonth12);
-    } else if (t === 1) {
-      reachFactor = (ORS_WEIGHT * s.pctORSReachedByYear2) + (PCP_WEIGHT * s.pctPCPReachedByYear2);
-    } else {
-      reachFactor = (ORS_WEIGHT * s.pctORSReachedByYear3Plus) + (PCP_WEIGHT * s.pctPCPReachedByYear3Plus);
-    }
+    const orthoReachedAdj = t === 0 ? s.pctORSReachedByMonth12 : (t === 1 ? s.pctORSReachedByYear2 : s.pctORSReachedByYear3Plus);
+    const pcpReachedAdj = t === 0 ? s.pctPCPReachedByMonth12 : (t === 1 ? s.pctPCPReachedByYear2 : s.pctPCPReachedByYear3Plus);
+    
+    // Apply market research adjs
+    const finalOrthoReached = orthoReachedAdj * s.newMarketResearchAdjOrtho;
+    const finalPcpReached = pcpReachedAdj * s.newMarketResearchAdjRheum;
+    
+    reachFactor = (ORS_WEIGHT * finalOrthoReached) + (PCP_WEIGHT * finalPcpReached);
     const rawX = Math.min((t + 1) / s.yearsToPeak, 1.0);
     const uptakeCurve = rawX * rawX * (3 - 2 * rawX); // smoothstep
     let monthlyShare = accessAdjustedPeakShare * uptakeCurve * reachFactor;
@@ -284,8 +287,23 @@ export function computeForecast(s: ForecastState) {
     // STAGE 15
     const annualPatients = patientsOnTherapy * 1;
 
+    // Sampling discount logic (decaying from peakSamplingIntensity to steadyStateSampleRate)
+    const samplingDecayRate = 0.5; // decays halfway each year
+    const currentSampleRate = s.steadyStateSampleRate + (s.peakSamplingIntensity - s.steadyStateSampleRate) * Math.pow(1 - samplingDecayRate, t);
+
     // STAGE 16
-    const rev = annualPatients * s.frequencyOfInjectionsYearly * s.wacPrice;
+    // Apply sampling discount to revenue (free injections don't generate revenue)
+    let rev = (annualPatients * s.frequencyOfInjectionsYearly * s.wacPrice) * (1 - currentSampleRate);
+    
+    // Apply Quarterly Overrides
+    if (t === 0) {
+      // Year 1 average override of Q1-Q4
+      const y1AvgOverride = (s.q1OverrideAdj + s.q2OverrideAdj + s.q3OverrideAdj + s.q4OverrideAdj) / 4;
+      rev *= (1 + y1AvgOverride);
+    } else if (t === 1) {
+      // Year 2 override mapped to Q5
+      rev *= (1 + s.q5OverrideAdj);
+    }
     
     years.push('Year ' + (i + 1));
     patients.push(annualPatients);
@@ -301,6 +319,17 @@ export function computeForecast(s: ForecastState) {
   const cumulative = revenue.reduce((a, b) => a + b, 0);
   const addressable = s.prevalence * s.diagnosisRate * s.treatmentRate * s.addressableShare;
   const peakRevenue = Math.max(...revenue);
+  const adjustedPeakPatients = addressable * adjustedPeakShare;
+
+  const zilrettaActuals = [
+    349088,
+    40497790,
+    254686453,
+    600051917,
+    836669581,
+    911430289,
+    null // Year 7
+  ];
   
   return {
     years,
@@ -310,6 +339,9 @@ export function computeForecast(s: ForecastState) {
     share,
     addressable,
     peakRevenue,
-    cumulative
+    cumulative,
+    adjustedPeakShare,
+    adjustedPeakPatients,
+    zilrettaActuals
   };
 }

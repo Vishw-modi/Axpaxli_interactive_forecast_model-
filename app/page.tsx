@@ -1684,24 +1684,28 @@ const chatScript: ChatStepDef[] = [
             </AccordionSection>
       </CollapsibleMainGroup>
 
-      <CollapsibleMainGroup title="Foundation / Data" isOpen={openMainGroups.has('Foundation / Data')} onToggle={() => toggleMainGroup('Foundation / Data')}>
-            <AccordionSection idx={101} title="US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
-              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                  US Population Census (by Year & Age Bucket)
+      {!asDropdown && (
+        <CollapsibleMainGroup title="Foundation / Data" isOpen={openMainGroups.has('Foundation / Data')} onToggle={() => toggleMainGroup('Foundation / Data')}>
+              <AccordionSection idx={101} title="US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
+                <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+                    US Population Census (by Year & Age Bucket)
+                  </div>
+                  {!asDropdown && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn secondary" onClick={() => document.getElementById('upload-census')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                        <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                      </button>
+                      <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                      <button className="btn secondary" onClick={() => handleViewFile('Book1.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                        <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn secondary" onClick={() => document.getElementById('upload-census')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                  </button>
-                  <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                  <button className="btn secondary" onClick={() => handleViewFile('Book1.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                  </button>
-                </div>
-              </div>
-            </AccordionSection>
-      </CollapsibleMainGroup>
+              </AccordionSection>
+        </CollapsibleMainGroup>
+      )}
 
       <CollapsibleMainGroup title="Core Demand Modeling" isOpen={openMainGroups.has('Core Demand Modeling')} onToggle={() => toggleMainGroup('Core Demand Modeling')}>
         <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
@@ -1709,15 +1713,17 @@ const chatScript: ChatStepDef[] = [
                 <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
                   2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age)
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn secondary" onClick={() => document.getElementById('upload-ims')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                  </button>
-                  <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                  <button className="btn secondary" onClick={() => handleViewFile('insured and uninsured patients.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                  </button>
-                </div>
+                {!asDropdown && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn secondary" onClick={() => document.getElementById('upload-ims')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                      <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                    </button>
+                    <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                    <button className="btn secondary" onClick={() => handleViewFile('insured and uninsured patients.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                      <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                    </button>
+                  </div>
+                )}
               </div>
               <SliderControl asDropdown={asDropdown} label="Diagnosis rate (base year)" fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={state.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => handleStateChange('diagnosisRate', v)} />
               <SliderControl asDropdown={asDropdown} label="Diagnosis annual growth rate" fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={state.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => handleStateChange('diagnosisAnnualGrowthRate', v)} />
@@ -1728,15 +1734,17 @@ const chatScript: ChatStepDef[] = [
                 <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
                   Rx Analysis — Treatment Share × Physician Type
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn secondary" onClick={() => document.getElementById('upload-rx')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                  </button>
-                  <input type="file" id="upload-rx" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                  <button className="btn secondary" onClick={() => handleViewFile('step 5.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                  </button>
-                </div>
+                {!asDropdown && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn secondary" onClick={() => document.getElementById('upload-rx')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                      <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                    </button>
+                    <input type="file" id="upload-rx" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                    <button className="btn secondary" onClick={() => handleViewFile('step 5.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                      <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                    </button>
+                  </div>
+                )}
               </div>
               <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
               <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
@@ -1752,15 +1760,17 @@ const chatScript: ChatStepDef[] = [
                 <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
                   Primary market research for peak share
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn secondary" onClick={() => document.getElementById('upload-pmr')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                  </button>
-                  <input type="file" id="upload-pmr" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                  <button className="btn secondary" onClick={() => handleViewFile('3rd_excel.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                  </button>
-                </div>
+                {!asDropdown && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn secondary" onClick={() => document.getElementById('upload-pmr')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                      <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                    </button>
+                    <input type="file" id="upload-pmr" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                    <button className="btn secondary" onClick={() => handleViewFile('3rd_excel.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                      <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                    </button>
+                  </div>
+                )}
               </div>
               <SliderControl asDropdown={asDropdown} label="Overstatement adjustment factor" fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={state.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => handleStateChange('overstatementAdjFactor', v)} />
               <ToggleControl label="WOMAC pain-score data available?" fieldKey="womacScoreAvailable" value={state.womacScoreAvailable} onChange={v => handleStateChange('womacScoreAvailable', v)} />
@@ -1998,15 +2008,6 @@ const chatScript: ChatStepDef[] = [
                         
                         {(msg.hasUpload || msg.viewFile) && (
                           <div style={{ marginTop: '12px', marginBottom: '4px', display: 'flex', gap: '8px' }}>
-                            {msg.hasUpload && (
-                              <>
-                                <button className="btn secondary" onClick={() => document.getElementById(`dummy-upload-${msg.id}`)?.click()}>
-                                  <span style={{ marginRight: '6px' }}>📎</span>
-                                  Upload File (.xlsx, .csv)
-                                </button>
-                                <input type="file" id={`dummy-upload-${msg.id}`} accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                              </>
-                            )}
                             {msg.viewFile && (
                               <button className="btn secondary" onClick={() => handleViewFile(msg.viewFile!)}>
                                 <span style={{ marginRight: '6px' }}>👁️</span>
@@ -2115,28 +2116,28 @@ const chatScript: ChatStepDef[] = [
             <div style={{ minWidth: 0 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '24px' }} id="dashMetrics">
               <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Peak</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.peakRevenue)}</div>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Peak (Actual)</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(Math.max(...(f as any).zilrettaActuals.filter((v: any) => v !== null)))}</div>
               </div>
               <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Peak Share</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtPct(state.peakShare * 100)}</div>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Peak Share (Adj)</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtPct((f as any).adjustedPeakShare * 100)}</div>
               </div>
               <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Peak Patients</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtNum(f.addressable * state.peakShare)}</div>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Peak Patients (Adj)</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtNum((f as any).adjustedPeakPatients)}</div>
               </div>
               <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 1</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.cumulativeRevenue[0])}</div>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 1 (Actual)</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM((f as any).zilrettaActuals[0])}</div>
               </div>
               <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 2</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.cumulativeRevenue[1])}</div>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 2 (Actual)</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM((f as any).zilrettaActuals[1])}</div>
               </div>
               <div className="metric" style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 3</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.cumulativeRevenue[2])}</div>
+                <div className="label" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Rev - Yr 3 (Actual)</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM((f as any).zilrettaActuals[2])}</div>
               </div>
             </div>
 
@@ -2148,7 +2149,7 @@ const chatScript: ChatStepDef[] = [
             <div className="canvas-wrap">
               {activeTab === 4 && <Line 
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: f.years, datasets: [{ label: 'Net year revenue', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                data={{ labels: f.years, datasets: [{ label: 'Actual Net Rev (Zilretta)', data: (f as any).zilrettaActuals.map((val: any, idx: number) => val !== null ? val : f.revenue[idx]), borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
               />}
             </div>
           </div>
@@ -2178,17 +2179,26 @@ const chatScript: ChatStepDef[] = [
             <h3>Year-by-year detail</h3>
             <table id="forecastTable">
               <thead>
-                <tr><th>Year</th><th>Patients</th><th>Share</th><th>Net year revenue</th></tr>
+                <tr><th>Year</th><th>Patients</th><th>Share</th><th>Modeled Net Rev</th><th>Actual Net Rev (Zilretta)</th></tr>
               </thead>
               <tbody>
-                {f.years.map((y, i) => (
-                  <tr key={i}>
-                    <td>{y}</td>
-                    <td>{fmtNum(f.patients[i])}</td>
-                    <td>{fmtPct(f.share[i])}</td>
-                    <td>{fmtM(f.revenue[i])}</td>
-                  </tr>
-                ))}
+                {f.years.map((y, i) => {
+                  const actualRev = (f as any).zilrettaActuals?.[i];
+                  let actualDisplay = '-';
+                  if (actualRev !== null && actualRev !== undefined) {
+                    actualDisplay = fmtM(actualRev);
+                  }
+                  
+                  return (
+                    <tr key={i}>
+                      <td>{y}</td>
+                      <td>{fmtNum(f.patients[i])}</td>
+                      <td>{fmtPct(f.share[i])}</td>
+                      <td>{fmtM(f.revenue[i])}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--teal)' }}>{actualDisplay}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
