@@ -273,11 +273,13 @@ table th { color: var(--text-muted); font-weight: 600; font-size: 12px; text-tra
 }
 
 /* Accordion */
-.accordion-section { margin-bottom: 8px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border, #e0e0e0); }
-.accordion-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--surface-1, #f8f8f6); font-weight: 500; font-size: 14px; cursor: pointer; border: none; text-align: left; }
-.accordion-header.open { background: var(--surface-2, #fff); }
-.accordion-chevron { font-size: 11px; color: var(--text-secondary, #888); }
-.accordion-body { padding: 16px; background: var(--surface-2, #fff); display: flex; flex-direction: column; gap: 20px; }
+.accordion-section { margin-bottom: 12px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border, #e0e0e0); box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all 0.2s ease; background: #fff; }
+.accordion-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; background: #fff; font-weight: 600; font-size: 15px; cursor: pointer; border: none; text-align: left; transition: background 0.2s; }
+.accordion-header:hover { background: #fafafa; }
+.accordion-header.open { background: #fdfdfd; border-bottom: 1px solid var(--border, #e0e0e0); }
+.accordion-chevron { font-size: 11px; color: var(--text-secondary, #888); transition: transform 0.3s ease; }
+.accordion-header.open .accordion-chevron { transform: rotate(180deg); }
+.accordion-body { padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 24px; }
 
 /* Slider */
 .slider-control-row { display: flex; flex-direction: column; gap: 6px; }

@@ -356,6 +356,26 @@ function ModelArchitecturePanel({ state }: { state: ForecastState }) {
     </div>
   );
 }
+
+const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: string, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
+  <div style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+    <div 
+      onClick={onToggle}
+      style={{ 
+        background: isOpen ? '#fff' : 'var(--surface-1, #f8f8f6)',
+        color: 'var(--navy)', 
+        fontSize: '17px', padding: '16px 20px', borderBottom: isOpen ? '1px solid var(--border)' : 'none',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        fontWeight: '600', transition: 'background 0.2s ease'
+      }}
+    >
+      <span>{title}</span>
+      <span style={{ fontSize: '13px', color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease', display: 'inline-block' }}>▼</span>
+    </div>
+    {isOpen && <div style={{ padding: '20px 24px', background: '#fafafa' }}>{children}</div>}
+  </div>
+);
+
 export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
   const [maxTab, setMaxTab] = useState(1);
@@ -674,7 +694,7 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage3_q1',
     who: 'ai',
-    text: "These seven inputs are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
+    text: "These seven inputs (IAS Treated % of Diagnosed, IAS Treated % Growth Rate, HA Ratio to IAS Treated, HA Ratio Growth Rate, IAS and HA Treated (Both), Initial Additional Market Growth, and Annual Decay Rate of Additional Market Growth) are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
     hasUpload: true,
     viewFile: '3rd_excel.csv'
   },
@@ -1184,8 +1204,8 @@ const chatScript: ChatStepDef[] = [
     window.scrollTo(0, 0);
   };
 
-  const [openSections, setOpenSections] = useState<Set<number>>(new Set([1]));
-  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set(['Core Demand Modeling', 'Access & Competitive Friction Adjustment', 'Volume & Revenue Output']));
+  const [openSections, setOpenSections] = useState<Set<number>>(new Set([0, 1]));
+  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set(['Forecast Setup & Market Alignment', 'Foundation / Data', 'Core Demand Modeling', 'Access & Competitive Friction Adjustments', 'Volume & Revenue Output']));
   const toggleMainGroup = (groupName: string) => {
     setOpenMainGroups(prev => {
       const next = new Set(prev);
@@ -1654,32 +1674,70 @@ const chatScript: ChatStepDef[] = [
     { name: 'Base', tag: 'tag-base', s: state }
   ];
   const scenarios = [...defaultScenarios, ...savedScenarios];
-  const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: string, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
-    <div style={{ marginBottom: '24px' }}>
-      <div 
-        onClick={onToggle}
-        style={{ 
-          marginTop: '32px', marginBottom: '16px', color: 'var(--navy)', 
-          fontSize: '18px', paddingBottom: '8px', borderBottom: '2px solid var(--border)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}
-      >
-        <span>{title}</span>
-        <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
-      </div>
-      {isOpen && <div>{children}</div>}
-    </div>
-  );
 
   const renderAssumptions = (asDropdown = false) => (
     <>
+      <CollapsibleMainGroup title="Forecast Setup & Market Alignment" isOpen={openMainGroups.has('Forecast Setup & Market Alignment')} onToggle={() => toggleMainGroup('Forecast Setup & Market Alignment')}>
+            <AccordionSection idx={0} title="Key Dates" color="#34495e" isOpen={openSections.has(0)} onQuickSet={(level) => handleQuickSet(0, level)} onToggle={() => toggleSection(0)}>
+              <DateOrNeverControl label="Product Approval Date (Start of Promotion)" fieldKey="launchDate" value={state.launchDate} onChange={v => handleStateChange('launchDate', v)} />
+              <DateOrNeverControl label="Availability Date (must be ≥ 1A)" fieldKey="availabilityDate" value={state.availabilityDate} onChange={v => handleStateChange('availabilityDate', v)} />
+            </AccordionSection>
+      </CollapsibleMainGroup>
+
+      <CollapsibleMainGroup title="Foundation / Data" isOpen={openMainGroups.has('Foundation / Data')} onToggle={() => toggleMainGroup('Foundation / Data')}>
+            <AccordionSection idx={101} title="US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
+              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+                  US Population Census (by Year & Age Bucket)
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn secondary" onClick={() => document.getElementById('upload-census')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                  </button>
+                  <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                  <button className="btn secondary" onClick={() => handleViewFile('Book1.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                  </button>
+                </div>
+              </div>
+            </AccordionSection>
+      </CollapsibleMainGroup>
+
       <CollapsibleMainGroup title="Core Demand Modeling" isOpen={openMainGroups.has('Core Demand Modeling')} onToggle={() => toggleMainGroup('Core Demand Modeling')}>
         <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
+              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+                  2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age)
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn secondary" onClick={() => document.getElementById('upload-ims')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                  </button>
+                  <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                  <button className="btn secondary" onClick={() => handleViewFile('insured and uninsured patients.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                  </button>
+                </div>
+              </div>
               <SliderControl asDropdown={asDropdown} label="Diagnosis rate (base year)" fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={state.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => handleStateChange('diagnosisRate', v)} />
               <SliderControl asDropdown={asDropdown} label="Diagnosis annual growth rate" fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={state.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => handleStateChange('diagnosisAnnualGrowthRate', v)} />
             </AccordionSection>
 
             <AccordionSection idx={2} title="Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
+              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+                  Rx Analysis — Treatment Share × Physician Type
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn secondary" onClick={() => document.getElementById('upload-rx')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                  </button>
+                  <input type="file" id="upload-rx" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                  <button className="btn secondary" onClick={() => handleViewFile('step 5.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                  </button>
+                </div>
+              </div>
               <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
               <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
               <SliderControl asDropdown={asDropdown} label="HA-to-IAS ratio" fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={state.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => handleStateChange('haRatioToIAS', v)} />
@@ -1690,6 +1748,20 @@ const chatScript: ChatStepDef[] = [
             </AccordionSection>
 
             <AccordionSection idx={3} title="Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
+              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+                  Primary market research for peak share
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn secondary" onClick={() => document.getElementById('upload-pmr')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                  </button>
+                  <input type="file" id="upload-pmr" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                  <button className="btn secondary" onClick={() => handleViewFile('3rd_excel.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                    <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                  </button>
+                </div>
+              </div>
               <SliderControl asDropdown={asDropdown} label="Overstatement adjustment factor" fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={state.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => handleStateChange('overstatementAdjFactor', v)} />
               <ToggleControl label="WOMAC pain-score data available?" fieldKey="womacScoreAvailable" value={state.womacScoreAvailable} onChange={v => handleStateChange('womacScoreAvailable', v)} />
               <ToggleControl label="Diabetes/glycemic data available?" fieldKey="diabetesGlycemicDataAvailable" value={state.diabetesGlycemicDataAvailable} onChange={v => handleStateChange('diabetesGlycemicDataAvailable', v)} />
@@ -1698,15 +1770,16 @@ const chatScript: ChatStepDef[] = [
               <SliderControl asDropdown={asDropdown} label="Market research adj. — Rheum/PCP" fieldKey="newMarketResearchAdjRheum" stops={[0.90, 0.95, 1.00, 1.05, 1.10]} currentValue={state.newMarketResearchAdjRheum} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjRheum')} onChange={v => handleStateChange('newMarketResearchAdjRheum', v)} />
             </AccordionSection>
 
+      </CollapsibleMainGroup>
+
+      <CollapsibleMainGroup title="Access & Competitive Friction Adjustments" isOpen={openMainGroups.has('Access & Competitive Friction Adjustments')} onToggle={() => toggleMainGroup('Access & Competitive Friction Adjustments')}>
             <AccordionSection idx={4} title="Payer Access" color="#d9534f" isOpen={openSections.has(4)} onQuickSet={(level) => handleQuickSet(4, level)} onToggle={() => toggleSection(4)}>
               <SelectControl label="Payer access requirement" fieldKey="payerAccessRequirement" options={[{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}]} value={state.payerAccessRequirement} onAskAI={() => openAiModal('payerAccessRequirement')} onChange={v => handleStateChange('payerAccessRequirement', v)} />
               <SliderControl asDropdown={asDropdown} label="Pricing adj. — access impact (% surviving)" fieldKey="pricingAdjFactorAccessImpact" stops={[0.90, 0.92, 0.96, 0.97, 0.98]} currentValue={state.pricingAdjFactorAccessImpact} unit="%" onAskAI={() => openAiModal('pricingAdjFactorAccessImpact')} onChange={v => handleStateChange('pricingAdjFactorAccessImpact', v)} />
               <ToggleControl label="Patient assistance program in place?" fieldKey="patientAssistanceProgramInPlace" value={state.patientAssistanceProgramInPlace} onChange={v => handleStateChange('patientAssistanceProgramInPlace', v)} />
               <SliderControl asDropdown={asDropdown} label="Pricing adj. — PAP lift" fieldKey="pricingAdjPatientAssistanceImpact" stops={[1.00, 1.05, 1.10, 1.15, 1.20]} currentValue={state.pricingAdjPatientAssistanceImpact} unit="%" onAskAI={() => openAiModal('pricingAdjPatientAssistanceImpact')} onChange={v => handleStateChange('pricingAdjPatientAssistanceImpact', v)} />
             </AccordionSection>
-      </CollapsibleMainGroup>
 
-      <CollapsibleMainGroup title="Access & Competitive Friction Adjustment" isOpen={openMainGroups.has('Access & Competitive Friction Adjustment')} onToggle={() => toggleMainGroup('Access & Competitive Friction Adjustment')}>
             <AccordionSection idx={5} title="Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
               <SliderControl asDropdown={asDropdown} label="Years to peak share" fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={state.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => handleStateChange('yearsToPeak', v)} />
               <SliderControl asDropdown={asDropdown} label="Ortho/Rheum reached by month 12" fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={state.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => handleStateChange('pctORSReachedByMonth12', v)} />
@@ -1765,25 +1838,6 @@ const chatScript: ChatStepDef[] = [
             </AccordionSection>
       </CollapsibleMainGroup>
 
-          <div className="card">
-            <h3>Patient flow funnel</h3>
-            <div className="funnel funnelBody">
-              {funnelRows.map((r, i) => {
-                const pct = Math.max(2, (r.val / r.max) * 100);
-                return (
-                  <div key={i} className="funnel-row">
-                    <div className="flabel">
-                      <span className="fname">{r.name}</span>
-                      <span className="fval">{fmtNum(r.val)}</span>
-                    </div>
-                    <div className="funnel-bar-bg">
-                      <div className="funnel-bar-fill" style={{ width: `${pct}%` }}></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="card">
             <h3>Forecasting algorithm</h3>

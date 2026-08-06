@@ -1,0 +1,51 @@
+,Stage,Step,Item / Parameter,Parameter ID(s),Input Nature,What to Show User,What to Explain,Control Type,Default Value,Editable Range
+0,Forecast Setup & Market Alignment,0,Product Approval Date (Start of Promotion),1A,Direct Input (Slider/List),—,—,Date Picker,2017-12-01 00:00:00,Jan 2017 – Jan 2019 for Knee (Jan 2020 for Hip/Shoulder)  (selected: Dec 2017)
+1,Forecast Setup & Market Alignment,0,Availability Date (must be ≥ 1A),1B,Direct Input (Slider/List),—,—,Date Picker,2017-12-01 00:00:00,Same range as 1A; in practice typically set equal to the Approval Date  (selected: Dec 2017)
+2,Foundation / Data,1,US Population Census (by Year & Age Bucket),—,Indirect Input (Uploadable),"Yearly Census population table, 2014–2027, by age bucket",Monthly-interpolated between yearly Census projections to build the population base,Excel Upload,US Census Bureau 2014 Projections,Upload replaces the default Census table
+3,Core Demand Modeling,2,2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age),—,Indirect Input (Uploadable),"IMS PharMetrics insured diagnosed-patient counts by age bucket, plus uninsured estimate",Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range,Excel Upload,IMS PharMetrics Plus 2016 cut,Upload refreshes the 2A/2B slider range
+4,Core Demand Modeling,2,2016 Diagnosis Rate,2A,Direct Input (Slider/List),—,—,Slider,0.052,4.8% (Cons.) → 5.3% (Aggr.)
+5,Core Demand Modeling,2,Diagnosis Annual Growth Rate,2B,Direct Input (Slider/List),—,—,Slider,0.032,1.9% (Cons.) → 6.5% (Aggr.)
+6,Core Demand Modeling,3,IAS Treated % of Diagnosed (base yr),4A,Direct Input (Slider/List),—,—,Slider,0.284,24.4% (Cons.) → 32.4% (Aggr.)
+7,Core Demand Modeling,3,IAS Treated % Growth Rate,4B,Direct Input (Slider/List),—,—,Slider,0.035,1.0% (Cons.) → 4.0% (Aggr.)
+8,Core Demand Modeling,3,HA Ratio to IAS Treated,4C,Direct Input (Slider/List),—,—,Slider,0.3,30% (Cons.) → 55% (Aggr.)
+9,Core Demand Modeling,3,HA Ratio Growth Rate,4D,Direct Input (Slider/List),—,—,Slider,-0.01,-2.0% (Cons.) → 0.0% (Aggr.)
+10,Core Demand Modeling,3,IAS and HA Treated (Both),4E,Direct Input (Slider/List),—,—,Slider,0.15,20.0% (Cons.) → 10.0% (Aggr.)
+11,Core Demand Modeling,3,Initial Additional Market Growth (from promotion),4F,Direct Input (Slider/List),—,—,Slider,0.055,2.5% (Cons.) → 6.5% (Aggr.)
+12,Core Demand Modeling,3,Annual Decay Rate of Additional Market Growth,4G,Direct Input (Slider/List),—,—,Slider,0.2,25.0% (Cons.) → 15.0% (Aggr.)
+13,Core Demand Modeling,4,Rx Analysis — Treatment Share × Physician Type,—,Indirect Input (Uploadable),"Existing Rx-based split: IAS/HA/Both share by Ortho Surgeon, Rheumatologist, PCP/Other",Fixed claims-based cut applied directly to the treated-patient pool from Step 3,Excel Upload,Knee Model Skeleton cells E76:G87,Upload replaces the default physician split
+14,Core Demand Modeling,5,Primary market research for peak share,,Indirect Input (Uploadable),,,Excel Upload,,
+15,Core Demand Modeling,5,Overstatement Adj. Factor (General),5A,Direct Input (Slider/List),—,—,Slider,0.25,30% (Cons.) → 10% (Aggr.)
+16,Core Demand Modeling,5,WOMAC Score Data Available?,5B,Direct Input (Slider/List),—,—,Toggle,Yes,Yes / No  (selected: Yes)
+17,Core Demand Modeling,5,Diabetes / Glycemic Data Available?,5C,Direct Input (Slider/List),—,—,Toggle,Yes,Yes / No  (selected: Yes)
+18,Core Demand Modeling,5,WAC Price / Term,5D,Direct Input (Slider/List),—,—,Slider,575,"$1,000 (Cons.) → $400 (Aggr.)"
+19,Core Demand Modeling,5,New Market Research Adj. — Orthos,5E,Direct Input (Slider/List),—,—,Slider,1.1,95% (Cons.) → 155% (Aggr.)
+20,Core Demand Modeling,5,New Market Research Adj. — Rheum/PCP/Other,5F,Direct Input (Slider/List),—,—,Slider,1,90% (Cons.) → 110% (Aggr.)
+21,Access & Competitive Friction Adjustments,6,Payer Access Requirement,6A,Direct Input (Slider/List),—,—,Categorical Select,Pre-Cert + Step Edit,No Requirement / Pre-Cert / Pre-Cert + Step Edit  (selected: Pre-Cert + Step Edit)
+22,Access & Competitive Friction Adjustments,6,Pricing Adj. Factor — Access Impact,6B,Direct Input (Slider/List),—,—,Slider,0.96,90% (Cons.) → 98% (Aggr.)
+23,Access & Competitive Friction Adjustments,6,Patient Assistance Program in Place?,6C,Direct Input (Slider/List),—,—,Toggle,No,Yes / No  (selected: No)
+24,Access & Competitive Friction Adjustments,6,Pricing Adj. — Patient Assistance Impact,6D,Direct Input (Slider/List),—,—,Slider,100% (No Adj.),100% (No Adj.) (Cons.) → 120% (Aggr.)
+25,Access & Competitive Friction Adjustments,7,Years to Peak Share,7A,Direct Input (Slider/List),—,—,Slider,5 yrs,7 yrs (Cons.) → 3 yrs (Aggr.)
+26,Access & Competitive Friction Adjustments,7,% ORS/Rheum Reached (12mo / 2yr / 3+yr),7B–7D,Direct Input (Slider/List),—,—,Direct Value,Marketing-plan sourced: 70% / 80% / 85%,Marketing-plan sourced: 70% / 80% / 85%
+27,Access & Competitive Friction Adjustments,7,% PCP/Other Reached (12mo / 2yr / 3+yr),7E–7G,Direct Input (Slider/List),—,—,Direct Value,Marketing-plan sourced: 52.4% / 60% / 65%,Marketing-plan sourced: 52.4% / 60% / 65%
+28,Access & Competitive Friction Adjustments,8,Duration of Miscellaneous J-Code,8A,Direct Input (Slider/List),—,—,Linked / Fixed,Auto-linked to Launch Date (Param 1A) — no separate input,Auto-linked to Launch Date (Param 1A) — no separate input
+29,Access & Competitive Friction Adjustments,8,Effect of J-Code (% retained),8B,Direct Input (Slider/List),—,—,Slider,Model uses a custom override of 60% (between Centered 53% and Semi-Aggressive 65%),30% (Cons.) → 75% (Aggr.)
+30,Access & Competitive Friction Adjustments,9,Duration of Refrigeration Requirement,9A,Direct Input (Slider/List),—,—,Slider,Always,Always (Cons.) → 12 mo (Aggr.)
+31,Access & Competitive Friction Adjustments,9,Effect of Refrigeration (% retained) — ORS,9B,Direct Input (Slider/List),—,—,Slider,0.95,70% (Cons.) → 95% (Aggr.)
+32,Access & Competitive Friction Adjustments,9,Effect of Refrigeration — Rheum/Other,9C,Direct Input (Slider/List),—,—,Slider,0.95,70% (Cons.) → 95% (Aggr.)
+33,Access & Competitive Friction Adjustments,10,Office Mgmt. Rejection Rate,10A,Direct Input (Slider/List),—,—,Linked / Fixed,Auto-linked to WAC Price (Param 5D) via two-stage lookup table — no separate input,Auto-linked to WAC Price (Param 5D) via two-stage lookup table — no separate input
+34,Access & Competitive Friction Adjustments,10,Office Rejection Rate — Annual Growth,10B,Direct Input (Slider/List),—,—,Slider,-0.01,0.0% (Cons.) → -2.0% (Aggr.)
+35,Access & Competitive Friction Adjustments,11,Cingal Combo Product Launch Date,11A,Direct Input (Slider/List),—,—,Date Picker,2019-11-01 00:00:00,"Jul 2017 – Dec 2020, or “Does Not Launch”  (selected: Nov 2019)"
+36,Access & Competitive Friction Adjustments,11,Effect of Cingal Launch (% retained) — Ortho/Rheum,11B,Direct Input (Slider/List),—,—,Slider,0.74,70% (Cons.) → 90% (Aggr.)
+37,Access & Competitive Friction Adjustments,11,Effect of Cingal Launch (% retained) — PCP/Other,11C,Direct Input (Slider/List),—,—,Slider,0.85,80% (Cons.) → 100% (Aggr.)
+38,Access & Competitive Friction Adjustments,12,Ampion Biologic Product Launch Date,12A,Direct Input (Slider/List),—,—,Date Picker,Does Not Launch,"Jul 2017 – Dec 2020, or “Does Not Launch”  (selected: Does Not Launch)"
+39,Access & Competitive Friction Adjustments,12,Effect of Ampion Launch (% retained) — Ortho/Rheum,12B,Direct Input (Slider/List),—,—,Slider,0.865,75% (Cons.) → 95% (Aggr.)
+40,Access & Competitive Friction Adjustments,12,Effect of Ampion Launch (% retained) — PCP/Other,12C,Direct Input (Slider/List),—,—,Slider,0.84,75% (Cons.) → 95% (Aggr.)
+41,Access & Competitive Friction Adjustments,13,Anti-NGF Product Launch Date,13A,Direct Input (Slider/List),—,—,Date Picker,2020-01-01 00:00:00,"Apr 2019 – Dec 2022, or “Does Not Launch”  (selected: Jan 2020)"
+42,Access & Competitive Friction Adjustments,13,Effect of Anti-NGF Launch (% retained) — Ortho/Rheum,13B,Direct Input (Slider/List),—,—,Slider,0.9,80% (Cons.) → 100% (Aggr.)
+43,Access & Competitive Friction Adjustments,13,Effect of Anti-NGF Launch (% retained) — PCP/Other,13C,Direct Input (Slider/List),—,—,Slider,0.95,90% (Cons.) → 100% (Aggr.)
+44,Volume & Revenue Output,14,Frequency of Injections (yearly),14A,Direct Input (Slider/List),—,—,Slider,1.5,1.0 (Cons.) → 2.0 (Aggr.)
+45,Volume & Revenue Output,15,Sample Start Peak %,15A,Direct Input (Slider/List),—,—,Slider,0.25,35% (Cons.) → 15% (Aggr.)
+46,Volume & Revenue Output,15,Sample Long-Term % Asymptote,15B,Direct Input (Slider/List),—,—,Slider,0.02,4.0% (Cons.) → 1.0% (Aggr.)
+47,Volume & Revenue Output,16,Monthly Seasonality Index (Jan–Dec),—,Indirect Input (Uploadable),Default seasonality pattern (modeled on Synvisc 2013–15 monthly volumes),"Captures predictable within-year demand swings, independent of the calendar-day correction below",Excel Upload,Synvisc-analog 12-month index,Upload replaces the default 12-month index
+48,Volume & Revenue Output,18,Launch-Quarter Actuals / Override % (by Quarter),—,Indirect Input (Uploadable),Raw model quarterly totals for the current scenario,"Override % is applied to each flagged quarter, then reconciled back down to the underlying months",Direct Value,Baseline ships with overrides in the first 5 quarters,Analyst-entered % per quarter
+49,Volume & Revenue Output,20,WAC Price (carried forward),5D (reused),Direct Input (Slider/List),—,—,Carried Forward,Same value as selected in Step 5 ($575 centered),Same value as selected in Step 5 ($575 centered)
