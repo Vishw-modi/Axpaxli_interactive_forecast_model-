@@ -579,19 +579,6 @@ const chatScript: ChatStepDef[] = [
     ]
   },
   {
-    id: 'stage3_q1',
-    who: 'ai',
-    text: "These seven inputs are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
-    hasUpload: true,
-    viewFile: '3rd_excel.csv'
-  },
-  {
-    id: 'stage3_a1',
-    who: 'user',
-    text: "No, use the existing research.",
-    getAssumptions: () => [{k:'Market Research Source', v:'Existing primary market research (Default)'}]
-  },
-  {
     id: 'stage3_q4A',
     who: 'ai',
     text: "4A: What % of diagnosed patients get an IAS injection in the base year?",
@@ -665,14 +652,7 @@ const chatScript: ChatStepDef[] = [
     id: 'stage4_q1',
     who: 'ai',
     text: "Here's the current Rx-based physician split — IAS/HA/Both share by Ortho Surgeon, Rheumatologist, and PCP/Other, from claims analysis.",
-    dataSnippet: {
-      headers: ['Physician Type', 'IAS Share', 'HA Share', 'Both Share'],
-      rows: [
-        ['Ortho Surgeon', '55%', '60%', '50%'],
-        ['Rheumatologist', '20%', '15%', '25%'],
-        ['PCP / Other', '25%', '25%', '25%']
-      ]
-    }
+    viewFile: 'step 5.csv'
   },
   {
     id: 'stage4_q2',
@@ -689,7 +669,25 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage4_summary',
     who: 'ai',
-    text: "Good — applying the existing physician split. Next, let's talk product profile and physician preference."
+    text: "Good — applying the existing physician split."
+  },
+  {
+    id: 'stage3_q1',
+    who: 'ai',
+    text: "These seven inputs are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
+    hasUpload: true,
+    viewFile: '3rd_excel.csv'
+  },
+  {
+    id: 'stage3_a1',
+    who: 'user',
+    text: "No, use the existing research.",
+    getAssumptions: () => [{k:'Market Research Source', v:'Existing primary market research (Default)'}]
+  },
+  {
+    id: 'stage3_summary',
+    who: 'ai',
+    text: "Got it. Next, let's talk product profile and physician preference."
   },
   {
     id: 'stage5_q1',
