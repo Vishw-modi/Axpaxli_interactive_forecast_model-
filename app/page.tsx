@@ -195,6 +195,39 @@ function SelectControl({
   );
 }
 
+function NumberControl({
+  label, fieldKey, currentValue, unit, onChange, asDropdown
+}: {
+  label: string;
+  fieldKey: string;
+  currentValue: number;
+  unit: string;
+  onChange: (val: number) => void;
+  asDropdown?: boolean;
+}) {
+  const displayVal = unit === '%' ? Math.round(currentValue * 100) : currentValue;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = parseFloat(e.target.value);
+    if (isNaN(val)) val = 0;
+    if (unit === '%') val = val / 100;
+    onChange(val);
+  };
+  return (
+    <div className={asDropdown ? "slider-control-row" : ""} style={!asDropdown ? { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' } : { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+      <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <input 
+          type="number" 
+          value={displayVal} 
+          onChange={handleChange}
+          style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e2e8f0', width: '80px', textAlign: 'right' }} 
+        />
+        <span style={{ fontSize: '13px', color: '#64748b' }}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+
 function DateOrNeverControl({
   label, fieldKey, value, onChange
 }: {
@@ -422,6 +455,7 @@ export default function ForecastApp() {
 
   type ChatControl = 
   | { type: 'slider', key: keyof ForecastState, label: string, stops: number[], unit: string }
+  | { type: 'number', key: keyof ForecastState, label: string, unit: string }
   | { type: 'toggle', key: keyof ForecastState, label: string }
   | { type: 'select', key: keyof ForecastState, label: string, options: {value:string, label:string}[] }
   | { type: 'dateOrNever', key: keyof ForecastState, label: string };
@@ -599,6 +633,11 @@ const chatScript: ChatStepDef[] = [
     ]
   },
   {
+    id: 'stage3_q4_intro',
+    who: 'ai',
+    text: "These seven inputs (IAS Treated % of Diagnosed, IAS Treated % Growth Rate, HA Ratio to IAS Treated, HA Ratio Growth Rate, IAS and HA Treated (Both), Initial Additional Market Growth, and Annual Decay Rate of Additional Market Growth) are set from our existing primary market research, you can use the slider below to adjust the values as per your requirement"
+  },
+  {
     id: 'stage3_q4A',
     who: 'ai',
     text: "4A: What % of diagnosed patients get an IAS injection in the base year?",
@@ -692,20 +731,20 @@ const chatScript: ChatStepDef[] = [
     text: "Good — applying the existing physician split."
   },
   {
-    id: 'stage3_q1',
+    id: 'stage5_intro',
     who: 'ai',
-    text: "These seven inputs (IAS Treated % of Diagnosed, IAS Treated % Growth Rate, HA Ratio to IAS Treated, HA Ratio Growth Rate, IAS and HA Treated (Both), Initial Additional Market Growth, and Annual Decay Rate of Additional Market Growth) are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
+    text: "Peak preference share is pulled from a primary-research lookup matrix keyed on the full product profile — whether WOMAC pain-score and diabetes/glycemic data exist, whether refrigeration is required, and the WAC price point — then reweighted using newer market research (separately for Ortho vs. Rheum/PCP) and discounted for typical survey overstatement bias. Price isn't a simple multiplier here: a different price selects an entirely different row of the preference-share matrix. If you have your own data then you can upload it as well.",
     hasUpload: true,
     viewFile: '3rd_excel.csv'
   },
   {
-    id: 'stage3_a1',
+    id: 'stage5_intro_a',
     who: 'user',
     text: "No, use the existing research.",
-    getAssumptions: () => [{k:'Market Research Source', v:'Existing primary market research (Default)'}]
+    getAssumptions: () => [{k:'Peak Preference Share Data', v:'Existing primary-research lookup matrix (Default)'}]
   },
   {
-    id: 'stage3_summary',
+    id: 'stage5_intro_summary',
     who: 'ai',
     text: "Got it. Next, let's talk product profile and physician preference."
   },
@@ -1098,19 +1137,19 @@ const chatScript: ChatStepDef[] = [
     who: 'ai',
     text: "Got it — what % adjustment should I apply to each of those quarters, and I'll reconcile the monthly detail underneath automatically.",
     controls: [
-      { type: 'slider', key: 'q1OverrideAdj', label: 'Q1 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
-      { type: 'slider', key: 'q2OverrideAdj', label: 'Q2 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
-      { type: 'slider', key: 'q3OverrideAdj', label: 'Q3 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
-      { type: 'slider', key: 'q4OverrideAdj', label: 'Q4 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' },
-      { type: 'slider', key: 'q5OverrideAdj', label: 'Q5 Override Adjustment', stops: [-0.5, -0.25, 0.0, 0.25, 0.5], unit: '%' }
+      { type: 'number', key: 'q4_2017_OverrideAdj', label: 'Q4-2017 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q1_2018_OverrideAdj', label: 'Q1-2018 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q2_2018_OverrideAdj', label: 'Q2-2018 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q3_2018_OverrideAdj', label: 'Q3-2018 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q4_2018_OverrideAdj', label: 'Q4-2018 Override Adjustment', unit: '%' }
     ],
-    getUserReply: (s) => `Applied adjustments: Q1 (${(s.q1OverrideAdj*100).toFixed(0)}%), Q2 (${(s.q2OverrideAdj*100).toFixed(0)}%), Q3 (${(s.q3OverrideAdj*100).toFixed(0)}%), Q4 (${(s.q4OverrideAdj*100).toFixed(0)}%), Q5 (${(s.q5OverrideAdj*100).toFixed(0)}%)`,
+    getUserReply: (s) => `Applied adjustments: Q4-17 (${(s.q4_2017_OverrideAdj*100).toFixed(0)}%), Q1-18 (${(s.q1_2018_OverrideAdj*100).toFixed(0)}%), Q2-18 (${(s.q2_2018_OverrideAdj*100).toFixed(0)}%), Q3-18 (${(s.q3_2018_OverrideAdj*100).toFixed(0)}%), Q4-18 (${(s.q4_2018_OverrideAdj*100).toFixed(0)}%)`,
     getAssumptions: (s) => [
-      {k:'Q1 Override', v: `${(s.q1OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q2 Override', v: `${(s.q2OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q3 Override', v: `${(s.q3OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q4 Override', v: `${(s.q4OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q5 Override', v: `${(s.q5OverrideAdj*100).toFixed(0)}%`}
+      {k:'Q4-2017 Override', v: `${(s.q4_2017_OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q1-2018 Override', v: `${(s.q1_2018_OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q2-2018 Override', v: `${(s.q2_2018_OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q3-2018 Override', v: `${(s.q3_2018_OverrideAdj*100).toFixed(0)}%`},
+      {k:'Q4-2018 Override', v: `${(s.q4_2018_OverrideAdj*100).toFixed(0)}%`}
     ]
   },
   {
@@ -1730,7 +1769,14 @@ const chatScript: ChatStepDef[] = [
             </AccordionSection>
 
             <AccordionSection idx={2} title="Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
-              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
+              <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
+              <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
+              <SliderControl asDropdown={asDropdown} label="HA-to-IAS ratio" fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={state.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => handleStateChange('haRatioToIAS', v)} />
+              <SliderControl asDropdown={asDropdown} label="HA ratio annual growth rate" fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={state.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => handleStateChange('haRatioGrowthRate', v)} />
+              <SliderControl asDropdown={asDropdown} label="IAS+HA treated (both) %" fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={state.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => handleStateChange('iasAndHATreatedBoth', v)} />
+              <SliderControl asDropdown={asDropdown} label="Initial promotional market lift" fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={state.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => handleStateChange('initialAdditionalMarketGrowth', v)} />
+              <SliderControl asDropdown={asDropdown} label="Annual decay of promo lift" fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={state.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => handleStateChange('annualDecayRateOfAdditionalGrowth', v)} />
+              <div style={{ padding: '12px 0 8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
                 <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
                   Rx Analysis — Treatment Share × Physician Type
                 </div>
@@ -1746,13 +1792,6 @@ const chatScript: ChatStepDef[] = [
                   </div>
                 )}
               </div>
-              <SliderControl asDropdown={asDropdown} label="IAS treated % of diagnosed (base yr)" fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={state.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => handleStateChange('iasTreatedPctOfDiagnosed', v)} />
-              <SliderControl asDropdown={asDropdown} label="IAS treated annual growth rate" fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={state.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => handleStateChange('iasTreatedGrowthRate', v)} />
-              <SliderControl asDropdown={asDropdown} label="HA-to-IAS ratio" fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={state.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => handleStateChange('haRatioToIAS', v)} />
-              <SliderControl asDropdown={asDropdown} label="HA ratio annual growth rate" fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={state.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => handleStateChange('haRatioGrowthRate', v)} />
-              <SliderControl asDropdown={asDropdown} label="IAS+HA treated (both) %" fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={state.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => handleStateChange('iasAndHATreatedBoth', v)} />
-              <SliderControl asDropdown={asDropdown} label="Initial promotional market lift" fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={state.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => handleStateChange('initialAdditionalMarketGrowth', v)} />
-              <SliderControl asDropdown={asDropdown} label="Annual decay of promo lift" fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={state.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => handleStateChange('annualDecayRateOfAdditionalGrowth', v)} />
             </AccordionSection>
 
             <AccordionSection idx={3} title="Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
@@ -1840,11 +1879,11 @@ const chatScript: ChatStepDef[] = [
             </AccordionSection>
 
             <AccordionSection idx={9} title="Quarterly Overrides" color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
-              <SliderControl asDropdown={asDropdown} label="Q1 Override Adjustment" fieldKey="q1OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q1OverrideAdj} unit="%" onAskAI={() => openAiModal('q1OverrideAdj')} onChange={v => handleStateChange('q1OverrideAdj', v)} />
-              <SliderControl asDropdown={asDropdown} label="Q2 Override Adjustment" fieldKey="q2OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q2OverrideAdj} unit="%" onAskAI={() => openAiModal('q2OverrideAdj')} onChange={v => handleStateChange('q2OverrideAdj', v)} />
-              <SliderControl asDropdown={asDropdown} label="Q3 Override Adjustment" fieldKey="q3OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q3OverrideAdj} unit="%" onAskAI={() => openAiModal('q3OverrideAdj')} onChange={v => handleStateChange('q3OverrideAdj', v)} />
-              <SliderControl asDropdown={asDropdown} label="Q4 Override Adjustment" fieldKey="q4OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q4OverrideAdj} unit="%" onAskAI={() => openAiModal('q4OverrideAdj')} onChange={v => handleStateChange('q4OverrideAdj', v)} />
-              <SliderControl asDropdown={asDropdown} label="Q5 Override Adjustment" fieldKey="q5OverrideAdj" stops={[-0.5, -0.25, 0.0, 0.25, 0.5]} currentValue={state.q5OverrideAdj} unit="%" onAskAI={() => openAiModal('q5OverrideAdj')} onChange={v => handleStateChange('q5OverrideAdj', v)} />
+              <NumberControl asDropdown={asDropdown} label="Q4-2017 Override Adjustment" fieldKey="q4_2017_OverrideAdj" currentValue={state.q4_2017_OverrideAdj} unit="%" onChange={v => handleStateChange('q4_2017_OverrideAdj', v)} />
+              <NumberControl asDropdown={asDropdown} label="Q1-2018 Override Adjustment" fieldKey="q1_2018_OverrideAdj" currentValue={state.q1_2018_OverrideAdj} unit="%" onChange={v => handleStateChange('q1_2018_OverrideAdj', v)} />
+              <NumberControl asDropdown={asDropdown} label="Q2-2018 Override Adjustment" fieldKey="q2_2018_OverrideAdj" currentValue={state.q2_2018_OverrideAdj} unit="%" onChange={v => handleStateChange('q2_2018_OverrideAdj', v)} />
+              <NumberControl asDropdown={asDropdown} label="Q3-2018 Override Adjustment" fieldKey="q3_2018_OverrideAdj" currentValue={state.q3_2018_OverrideAdj} unit="%" onChange={v => handleStateChange('q3_2018_OverrideAdj', v)} />
+              <NumberControl asDropdown={asDropdown} label="Q4-2018 Override Adjustment" fieldKey="q4_2018_OverrideAdj" currentValue={state.q4_2018_OverrideAdj} unit="%" onChange={v => handleStateChange('q4_2018_OverrideAdj', v)} />
             </AccordionSection>
       </CollapsibleMainGroup>
 
@@ -2008,6 +2047,13 @@ const chatScript: ChatStepDef[] = [
                         
                         {(msg.hasUpload || msg.viewFile) && (
                           <div style={{ marginTop: '12px', marginBottom: '4px', display: 'flex', gap: '8px' }}>
+                            {msg.hasUpload && (
+                              <label className="btn secondary" style={{ cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center' }}>
+                                <span style={{ marginRight: '6px' }}>📎</span>
+                                Upload file
+                                <input type="file" style={{ display: 'none' }} onChange={handleModelUpload} />
+                              </label>
+                            )}
                             {msg.viewFile && (
                               <button className="btn secondary" onClick={() => handleViewFile(msg.viewFile!)}>
                                 <span style={{ marginRight: '6px' }}>👁️</span>
@@ -2021,6 +2067,7 @@ const chatScript: ChatStepDef[] = [
                           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {msg.controls.map((ctrl: any, idx: number) => {
                               if (ctrl.type === 'slider') return <SliderControl asDropdown={false} key={idx} label={ctrl.label} fieldKey={ctrl.key} stops={ctrl.stops} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
+                              if (ctrl.type === 'number') return <NumberControl asDropdown={false} key={idx} label={ctrl.label} fieldKey={ctrl.key} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
                               if (ctrl.type === 'toggle') return <ToggleControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as boolean} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
                               if (ctrl.type === 'select') return <SelectControl key={idx} label={ctrl.label} fieldKey={ctrl.key} options={ctrl.options} value={state[ctrl.key as keyof ForecastState] as string} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
                               if (ctrl.type === 'dateOrNever') return <DateOrNeverControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as string} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;

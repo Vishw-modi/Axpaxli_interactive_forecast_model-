@@ -80,11 +80,11 @@ export type ForecastState = {
   steadyStateSampleRate: number;
 
   // STAGE 18
-  q1OverrideAdj: number;
-  q2OverrideAdj: number;
-  q3OverrideAdj: number;
-  q4OverrideAdj: number;
-  q5OverrideAdj: number;
+  q4_2017_OverrideAdj: number;
+  q1_2018_OverrideAdj: number;
+  q2_2018_OverrideAdj: number;
+  q3_2018_OverrideAdj: number;
+  q4_2018_OverrideAdj: number;
 };
 
 export const DEFAULT_FORECAST_STATE: ForecastState = {
@@ -169,11 +169,11 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   steadyStateSampleRate: 0.05,
 
   // STAGE 18
-  q1OverrideAdj: 0.0,
-  q2OverrideAdj: 0.0,
-  q3OverrideAdj: 0.0,
-  q4OverrideAdj: 0.0,
-  q5OverrideAdj: 0.0,
+  q4_2017_OverrideAdj: 0.0,
+  q1_2018_OverrideAdj: 0.0,
+  q2_2018_OverrideAdj: 0.0,
+  q3_2018_OverrideAdj: 0.0,
+  q4_2018_OverrideAdj: 0.0,
 };
 
 export const defaultState: ForecastState = DEFAULT_FORECAST_STATE;
@@ -297,12 +297,12 @@ export function computeForecast(s: ForecastState) {
     
     // Apply Quarterly Overrides
     if (t === 0) {
-      // Year 1 average override of Q1-Q4
-      const y1AvgOverride = (s.q1OverrideAdj + s.q2OverrideAdj + s.q3OverrideAdj + s.q4OverrideAdj) / 4;
+      // Year 1 average override of Q4-2017 to Q3-2018
+      const y1AvgOverride = (s.q4_2017_OverrideAdj + s.q1_2018_OverrideAdj + s.q2_2018_OverrideAdj + s.q3_2018_OverrideAdj) / 4;
       rev *= (1 + y1AvgOverride);
     } else if (t === 1) {
-      // Year 2 override mapped to Q5
-      rev *= (1 + s.q5OverrideAdj);
+      // Year 2 mapped to Q4-2018
+      rev *= (1 + s.q4_2018_OverrideAdj);
     }
     
     years.push('Year ' + (i + 1));
