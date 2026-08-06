@@ -382,6 +382,22 @@ export default function ForecastApp() {
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingModel, setIsUploadingModel] = useState(false);
   const [hasUploaded, setHasUploaded] = useState(false);
+  const [viewFileModal, setViewFileModal] = useState<{filename: string, content: string[][]} | null>(null);
+
+  const handleViewFile = async (filename: string) => {
+    try {
+      const res = await fetch(`/${filename}`);
+      if (res.ok) {
+        const text = await res.text();
+        const rows = text.split('\n').map(line => line.split(','));
+        setViewFileModal({ filename, content: rows });
+      } else {
+        setViewFileModal({ filename, content: [['Error loading file']] });
+      }
+    } catch(e) {
+      setViewFileModal({ filename, content: [['Error loading file']] });
+    }
+  };
   const [aiInputValue, setAiInputValue] = useState('');
 
   type ChatControl = 
@@ -397,6 +413,7 @@ type ChatStepDef = {
   controls?: ChatControl[];
   dataSnippet?: { headers: string[], rows: string[][] };
   hasUpload?: boolean;
+  viewFile?: string;
   getAssumptions?: (s: ForecastState) => {k:string, v:string}[];
   getUserReply?: (s: ForecastState) => string;
 };
@@ -565,7 +582,8 @@ const chatScript: ChatStepDef[] = [
     id: 'stage3_q1',
     who: 'ai',
     text: "These seven inputs are set from our existing primary market research. Is any new market research available I should factor in — you can upload an Excel and I'll refresh the ranges?",
-    hasUpload: true
+    hasUpload: true,
+    viewFile: '3rd_excel.csv'
   },
   {
     id: 'stage3_a1',
@@ -1926,13 +1944,23 @@ const chatScript: ChatStepDef[] = [
                         )}
                         {msg.text}
                         
-                        {msg.hasUpload && (
-                          <div style={{ marginTop: '12px', marginBottom: '4px' }}>
-                            <button className="btn secondary" onClick={() => document.getElementById(`dummy-upload-${msg.id}`)?.click()}>
-                              <span style={{ marginRight: '6px' }}>📎</span>
-                              Upload File (.xlsx, .csv)
-                            </button>
-                            <input type="file" id={`dummy-upload-${msg.id}`} accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                        {(msg.hasUpload || msg.viewFile) && (
+                          <div style={{ marginTop: '12px', marginBottom: '4px', display: 'flex', gap: '8px' }}>
+                            {msg.hasUpload && (
+                              <>
+                                <button className="btn secondary" onClick={() => document.getElementById(`dummy-upload-${msg.id}`)?.click()}>
+                                  <span style={{ marginRight: '6px' }}>📎</span>
+                                  Upload File (.xlsx, .csv)
+                                </button>
+                                <input type="file" id={`dummy-upload-${msg.id}`} accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                              </>
+                            )}
+                            {msg.viewFile && (
+                              <button className="btn secondary" onClick={() => handleViewFile(msg.viewFile!)}>
+                                <span style={{ marginRight: '6px' }}>👁️</span>
+                                View current data
+                              </button>
+                            )}
                           </div>
                         )}
 
@@ -2409,6 +2437,32 @@ const chatScript: ChatStepDef[] = [
 
 
         </section>
+
+        {viewFileModal && (
+          <div onClick={() => setViewFileModal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '900px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Viewing current data</h3>
+                <button onClick={() => setViewFileModal(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+              </div>
+              <div style={{ overflow: 'auto', flex: 1, border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <tbody>
+                    {viewFileModal.content.map((row, ri) => (
+                      <tr key={ri} style={{ borderBottom: '1px solid #e2e8f0', background: ri === 0 ? '#f8fafc' : '#fff' }}>
+                        {row.map((cell, ci) => (
+                          <td key={ci} style={{ padding: '8px 12px', fontWeight: ri === 0 ? 600 : 400, color: '#334155', whiteSpace: 'nowrap' }}>
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isAiModalOpen && (
           <div onClick={() => setIsAiModalOpen(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

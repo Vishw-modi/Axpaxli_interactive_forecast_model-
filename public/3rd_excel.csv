@@ -1,0 +1,24 @@
+﻿,,,,,,Product X,,,,Steroid injections only,,,,Viscosupplementation injections only,,,,Both steroid and viscosupplementation injections,,,
+State of Mkt,Adj for O/S,WOMAC Score Available?,Diabetes Data Avail?,Refrigeration,Price,Total,GP/FP/IM,Ortho. Surg.,Rhuem,Total,GP/FP/IM,Ortho. Surg.,Rhuem,Total,GP/FP/IM,Ortho. Surg.,Rhuem,Total,GP/FP/IM,Ortho. Surg.,Rhuem
+Future: Product X Only,No,Yes,Yes,Required,$400 ,,23.30%,26.30%,25.60%,,43.70%,40.80%,38.90%,,23.10%,21.20%,24.70%,,9.90%,11.70%,10.90%
+Future: Product X Only,No,Yes,Yes,Required,$500 ,,22.80%,24.10%,23.80%,,44.00%,41.90%,39.80%,,23.30%,21.90%,25.30%,,9.90%,12.10%,11.10%
+Future: Product X Only,No,Yes,Yes,Required,$575 ,,22.20%,22.00%,22.00%,,44.40%,43.10%,40.70%,,23.40%,22.50%,25.90%,,10.00%,12.40%,11.40%
+Future: Product X Only,No,Yes,Yes,Required,$800 ,,19.60%,20.70%,20.30%,,45.90%,43.90%,41.60%,,24.20%,22.90%,26.50%,,10.30%,12.60%,11.60%
+Future: Product X Only,No,Yes,Yes,Required,"$1,000 ",,17.00%,15.70%,19.80%,,47.40%,46.60%,41.90%,,25.00%,24.30%,26.60%,,10.70%,13.40%,11.70%
+Future: Product X Only,No,Yes,No,Required,$400 ,,21.60%,25.70%,25.20%,,44.70%,41.10%,39.10%,,23.60%,21.40%,24.80%,,10.10%,11.80%,10.90%
+Future: Product X Only,No,Yes,No,Required,$500 ,,21.10%,23.60%,23.50%,,45.00%,42.30%,40.00%,,23.80%,22.00%,25.40%,,10.10%,12.10%,11.20%
+Future: Product X Only,No,Yes,No,Required,$575 ,,20.60%,21.50%,21.70%,,45.30%,43.40%,40.90%,,23.90%,22.60%,26.00%,,10.20%,12.50%,11.40%
+Future: Product X Only,No,Yes,No,Required,$800 ,,18.10%,20.20%,20.00%,,46.70%,44.10%,41.80%,,24.60%,23.00%,26.50%,,10.50%,12.70%,11.70%
+Future: Product X Only,No,Yes,No,Required,"$1,000 ",,15.70%,15.40%,19.50%,,48.10%,46.80%,42.00%,,25.40%,24.40%,26.70%,,10.80%,13.50%,11.70%
+Future: Product X Only,No,No,Yes,Required,$400 ,,22.50%,24.90%,25.40%,,44.20%,41.50%,39.00%,,23.30%,21.60%,24.80%,,10.00%,11.90%,10.90%
+Future: Product X Only,No,No,Yes,Required,$500 ,,22.00%,22.90%,23.60%,,44.50%,42.60%,39.90%,,23.50%,22.20%,25.30%,,10.00%,12.30%,11.20%
+Future: Product X Only,No,No,Yes,Required,$575 ,,21.50%,20.90%,21.80%,,44.80%,43.70%,40.80%,,23.60%,22.80%,25.90%,,10.10%,12.60%,11.40%
+Future: Product X Only,No,No,Yes,Required,$800 ,,18.90%,19.60%,20.10%,,46.20%,44.40%,41.70%,,24.40%,23.20%,26.50%,,10.40%,12.80%,11.70%
+Future: Product X Only,No,No,Yes,Required,"$1,000 ",,16.40%,14.90%,19.70%,,47.70%,47.00%,42.00%,,25.20%,24.50%,26.70%,,10.70%,13.50%,11.70%
+Future: Product X Only,No,No,No,Required,$400 ,,20.80%,24.40%,25.00%,,45.20%,41.80%,39.10%,,23.80%,21.80%,24.90%,,10.20%,12.00%,10.90%
+Future: Product X Only,No,No,No,Required,$500 ,,20.40%,22.40%,23.30%,,45.40%,42.90%,40.10%,,24.00%,22.40%,25.50%,,10.20%,12.30%,11.20%
+Future: Product X Only,No,No,No,Required,$575 ,,19.90%,20.40%,21.50%,,45.70%,44.00%,41.00%,,24.10%,22.90%,26.00%,,10.30%,12.60%,11.50%
+Future: Product X Only,No,No,No,Required,$800 ,,17.50%,19.20%,19.90%,,47.00%,44.70%,41.80%,,24.80%,23.30%,26.60%,,10.60%,12.80%,11.70%
+Future: Product X Only,No,No,No,Required,"$1,000 ",,15.20%,14.60%,19.40%,,48.40%,47.20%,42.10%,,25.50%,24.60%,26.70%,,10.90%,13.60%,11.80%
+,,,,,,,,,,,,,,,,,,,,,
+Current Market,,,,,,0.00%,0.00%,0.00%,0.00%,58.50%,60.40%,58.80%,55.50%,26.90%,27.90%,25.40%,29.90%,14.60%,11.70%,15.70%,14.60%
