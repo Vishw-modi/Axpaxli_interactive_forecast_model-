@@ -2198,15 +2198,15 @@ const chatScript: ChatStepDef[] = [
                 <div className="value" style={{ fontSize: '18px' }}>{fmtNum((f as any).adjustedPeakPatients)}</div>
               </div>
               <div className="metric">
-                <div className="label">Year 1 Net Rev</div>
+                <div className="label">2016 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[0])}</div>
               </div>
               <div className="metric">
-                <div className="label">Year 2 Net Rev</div>
+                <div className="label">2017 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[1])}</div>
               </div>
               <div className="metric">
-                <div className="label">Year 3 Net Rev</div>
+                <div className="label">2018 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[2])}</div>
               </div>
             </div>
@@ -2401,9 +2401,9 @@ const chatScript: ChatStepDef[] = [
                   <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(scenarioF.peakRevenue)}</div></div>
                   <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum((scenarioF as any).adjustedPeakPatients)}</div></div>
                   <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct((scenarioF as any).adjustedPeakShare * 100)}</div></div>
-                  <div className="metric"><div className="label">1-year revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
-                  <div className="metric"><div className="label">2-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
-                  <div className="metric"><div className="label">3-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
+                  <div className="metric"><div className="label">2016 revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
+                  <div className="metric"><div className="label">2017 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
+                  <div className="metric"><div className="label">2018 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
                 </div>
               </div>
   
@@ -2497,7 +2497,7 @@ const chatScript: ChatStepDef[] = [
             <div style={{ overflowX: 'auto' }}>
               <table id="compareTable" style={{ whiteSpace: 'nowrap', width: '100%' }}>
                 <thead>
-                  <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1 net</th><th>Year 2 net</th><th>Year 3 net</th><th>Year 4 net</th><th>Year 5 net</th></tr>
+                  <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>2016 net</th><th>2017 net</th><th>2018 net</th><th>2019 net</th><th>2020 net</th></tr>
                 </thead>
               <tbody>
                 {scenarios.map((sc, i) => {
@@ -2533,7 +2533,7 @@ const chatScript: ChatStepDef[] = [
                   scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } 
                 }}
                 data={{ 
-                  labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'], 
+                  labels: ['2016', '2017', '2018', '2019', '2020'], 
                   datasets: scenarios.map((sc, i) => ({ 
                     label: sc.name, 
                     data: getRebasedForecast(sc.s).revenue.slice(0, 5), 

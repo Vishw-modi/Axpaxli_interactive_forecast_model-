@@ -305,7 +305,7 @@ export function computeForecast(s: ForecastState) {
       rev *= (1 + s.q4_2018_OverrideAdj);
     }
     
-    years.push('Year ' + (i + 1));
+    years.push((2016 + i).toString());
     patients.push(annualPatients);
     revenue.push(rev);
     share.push(monthlyShare * 100);
