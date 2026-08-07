@@ -1853,7 +1853,7 @@ const chatScript: ChatStepDef[] = [
         <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
               <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
                 <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                  2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age)
+                  2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age) <InfoTooltip text="Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range" />
                 </div>
                 {!asDropdown && (
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -1981,7 +1981,7 @@ const chatScript: ChatStepDef[] = [
               <SliderControl asDropdown={asDropdown} label="Steady-state sample rate" fieldKey="steadyStateSampleRate" stops={[0.01, 0.03, 0.05, 0.08, 0.10]} currentValue={s.steadyStateSampleRate} unit="%" onAskAI={() => openAiModal('steadyStateSampleRate')} onChange={v => h('steadyStateSampleRate', v)} />
             </AccordionSection>
 
-            <AccordionSection idx={9} title={<>Quarterly Overrides <span style={{ color: 'var(--text-muted, #888)' }}>(will be applied to overall quarters)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
+            <AccordionSection idx={9} title={<>Quarterly Overrides <span style={{ color: '#888' }}>(override is applied on the total zilretta treatments)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
               <NumberControl asDropdown={asDropdown} label="Q4-2017 Override Adjustment" fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
               <NumberControl asDropdown={asDropdown} label="Q1-2018 Override Adjustment" fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
               <NumberControl asDropdown={asDropdown} label="Q2-2018 Override Adjustment" fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
