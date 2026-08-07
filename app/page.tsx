@@ -40,7 +40,7 @@ ChartJS.register(
 function AccordionSection({
   idx, title, color, isOpen, onToggle, onQuickSet, children
 }: {
-  idx: number; title: string; color: string;
+  idx: number; title: React.ReactNode; color: string;
   isOpen: boolean; onToggle: () => void;
   onQuickSet?: (level: 0 | 2 | 4) => void;
   children: React.ReactNode;
@@ -390,8 +390,52 @@ function ModelArchitecturePanel({ state }: { state: ForecastState }) {
   );
 }
 
-const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: string, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
-  <div style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+const InfoTooltip = ({ text }: { text: string }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <span 
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'help', color: '#888', fontSize: '15px' }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      ⓘ
+      {isHovered && (
+        <span style={{
+          position: 'absolute',
+          bottom: '125%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'max-content',
+          maxWidth: '300px',
+          backgroundColor: '#333',
+          color: '#fff',
+          textAlign: 'center',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          fontSize: '13px',
+          lineHeight: '1.4',
+          pointerEvents: 'none',
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+          zIndex: 1000
+        }}>
+          {text}
+          <span style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            marginLeft: '-5px',
+            borderWidth: '5px',
+            borderStyle: 'solid',
+            borderColor: '#333 transparent transparent transparent'
+          }} />
+        </span>
+      )}
+    </span>
+  );
+};
+
+const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: React.ReactNode, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) => (
+  <div style={{ marginBottom: '32px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', border: '1px solid var(--border)' }}>
     <div 
       onClick={onToggle}
       style={{ 
@@ -399,15 +443,27 @@ const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: st
         color: 'var(--navy)', 
         fontSize: '17px', padding: '16px 20px', borderBottom: isOpen ? '1px solid var(--border)' : 'none',
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        fontWeight: '600', transition: 'background 0.2s ease'
+        fontWeight: '600', transition: 'background 0.2s ease',
+        borderTopLeftRadius: '11px', borderTopRightRadius: '11px',
+        borderBottomLeftRadius: isOpen ? '0' : '11px', borderBottomRightRadius: isOpen ? '0' : '11px'
       }}
     >
       <span>{title}</span>
       <span style={{ fontSize: '13px', color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease', display: 'inline-block' }}>▼</span>
     </div>
-    {isOpen && <div style={{ padding: '20px 24px', background: '#fafafa' }}>{children}</div>}
+    {isOpen && <div style={{ padding: '20px 24px', background: '#fafafa', borderBottomLeftRadius: '11px', borderBottomRightRadius: '11px' }}>{children}</div>}
   </div>
 );
+
+
+const CHART_LABELS_13 = ['Dec-17','Jun-18','Dec-18','Jun-19','Dec-19','Jun-20','Dec-20',
+          'Jun-21','Dec-21','Jun-22','Dec-22','Jun-23','Dec-23'];
+ 
+const PATIENTS_BASE_13 = [562, 4208, 13835, 33960, 58345, 84981, 107172, 121203,
+                 128872, 131983, 133472, 135366, 138285];
+ 
+const SHARE_BASE_13 = [0.001, 0.005, 0.016, 0.037, 0.060, 0.082, 0.099, 0.107,
+              0.108, 0.107, 0.104, 0.101, 0.100];
 
 export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
@@ -1712,6 +1768,31 @@ const chatScript: ChatStepDef[] = [
   const f = getRebasedForecast(state);
   const scenarioF = getRebasedForecast(scenarioState);
 
+  // Dynamic rebasing for 13-point charts
+  const mapPointToYearIndex = (pointIndex: number) => {
+    if (pointIndex === 0) return 0; // Dec-17 -> Year 0
+    if (pointIndex <= 2) return 1;  // Jun-18, Dec-18 -> Year 1
+    if (pointIndex <= 4) return 2;  // Jun-19, Dec-19 -> Year 2
+    if (pointIndex <= 6) return 3;  // Jun-20, Dec-20 -> Year 3
+    if (pointIndex <= 8) return 4;  // Jun-21, Dec-21 -> Year 4
+    return 5;                       // Jun-22 to Dec-23 -> Year 5
+  };
+
+  const dynamicPatients = PATIENTS_BASE_13.map((baseVal, idx) => {
+    const i = mapPointToYearIndex(idx);
+    const ratio = baseF.patients[i] ? (f.patients[i] / baseF.patients[i]) : 1;
+    return Math.round(baseVal * ratio);
+  });
+
+  const dynamicShare = SHARE_BASE_13.map((baseVal, idx) => {
+    const i = mapPointToYearIndex(idx);
+    const ratio = baseF.share[i] ? (f.share[i] / baseF.share[i]) : 1;
+    // Convert fraction to percentage and clamp to 100%
+    const scaledPct = (baseVal * ratio) * 100;
+    return Math.min(scaledPct, 100); 
+  });
+
+
   // Scenario variations (hardcoded based on peak revenue)
   const basePeak = scenarioF.peakRevenue;
   const impacts = [
@@ -1746,7 +1827,7 @@ const chatScript: ChatStepDef[] = [
       </CollapsibleMainGroup>
 
       {!asDropdown && (
-        <CollapsibleMainGroup title="Foundation / Data" isOpen={openMainGroups.has('Foundation / Data')} onToggle={() => toggleMainGroup('Foundation / Data')}>
+        <CollapsibleMainGroup title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Foundation / Data <InfoTooltip text="Monthly-interpolated between yearly Census projections to build the population base" /></span>} isOpen={openMainGroups.has('Foundation / Data')} onToggle={() => toggleMainGroup('Foundation / Data')}>
               <AccordionSection idx={101} title="US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
                 <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
@@ -1900,7 +1981,7 @@ const chatScript: ChatStepDef[] = [
               <SliderControl asDropdown={asDropdown} label="Steady-state sample rate" fieldKey="steadyStateSampleRate" stops={[0.01, 0.03, 0.05, 0.08, 0.10]} currentValue={s.steadyStateSampleRate} unit="%" onAskAI={() => openAiModal('steadyStateSampleRate')} onChange={v => h('steadyStateSampleRate', v)} />
             </AccordionSection>
 
-            <AccordionSection idx={9} title="Quarterly Overrides" color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
+            <AccordionSection idx={9} title={<>Quarterly Overrides <span style={{ color: 'var(--text-muted, #888)' }}>(will be applied to overall quarters)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
               <NumberControl asDropdown={asDropdown} label="Q4-2017 Override Adjustment" fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
               <NumberControl asDropdown={asDropdown} label="Q1-2018 Override Adjustment" fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
               <NumberControl asDropdown={asDropdown} label="Q2-2018 Override Adjustment" fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
@@ -2198,15 +2279,15 @@ const chatScript: ChatStepDef[] = [
                 <div className="value" style={{ fontSize: '18px' }}>{fmtNum((f as any).adjustedPeakPatients)}</div>
               </div>
               <div className="metric">
-                <div className="label">Year 1 Net Rev</div>
+                <div className="label">2016 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[0])}</div>
               </div>
               <div className="metric">
-                <div className="label">Year 2 Net Rev</div>
+                <div className="label">2017 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[1])}</div>
               </div>
               <div className="metric">
-                <div className="label">Year 3 Net Rev</div>
+                <div className="label">2018 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[2])}</div>
               </div>
             </div>
@@ -2226,11 +2307,11 @@ const chatScript: ChatStepDef[] = [
 
           <div className="grid2">
             <div className="card">
-              <h3>Patients on therapy</h3>
+              <h3>Treatments by Months</h3>
               <div className="canvas-wrap" style={{ height: '240px' }}>
-                {activeTab === 4 && <Bar 
-                  options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtNum(Number(v)) } } } }}
-                  data={{ labels: f.years, datasets: [{ label: 'Patients', data: f.patients.map(Math.round), backgroundColor: '#00b2a9', borderRadius: 4 }] }} 
+                {activeTab === 4 && <Line 
+                  options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v: any) => fmtNum(Number(v)) } } } }}
+                  data={{ labels: CHART_LABELS_13, datasets: [{ label: 'Patients', data: dynamicPatients, borderColor: '#00b2a9', backgroundColor: 'rgba(0,178,169,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
                 />}
               </div>
             </div>
@@ -2238,8 +2319,8 @@ const chatScript: ChatStepDef[] = [
               <h3>Market share of treated patients (%)</h3>
               <div className="canvas-wrap" style={{ height: '240px' }}>
                 {activeTab === 4 && <Line 
-                  options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => `${v}%` } } } }}
-                  data={{ labels: f.years, datasets: [{ label: 'Share %', data: f.share.map(v => Math.round(v * 10) / 10), borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                  options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v: any) => `${Number(v).toFixed(1)}%` } } } }}
+                  data={{ labels: CHART_LABELS_13, datasets: [{ label: 'Share %', data: dynamicShare, borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
                 />}
               </div>
             </div>
@@ -2401,9 +2482,9 @@ const chatScript: ChatStepDef[] = [
                   <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(scenarioF.peakRevenue)}</div></div>
                   <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum((scenarioF as any).adjustedPeakPatients)}</div></div>
                   <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct((scenarioF as any).adjustedPeakShare * 100)}</div></div>
-                  <div className="metric"><div className="label">1-year revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
-                  <div className="metric"><div className="label">2-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
-                  <div className="metric"><div className="label">3-year cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
+                  <div className="metric"><div className="label">2016 revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
+                  <div className="metric"><div className="label">2017 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
+                  <div className="metric"><div className="label">2018 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
                 </div>
               </div>
   
@@ -2497,7 +2578,7 @@ const chatScript: ChatStepDef[] = [
             <div style={{ overflowX: 'auto' }}>
               <table id="compareTable" style={{ whiteSpace: 'nowrap', width: '100%' }}>
                 <thead>
-                  <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1 net</th><th>Year 2 net</th><th>Year 3 net</th><th>Year 4 net</th><th>Year 5 net</th></tr>
+                  <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>2016 net</th><th>2017 net</th><th>2018 net</th><th>2019 net</th><th>2020 net</th></tr>
                 </thead>
               <tbody>
                 {scenarios.map((sc, i) => {
@@ -2533,7 +2614,7 @@ const chatScript: ChatStepDef[] = [
                   scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } 
                 }}
                 data={{ 
-                  labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'], 
+                  labels: ['2016', '2017', '2018', '2019', '2020'], 
                   datasets: scenarios.map((sc, i) => ({ 
                     label: sc.name, 
                     data: getRebasedForecast(sc.s).revenue.slice(0, 5), 
