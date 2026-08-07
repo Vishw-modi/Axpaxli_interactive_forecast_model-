@@ -89,7 +89,7 @@ export type ForecastState = {
 
 export const DEFAULT_FORECAST_STATE: ForecastState = {
   prevalence: 1750000,
-  diagnosisRate: 0.85,
+  diagnosisRate: 0.051,
   treatmentRate: 0.92,
   addressableShare: 0.65,
   peakShare: 0.25,
@@ -127,7 +127,7 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   payerAccessRequirement: 'pre_cert_step_edit',
   pricingAdjFactorAccessImpact: 0.96,
   patientAssistanceProgramInPlace: false,
-  pricingAdjPatientAssistanceImpact: 1.00,
+  pricingAdjPatientAssistanceImpact: 1.10,
 
   // STAGE 7
   pctORSReachedByMonth12: 0.70,
@@ -162,7 +162,7 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   antiNGFRetentionPCP: 0.95,
 
   // STAGE 14
-  frequencyOfInjectionsYearly: 1.3,
+  frequencyOfInjectionsYearly: 1.5,
 
   // STAGE 15
   peakSamplingIntensity: 0.15,
