@@ -484,7 +484,7 @@ export default function ForecastApp() {
   const chatRef = useRef<HTMLDivElement>(null);
   const assumpRef = useRef<HTMLDivElement>(null);
 
-  const [aiTab, setAiTab] = useState<'current'|'new'>('current');
+
   const [newFlowStep, setNewFlowStep] = useState(0);
   const [newFlowInput, setNewFlowInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -571,7 +571,7 @@ const newFlowScript = [
   { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3, hasTable: true },
   { who: 'ai', text: "Anything else to factor in before we move to Assumptions — market events, competitive dynamics, or other share adjustments?", step: 3 },
   { who: 'user', text: "Nothing else for now.", step: 3 },
-  { who: 'ai', text: "Great — heading to the **Assumptions section** to set the actual Zilretta-specific values.", step: 4 }
+  { who: 'ai', text: "Great. For detailed parameter inputs and adjustments, we will be moving to the **Assumptions section**.", step: 4 }
 ];
 
 const chatScript: ChatStepDef[] = [
@@ -2152,157 +2152,10 @@ const chatScript: ChatStepDef[] = [
               <h1 style={{ marginBottom: '4px' }}>Build your forecast in conversation</h1>
               <p className="lead" style={{ margin: 0 }}>The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
             </div>
-            <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
-              <button 
-                onClick={() => setAiTab('current')} 
-                style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: aiTab === 'current' ? '#fff' : 'transparent', color: aiTab === 'current' ? '#0f7696' : '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer', boxShadow: aiTab === 'current' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
-              >Current Flow</button>
-              <button 
-                onClick={() => setAiTab('new')} 
-                style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: aiTab === 'new' ? '#fff' : 'transparent', color: aiTab === 'new' ? '#0f7696' : '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer', boxShadow: aiTab === 'new' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
-              >New Flow (Scripted)</button>
-            </div>
+
           </div>
 
-          {aiTab === 'current' && (
-            <>
-              <div className="chat-wrap">
-                <div className="card chat-thread" id="chatThread" ref={chatRef} style={{ background: '#f9fafb' }}>
-                {chatMessages.map((msg, i) => {
-                  const isLast = i === chatMessages.length - 1;
-                  const isAiControlStep = msg.who === 'ai' && msg.controls && isLast;
-                  
-                  return (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.who === 'user' ? 'flex-end' : 'flex-start', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: msg.who === 'user' ? 'flex-end' : 'flex-start', width: '100%' }}>
-                      <div className={`bubble ${msg.who === 'ai' ? 'ai' : 'user'}`} style={{ 
-                        margin: 0, 
-                        border: msg.who === 'ai' ? '1px solid #e5e7eb' : 'none', 
-                        background: msg.who === 'ai' ? '#ffffff' : '#0f7696', 
-                        color: msg.who === 'ai' ? '#374151' : '#ffffff',
-                        boxShadow: msg.who === 'ai' ? '0 1px 2px rgba(0,0,0,0.02)' : 'none',
-                        borderRadius: '12px',
-                        borderTopRightRadius: msg.who === 'user' ? '2px' : '12px',
-                        borderTopLeftRadius: msg.who === 'ai' ? '2px' : '12px'
-                      }}>
-                        {msg.dataSnippet && (
-                          <div style={{ marginBottom: '12px', overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', lineHeight: '1.4' }}>
-                              <thead>
-                                <tr>
-                                  {msg.dataSnippet.headers.map((h: string, hi: number) => (
-                                    <th key={hi} style={{ padding: '6px 8px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', textAlign: 'left', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {msg.dataSnippet.rows.map((row: string[], ri: number) => (
-                                  <tr key={ri} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    {row.map((cell: string, ci: number) => (
-                                      <td key={ci} style={{ padding: '5px 8px', color: ci === 0 ? '#0f7696' : '#374151', fontWeight: ci === 0 ? 600 : 400, whiteSpace: ci <= 1 ? 'nowrap' : 'normal' }}>{cell}</td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                        {msg.text}
-                        
-                        {(msg.hasUpload || msg.viewFile) && (
-                          <div style={{ marginTop: '12px', marginBottom: '4px', display: 'flex', gap: '8px' }}>
-                            {msg.hasUpload && (
-                              <label className="btn secondary" style={{ cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center' }}>
-                                <span style={{ marginRight: '6px' }}>📎</span>
-                                Upload file
-                                <input type="file" style={{ display: 'none' }} onChange={handleModelUpload} />
-                              </label>
-                            )}
-                            {msg.viewFile && (
-                              <button className="btn secondary" onClick={() => handleViewFile(msg.viewFile!)}>
-                                <span style={{ marginRight: '6px' }}>👁️</span>
-                                View current data
-                              </button>
-                            )}
-                          </div>
-                        )}
 
-                        {isAiControlStep && (
-                          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {msg.controls.map((ctrl: any, idx: number) => {
-                              if (ctrl.type === 'slider') return <SliderControl asDropdown={false} key={idx} label={ctrl.label} fieldKey={ctrl.key} stops={ctrl.stops} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
-                              if (ctrl.type === 'number') return <NumberControl asDropdown={false} key={idx} label={ctrl.label} fieldKey={ctrl.key} currentValue={state[ctrl.key as keyof ForecastState] as number} unit={ctrl.unit} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
-                              if (ctrl.type === 'toggle') return <ToggleControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as boolean} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
-                              if (ctrl.type === 'select') return <SelectControl key={idx} label={ctrl.label} fieldKey={ctrl.key} options={ctrl.options} value={state[ctrl.key as keyof ForecastState] as string} onAskAI={() => openAiModal(ctrl.key)} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
-                              if (ctrl.type === 'dateOrNever') return <DateOrNeverControl key={idx} label={ctrl.label} fieldKey={ctrl.key} value={state[ctrl.key as keyof ForecastState] as string} onChange={v => handleStateChange(ctrl.key as keyof ForecastState, v)} />;
-                              return null;
-                            })}
-                            <button className="btn" onClick={handleControlConfirm} style={{ alignSelf: 'flex-end', marginTop: '8px' }}>Confirm</button>
-                          </div>
-                        )}
-                      </div>
-                      {msg.who === 'user' && (
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fef0e7', color: '#e78c52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )})}
-                
-                {(() => {
-                  // Show input if: last message is AI without controls AND there's a user step coming
-                  const lastMsg = chatMessages[chatMessages.length - 1];
-                  const isLastAiNoControls = lastMsg?.who === 'ai' && !lastMsg?.controls;
-                  // Look ahead from current scriptStep to find next user step
-                  let hasUpcomingUserStep = false;
-                  for (let i = scriptStep + 1; i < chatScript.length; i++) {
-                    if (chatScript[i].who === 'user') { hasUpcomingUserStep = true; break; }
-                    if (chatScript[i].who === 'ai' && chatScript[i].controls) break;
-                  }
-                  return (!chatMessages.length || (isLastAiNoControls && hasUpcomingUserStep));
-                })() && (
-                  <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
-                    <input 
-                      type="text" 
-                      value={demoInput}
-                      onChange={e => setDemoInput(e.target.value)}
-                      onKeyDown={handleDemoSubmit}
-                      placeholder={scriptStep >= chatScript.length ? "Conversation complete" : "Type your answer..."}
-                      style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
-                      disabled={scriptStep >= chatScript.length || !chatStarted}
-                    />
-                    <button 
-                      className="btn" 
-                      onClick={() => handleDemoSubmit()}
-                      disabled={scriptStep >= chatScript.length || !chatStarted}
-                    >Send</button>
-                  </div>
-                )}
-              </div>
-              <div className="card assump-list" id="liveAssumptions" ref={assumpRef}>
-              <h3>Assumptions captured</h3>
-              <div id="liveAssumptionsBody" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                {assumptions.length === 0 ? 'Waiting for conversation to start…' : (
-                  assumptions.map((a, i) => (
-                    <div key={i} className="assump-item">
-                      <span className="k">{a.k}</span>
-                      <span className="v">{a.v}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-              <div style={{ marginTop: '16px', textAlign: 'right' }}>
-                <button className="btn secondary" onClick={() => runChat()} style={{ marginRight: '8px' }}>Replay conversation</button>
-                <button className="btn" onClick={() => goPage(3)}>Review assumptions →</button>
-              </div>
-            </>
-          )}
-
-          {aiTab === 'new' && (
             <div className="chat-wrap">
               <div className="card chat-thread" style={{ background: '#f9fafb' }}>
                 {newFlowScript.slice(0, newFlowStep + 1).map((msg, i, arr) => {
@@ -2311,20 +2164,6 @@ const chatScript: ChatStepDef[] = [
                   return (
                     <React.Fragment key={i}>
                       
-                      {msg.step === 4 && i === arr.length - 1 ? (
-                        <div style={{ margin: '22px 26px 26px', background: 'linear-gradient(135deg, var(--gold-lt, #FBF1D8), #fff)', border: '1.5px solid var(--gold, #B8860B)', borderRadius: '14px', padding: '18px 20px' }}>
-                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--gold, #B8860B)', letterSpacing: '.04em', marginBottom: '6px' }}>NEXT STEP — OUTSIDE THE CHAT</div>
-                          <h3 style={{ margin: '0 0 8px', fontSize: '15px', color: 'var(--ink, #20242B)' }}>Assumptions Section</h3>
-                          <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: 'var(--sub, #616B77)', lineHeight: 1.55 }}>A dedicated window, separate from the conversation, where the user sets actual Zilretta-specific parameter values using sliders, categorical options, and direct uploads — with AI-calculated Conservative → Aggressive ranges pre-populated for review and selection.</p>
-                          <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
-                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>◐</span> Sliders for range parameters</div>
-                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>⬆</span> Excel upload for source data</div>
-                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>▤</span> AI-calculated Conservative → Aggressive</div>
-                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>✓</span> User selects final value per parameter</div>
-                          </div>
-                          <button className="btn" style={{ marginTop: '14px' }} onClick={() => goPage(3)}>Continue to Assumptions →</button>
-                        </div>
-                      ) : (
                         <div style={{ display: 'flex', margin: '10px 0', gap: '9px', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
                           {!isUser && <div style={{ width: '26px', height: '26px', borderRadius: '8px', flex: '0 0 26px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: 'white', background: 'var(--teal, #1F7A6C)' }}>AI</div>}
                           
@@ -2338,6 +2177,12 @@ const chatScript: ChatStepDef[] = [
                             boxShadow: isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
                           }}>
                             <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<span style="display:block; margin-top:6px; font-size:11px; color:var(--sub, #616B77); font-style:italic;">$1</span>').replace(/\n\n/g, '<br><br>') }} />
+                            
+                            {msg.step === 4 && i === arr.length - 1 && (
+                              <div style={{ marginTop: '16px' }}>
+                                <button className="btn" onClick={() => goPage(3)}>Continue to Assumptions →</button>
+                              </div>
+                            )}
                             
                             {msg.hasTable && (
                               <div style={{ margin: '10px 0 10px 0', border: '1px solid var(--line, #E4E8EE)', borderRadius: '9px', overflow: 'hidden' }}>
@@ -2366,7 +2211,6 @@ const chatScript: ChatStepDef[] = [
                             </div>
                           )}
                         </div>
-                      )}
                     </React.Fragment>
                   );
                 })}
@@ -2448,7 +2292,7 @@ const chatScript: ChatStepDef[] = [
                 </div>
               </div>
             </div>
-          )}
+
 
         </section>
 
