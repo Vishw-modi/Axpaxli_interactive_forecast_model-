@@ -484,6 +484,31 @@ export default function ForecastApp() {
   const chatRef = useRef<HTMLDivElement>(null);
   const assumpRef = useRef<HTMLDivElement>(null);
 
+  const [aiTab, setAiTab] = useState<'current'|'new'>('current');
+  const [newFlowStep, setNewFlowStep] = useState(0);
+  const [newFlowInput, setNewFlowInput] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
+
+  const advanceNewFlow = () => {
+    if (newFlowInput.trim() === '') return;
+    
+    // First, show the user's message
+    let nextStep = newFlowStep + 1;
+    setNewFlowStep(nextStep);
+    setNewFlowInput('');
+    setIsAiTyping(true);
+
+    // Then, show the AI message after a brief delay
+    setTimeout(() => {
+      let finalStep = nextStep;
+      while (finalStep < newFlowScript.length - 1 && newFlowScript[finalStep + 1].who !== 'user') {
+        finalStep++;
+      }
+      setNewFlowStep(finalStep);
+      setIsAiTyping(false);
+    }, 600);
+  };
+
   // AI Modal state
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [activeAiMetric, setActiveAiMetric] = useState<string | null>(null);
@@ -529,6 +554,25 @@ type ChatStepDef = {
 };
 
 const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleString()}` : `${(v * (unit === '%' ? 100 : 1)).toLocaleString()}${unit === '$' ? '' : unit}`;
+
+const newFlowScript = [
+  { who: 'ai', text: "Hello! I'm your forecasting assistant. How can I help you today?", step: 1 },
+  { who: 'user', text: "I want to build a forecast for Zilretta.", step: 1 },
+  { who: 'ai', text: "Zilretta — approved for osteoarthritis (OA) knee pain. I'll scope this as **US-only**, anchored to its **October 2017** launch, with a **5-year forecast horizon** typical for this mature, stable category. Let me know if any of that should change.", step: 1 },
+  { who: 'user', text: "That all works.", step: 1 },
+  { who: 'ai', text: "Two ways to structure this: **Patient-Based** — a snapshot of the diagnosed/treated market by specialty — or **Patient-Flow** — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.\n\nOA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, **Patient-Based** is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.", step: 2 },
+  { who: 'user', text: "Agreed, let's go with Patient-Based.", step: 2 },
+  { who: 'ai', text: "Based on the OA Knee market and Zilretta's eligible patient population, here's how we'd segment a Patient-Based snapshot: by specialty — **Orthopedic Surgeons, Rheumatologists, PCP/Other** — and by treatment type — **IAS** (intra-articular steroid, including Zilretta) and **HA** (hyaluronic acid). Sound right?", step: 2 },
+  { who: 'user', text: "Yes.", step: 2 },
+  { who: 'ai', text: "With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.\n\n_Note: Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._\n\nA few source options worth considering:\n- **Census / population data**\n- **DRG claims**\n- **IMS/IQVIA commercial claims**\n- **Kantar / syndicated epi studies**\n\nDo you have access to any of these directly, or should I default to Census as the base?", step: 3 },
+  { who: 'user', text: "We have IMS data we can use.", step: 3 },
+  { who: 'ai', text: "Good — I'll combine **Census** for the population base with your **IMS data** for diagnosis, both at age-level grain to match the model. For treated-patient splits by specialty and IAS/HA, primary market research is more reliable than claims — do you have proprietary data for that?", step: 3 },
+  { who: 'user', text: "Yes, we have proprietary market research.", step: 3 },
+  { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3, hasTable: true },
+  { who: 'ai', text: "Anything else to factor in before we move to Assumptions — market events, competitive dynamics, or other share adjustments?", step: 3 },
+  { who: 'user', text: "Nothing else for now.", step: 3 },
+  { who: 'ai', text: "Great — heading to the **Assumptions section** to set the actual Zilretta-specific values.", step: 4 }
+];
 
 const chatScript: ChatStepDef[] = [
   {
@@ -2103,11 +2147,27 @@ const chatScript: ChatStepDef[] = [
 
         {/* PAGE 2 : AI CONVERSATION */}
         <section className={`page ${activeTab === 2 ? 'active' : ''}`} id="page-2">
-          <h1>Build your forecast in conversation</h1>
-          <p className="lead">The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <h1 style={{ marginBottom: '4px' }}>Build your forecast in conversation</h1>
+              <p className="lead" style={{ margin: 0 }}>The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+              <button 
+                onClick={() => setAiTab('current')} 
+                style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: aiTab === 'current' ? '#fff' : 'transparent', color: aiTab === 'current' ? '#0f7696' : '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer', boxShadow: aiTab === 'current' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+              >Current Flow</button>
+              <button 
+                onClick={() => setAiTab('new')} 
+                style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: aiTab === 'new' ? '#fff' : 'transparent', color: aiTab === 'new' ? '#0f7696' : '#64748b', fontWeight: 600, fontSize: '13px', cursor: 'pointer', boxShadow: aiTab === 'new' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+              >New Flow (Scripted)</button>
+            </div>
+          </div>
 
-          <div className="chat-wrap">
-            <div className="card chat-thread" id="chatThread" ref={chatRef} style={{ background: '#f9fafb' }}>
+          {aiTab === 'current' && (
+            <>
+              <div className="chat-wrap">
+                <div className="card chat-thread" id="chatThread" ref={chatRef} style={{ background: '#f9fafb' }}>
                 {chatMessages.map((msg, i) => {
                   const isLast = i === chatMessages.length - 1;
                   const isAiControlStep = msg.who === 'ai' && msg.controls && isLast;
@@ -2235,10 +2295,161 @@ const chatScript: ChatStepDef[] = [
             </div>
           </div>
 
-          <div style={{ marginTop: '16px', textAlign: 'right' }}>
-            <button className="btn secondary" onClick={() => runChat()} style={{ marginRight: '8px' }}>Replay conversation</button>
-            <button className="btn" onClick={() => goPage(3)}>Review assumptions →</button>
-          </div>
+              <div style={{ marginTop: '16px', textAlign: 'right' }}>
+                <button className="btn secondary" onClick={() => runChat()} style={{ marginRight: '8px' }}>Replay conversation</button>
+                <button className="btn" onClick={() => goPage(3)}>Review assumptions →</button>
+              </div>
+            </>
+          )}
+
+          {aiTab === 'new' && (
+            <div className="chat-wrap">
+              <div className="card chat-thread" style={{ background: '#f9fafb' }}>
+                {newFlowScript.slice(0, newFlowStep + 1).map((msg, i, arr) => {
+                  const isUser = msg.who === 'user';
+                  
+                  return (
+                    <React.Fragment key={i}>
+                      
+                      {msg.step === 4 && i === arr.length - 1 ? (
+                        <div style={{ margin: '22px 26px 26px', background: 'linear-gradient(135deg, var(--gold-lt, #FBF1D8), #fff)', border: '1.5px solid var(--gold, #B8860B)', borderRadius: '14px', padding: '18px 20px' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--gold, #B8860B)', letterSpacing: '.04em', marginBottom: '6px' }}>NEXT STEP — OUTSIDE THE CHAT</div>
+                          <h3 style={{ margin: '0 0 8px', fontSize: '15px', color: 'var(--ink, #20242B)' }}>Assumptions Section</h3>
+                          <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: 'var(--sub, #616B77)', lineHeight: 1.55 }}>A dedicated window, separate from the conversation, where the user sets actual Zilretta-specific parameter values using sliders, categorical options, and direct uploads — with AI-calculated Conservative → Aggressive ranges pre-populated for review and selection.</p>
+                          <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
+                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>◐</span> Sliders for range parameters</div>
+                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>⬆</span> Excel upload for source data</div>
+                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>▤</span> AI-calculated Conservative → Aggressive</div>
+                            <div style={{ background: 'white', border: '1px solid #E8D9B0', borderRadius: '9px', padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}><span>✓</span> User selects final value per parameter</div>
+                          </div>
+                          <button className="btn" style={{ marginTop: '14px' }} onClick={() => goPage(3)}>Continue to Assumptions →</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', margin: '10px 0', gap: '9px', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+                          {!isUser && <div style={{ width: '26px', height: '26px', borderRadius: '8px', flex: '0 0 26px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: 'white', background: 'var(--teal, #1F7A6C)' }}>AI</div>}
+                          
+                          <div style={{
+                            maxWidth: '80%', padding: '11px 14px', borderRadius: '13px', fontSize: '12.8px', lineHeight: 1.55,
+                            background: isUser ? 'var(--user, #2E75B6)' : '#ffffff',
+                            color: isUser ? 'white' : 'var(--ink, #20242B)',
+                            border: isUser ? 'none' : '1px solid var(--line, #E4E8EE)',
+                            borderTopRightRadius: isUser ? '4px' : '13px',
+                            borderTopLeftRadius: !isUser ? '4px' : '13px',
+                            boxShadow: isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
+                          }}>
+                            <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<span style="display:block; margin-top:6px; font-size:11px; color:var(--sub, #616B77); font-style:italic;">$1</span>').replace(/\n\n/g, '<br><br>') }} />
+                            
+                            {msg.hasTable && (
+                              <div style={{ margin: '10px 0 10px 0', border: '1px solid var(--line, #E4E8EE)', borderRadius: '9px', overflow: 'hidden' }}>
+                                <div style={{ background: '#F4F6F9', color: 'var(--sub)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '.04em', padding: '6px 12px', borderBottom: '1px solid var(--line)' }}>MUST-HAVE vs. GOOD-TO-HAVE</div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.8px' }}>
+                                  <thead>
+                                    <tr>
+                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Category</th>
+                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Must-Have</th>
+                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Good-to-Have</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Demand</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Epi, diagnosed & treated (IAS/HA)</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Regional splits</td></tr>
+                                    <tr><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Share</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Peak Share, Time to Peak</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Uptake curve, analogs</td></tr>
+                                    <tr><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>Finance</td><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>WAC Price</td><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>Rebates, GTN %</td></tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {isUser && (
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fef0e7', color: '#e78c52', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+
+                {isAiTyping && (
+                  <div style={{ display: 'flex', margin: '10px 0', gap: '9px', justifyContent: 'flex-start' }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', flex: '0 0 26px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: 'white', background: 'var(--teal, #1F7A6C)' }}>AI</div>
+                    <div style={{
+                      padding: '11px 14px', borderRadius: '13px', fontSize: '12.8px',
+                      background: '#ffffff', color: 'var(--sub, #616B77)',
+                      border: '1px solid var(--line, #E4E8EE)', borderTopLeftRadius: '4px',
+                      display: 'flex', alignItems: 'center',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                    }}>
+                      <span style={{ fontStyle: 'italic', fontSize: '11.5px', letterSpacing: '.03em', opacity: 0.7 }}>typing...</span>
+                    </div>
+                  </div>
+                )}
+
+                {newFlowStep < newFlowScript.length - 1 && (
+                  <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      value={newFlowInput}
+                      onChange={e => setNewFlowInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') advanceNewFlow(); }}
+                      placeholder="Type your answer..."
+                      style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                    />
+                    <button 
+                      className="btn" 
+                      onClick={advanceNewFlow}
+                      disabled={newFlowInput.trim() === ''}
+                    >Send</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="card assump-list">
+                <h3>Assumptions captured</h3>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {(() => {
+                    const newAssumptions = [];
+                    if (newFlowStep >= 3) {
+                      newAssumptions.push(
+                        { k: 'Product', v: 'Zilretta (triamcinolone acetonide ER)' },
+                        { k: 'Indication', v: 'OA Knee only' },
+                        { k: 'Geography', v: 'US only' },
+                        { k: 'Launch Date', v: 'Oct 2017' },
+                        { k: 'Horizon', v: '5 years' }
+                      );
+                    }
+                    if (newFlowStep >= 7) {
+                      newAssumptions.push(
+                        { k: 'Model', v: 'Patient-Based' },
+                        { k: 'Specialty grain', v: 'Ortho / Rheum / PCP-Other' },
+                        { k: 'Treatment grain', v: 'IAS / HA' }
+                      );
+                    }
+                    if (newFlowStep >= 14) {
+                      newAssumptions.push(
+                        { k: 'Demand source', v: 'Census + IMS' },
+                        { k: 'Treated-pt source', v: 'Proprietary research' },
+                        { k: 'Share source', v: 'Mkt research + brand plan' },
+                        { k: 'Finance source', v: 'WAC, brand plan' },
+                        { k: 'Other factors', v: 'None flagged' }
+                      );
+                    }
+                    
+                    if (newAssumptions.length === 0) return 'Waiting for conversation to start…';
+                    
+                    return newAssumptions.map((a, i) => (
+                      <div key={i} className="assump-item">
+                        <span className="k">{a.k}</span>
+                        <span className="v">{a.v}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+
         </section>
 
         {/* PAGE 3 : ASSUMPTIONS REVIEW */}
