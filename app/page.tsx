@@ -487,6 +487,7 @@ export default function ForecastApp() {
 
   const [newFlowStep, setNewFlowStep] = useState(0);
   const [newFlowInput, setNewFlowInput] = useState('');
+  const [newFlowUserInputs, setNewFlowUserInputs] = useState<Record<number, string>>({});
   const [isAiTyping, setIsAiTyping] = useState(false);
 
   const advanceNewFlow = () => {
@@ -494,6 +495,7 @@ export default function ForecastApp() {
     
     // First, show the user's message
     let nextStep = newFlowStep + 1;
+    setNewFlowUserInputs(prev => ({ ...prev, [nextStep]: newFlowInput }));
     setNewFlowStep(nextStep);
     setNewFlowInput('');
     setIsAiTyping(true);
@@ -2176,7 +2178,11 @@ const chatScript: ChatStepDef[] = [
                             borderTopLeftRadius: !isUser ? '4px' : '13px',
                             boxShadow: isUser ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
                           }}>
-                            <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<span style="display:block; margin-top:6px; font-size:11px; color:var(--sub, #616B77); font-style:italic;">$1</span>').replace(/\n\n/g, '<br><br>') }} />
+                            {isUser && newFlowUserInputs[i] ? (
+                              <span>{newFlowUserInputs[i]}</span>
+                            ) : (
+                              <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<span style="display:block; margin-top:6px; font-size:11px; color:var(--sub, #616B77); font-style:italic;">$1</span>').replace(/\n\n/g, '<br><br>') }} />
+                            )}
                             
                             {msg.step === 4 && i === arr.length - 1 && (
                               <div style={{ marginTop: '16px' }}>
