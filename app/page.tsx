@@ -64,9 +64,10 @@ function AccordionSection({
   );
 }
 
+const SliderContext = React.createContext<any>(null);
 
 function SliderControl({
-  label, fieldKey, stops, currentValue, unit, onAskAI,
+  label, fieldKey, stops: defaultStops, currentValue, unit, onAskAI,
   onChange,
   asDropdown
 }: {
@@ -79,8 +80,23 @@ function SliderControl({
   onAskAI: () => void;
   onChange: (val: number) => void;
 }) {
-  const currentIdx = stops.reduce((best, s, i) =>
-    Math.abs(s - currentValue) < Math.abs(stops[best] - currentValue) ? i : best, 0);
+  const ctx = React.useContext(SliderContext);
+  const isScenariosEnabled = ctx?.scenariosEnabledMap?.[fieldKey] || false;
+  const [localInput, setLocalInput] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setLocalInput(null);
+  }, [currentValue]);
+  const onToggleScenarios = (val: boolean) => ctx?.setScenariosEnabledMap((p: any) => ({...p, [fieldKey]: val}));
+  const customCenter = ctx?.customCentersMap?.[fieldKey];
+  const onSetCustomCenter = (val: number) => ctx?.setCustomCentersMap((p: any) => ({...p, [fieldKey]: val}));
+
+  const center = customCenter !== undefined && customCenter !== null ? customCenter : defaultStops[2];
+  const deltas = defaultStops.map(s => s - defaultStops[2]);
+  const dynamicStops = deltas.map(d => center + d);
+
+  const currentIdx = dynamicStops.reduce((best, s, i) =>
+    Math.abs(s - currentValue) < Math.abs(dynamicStops[best] - currentValue) ? i : best, 0);
 
   // Gradient colors for 5 stops
   const getStopColor = (idx: number) => {
@@ -102,11 +118,11 @@ function SliderControl({
         <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{label}</span>
         <select
           value={currentIdx}
-          onChange={e => onChange(stops[parseInt(e.target.value)])}
+          onChange={e => onChange(dynamicStops[parseInt(e.target.value)])}
           style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff', fontSize: '13px', outline: 'none', minWidth: '180px', flexShrink: 0 }}
         >
           {['Conservative','Semi-Cons.','Centered','Semi-Agg.','Aggressive'].map((t,i) => {
-            const valStr = unit === '$' ? '$' + stops[i].toLocaleString('en-US') : (stops[i] * (unit === '%' ? 100 : 1)).toLocaleString('en-US') + (unit === '$' ? '' : unit);
+            const valStr = unit === '$' ? '$' + dynamicStops[i].toLocaleString('en-US') : (dynamicStops[i] * (unit === '%' ? 100 : 1)).toLocaleString('en-US', {maximumFractionDigits: 2}) + (unit === '$' ? '' : unit);
             return <option key={i} value={i}>{t} ({valStr})</option>;
           })}
         </select>
@@ -115,30 +131,72 @@ function SliderControl({
   }
 
   return (
-    <div className="slider-control-row">
-      <div className="slider-label-row">
-        <span className="slider-label">{label}</span>
-        <span className="slider-value-chip" style={{ backgroundColor: activeColor + '20', color: activeColor }}>
-          {unit === '$'
-            ? `$${stops[currentIdx].toLocaleString('en-US')}`
-            : `${(stops[currentIdx] * (unit === '%' ? 100 : 1)).toLocaleString('en-US')}${unit === '$' ? '' : unit}`
-          }
-        </span>
+    <div className="slider-control-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="slider-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '0' }}>
+        <span className="slider-label" style={{ marginBottom: 0 }}>{label}</span>
         <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
       </div>
-      <input
-        type="range"
-        min={0} max={4} step={1}
-        value={currentIdx}
-        className="slider-input"
-        onChange={e => onChange(stops[parseInt(e.target.value)])}
-        style={{ background: `linear-gradient(to right, ${activeColor} ${(currentIdx / 4) * 100}%, #e2e8f0 ${(currentIdx / 4) * 100}%, #e2e8f0 100%)`, color: activeColor }}
-      />
-      <div className="slider-ticks">
-        {['Conservative','Semi-Conservative','Centered','Semi-Aggressive','Aggressive'].map((t,i) => (
-          <span key={i} className={`tick-label ${i === currentIdx ? 'active' : ''}`} style={i === currentIdx ? { color: activeColor } : {}}>{t}</span>
-        ))}
-      </div>
+      
+      {!isScenariosEnabled ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input 
+            type="number" 
+            value={localInput !== null ? localInput : (unit === '%' ? Math.round(currentValue * 10000)/100 : currentValue)}
+            onChange={(e) => {
+              setLocalInput(e.target.value);
+              if (e.target.value === '') return;
+              const val = parseFloat(e.target.value);
+              if (!isNaN(val)) {
+                const finalVal = unit === '%' ? val / 100 : val;
+                onChange(finalVal);
+                onSetCustomCenter(finalVal);
+              }
+            }}
+            onBlur={() => setLocalInput(null)}
+            style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100px', fontSize: '13px' }}
+          />
+          <span style={{ fontSize: '13px', color: '#4b5563' }}>{unit === '$' ? '' : unit}</span>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4b5563', cursor: 'pointer', marginLeft: 'auto' }}>
+            <input type="checkbox" checked={false} onChange={(e) => {
+              if (e.target.checked && onToggleScenarios) onToggleScenarios(true);
+            }} />
+            Enable Scenarios
+          </label>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-12px', marginBottom: '-10px' }}>
+             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4b5563', cursor: 'pointer' }}>
+               <input type="checkbox" checked={true} onChange={(e) => {
+                 if (!e.target.checked && onToggleScenarios) onToggleScenarios(false);
+               }} />
+               Enable Scenarios
+             </label>
+          </div>
+          <div style={{ padding: '16px 0 8px 0', position: 'relative', marginTop: '16px' }}>
+            <span className="slider-value-chip" style={{ position: 'absolute', top: '-18px', right: '0', backgroundColor: activeColor + '20', color: activeColor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 600 }}>
+              {unit === '$'
+                ? `$${dynamicStops[currentIdx].toLocaleString('en-US')}`
+                : `${(dynamicStops[currentIdx] * (unit === '%' ? 100 : 1)).toLocaleString('en-US', {maximumFractionDigits: 2})}${unit === '$' ? '' : unit}`
+              }
+            </span>
+            <input
+              type="range"
+              min={0} max={4} step={1}
+              value={currentIdx}
+              className="slider-input"
+              onChange={e => onChange(dynamicStops[parseInt(e.target.value)])}
+              style={{ background: `linear-gradient(to right, ${activeColor} ${(currentIdx / 4) * 100}%, #e2e8f0 ${(currentIdx / 4) * 100}%, #e2e8f0 100%)`, color: activeColor, width: '100%' }}
+            />
+            <div className="slider-ticks" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>
+              {['Conservative','Semi-Conservative','Centered','Semi-Aggressive','Aggressive'].map((t,i) => (
+                <span key={i} className={`tick-label ${i === currentIdx ? 'active' : ''}`} style={{ color: i === currentIdx ? activeColor : undefined, flex: 1, textAlign: i === 0 ? 'left' : i === 4 ? 'right' : 'center', fontWeight: i === currentIdx ? 600 : 400 }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -470,6 +528,8 @@ export default function ForecastApp() {
   const [maxTab, setMaxTab] = useState(1);
   const [state, setState] = useState<ForecastState>(defaultState);
   const [scenarioState, setScenarioState] = useState<ForecastState>(defaultState);
+  const [scenariosEnabledMap, setScenariosEnabledMap] = useState<Record<string, boolean>>({});
+  const [customCentersMap, setCustomCentersMap] = useState<Record<string, number>>({});
   const [selectedModel, setSelectedModel] = useState('ARIMA');
   const [savedScenarios, setSavedScenarios] = useState<{name: string, tag: string, s: ForecastState}[]>([]);
   const [scenarioNameInput, setScenarioNameInput] = useState('');
@@ -489,6 +549,12 @@ export default function ForecastApp() {
   const [newFlowInput, setNewFlowInput] = useState('');
   const [newFlowUserInputs, setNewFlowUserInputs] = useState<Record<number, string>>({});
   const [isAiTyping, setIsAiTyping] = useState(false);
+
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [newFlowStep, isAiTyping]);
 
   const advanceNewFlow = () => {
     if (newFlowInput.trim() === '') return;
@@ -560,15 +626,18 @@ const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleStr
 const newFlowScript = [
   { who: 'ai', text: "Hello! I'm your forecasting assistant. How can I help you today?", step: 1 },
   { who: 'user', text: "I want to build a forecast for Zilretta.", step: 1 },
-  { who: 'ai', text: "Zilretta — approved for osteoarthritis (OA) knee pain. I'll scope this as **US-only**, anchored to its **October 2017** launch, with a **5-year forecast horizon** typical for this mature, stable category. Let me know if any of that should change.", step: 1 },
+  { who: 'ai', text: "Happy to help build this out. We'll work through three steps before you move into Assumptions to fine-tune the numbers:<br><br><b>1. Setup</b> — Align on the basics (Brand, indication, market/geography, launch timing, forecast horizon)<br><b>2. Approach</b> — Agree on methodology (Forecasting approach + the grain we'll track it at)<br><b>3. Input Alignment</b> — Confirm data needs (Must-have inputs and the data sources we'll use for each)", step: 1 },
+  { who: 'ai', text: "Let's start with Setup. A few things to confirm:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Indication</b> → Zilretta is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li><li><b>Geography</b> → given the primary market is US, I'll scope this as US-only unless another market needs covering.</li><li><b>Launch Date</b> → based on drug approval records, launch looks to be around October 2017, so I'll anchor to that.</li><li><b>Forecast Horizon</b> → OA Knee is a mature, stable category, so a 5-year horizon is typical.</li></ul>Does all of that look right, or should any of these change?", step: 1 },
   { who: 'user', text: "That all works.", step: 1 },
   { who: 'ai', text: "Two ways to structure this: **Patient-Based** — a snapshot of the diagnosed/treated market by specialty — or **Patient-Flow** — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.\n\nOA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, **Patient-Based** is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.", step: 2 },
   { who: 'user', text: "Agreed, let's go with Patient-Based.", step: 2 },
-  { who: 'ai', text: "Based on the OA Knee market and Zilretta's eligible patient population, here's how we'd segment a Patient-Based snapshot: by specialty — **Orthopedic Surgeons, Rheumatologists, PCP/Other** — and by treatment type — **IAS** (intra-articular steroid, including Zilretta) and **HA** (hyaluronic acid). Sound right?", step: 2 },
+  { who: 'ai', text: "Good. Beyond the core inputs — epidemiology, treatment rates, and so on, which we'll cover in input alignment — accurate Patient-Based forecasts are usually built around one or two grains. Common ones are treatment type, specialty, patient age, or gender. Which of these do you want this built around?", step: 2 },
+  { who: 'user', text: "Let's go with specialty and treatment type.", step: 2 },
+  { who: 'ai', text: "Looking at OA Knee specifically — the primary specialties treating this are orthopedic surgeons and rheumatologists, with PCPs picking up a smaller share. And based on Zilretta's patient eligibility, the treatment side splits into intra-articular steroid (IAS), which is where Zilretta sits, and hyaluronic acid (HA), a different injectable class. Shall we track the model along those lines?", step: 2 },
   { who: 'user', text: "Yes.", step: 2 },
-  { who: 'ai', text: "With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.\n\n_Note: Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._\n\nA few source options worth considering:\n- **Census / population data**\n- **DRG claims**\n- **IMS/IQVIA commercial claims**\n- **Kantar / syndicated epi studies**\n\nDo you have access to any of these directly, or should I default to Census as the base?", step: 3 },
-  { who: 'user', text: "We have IMS data we can use.", step: 3 },
-  { who: 'ai', text: "Good — I'll combine **Census** for the population base with your **IMS data** for diagnosis, both at age-level grain to match the model. For treated-patient splits by specialty and IAS/HA, primary market research is more reliable than claims — do you have proprietary data for that?", step: 3 },
+  { who: 'ai', text: "With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.\n\n_Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._\n\nA few source options worth considering:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Census / population data</b></li><li><b>DRG claims</b></li><li><b>IMS/IQVIA commercial claims</b></li><li><b>Kantar / syndicated epi studies</b></li></ul>Do you have access to any of these directly, or should I default to Census as the base?", step: 3 },
+  { who: 'user', text: "We have 2016 IMS data on diagnosed OA Knee patients we can use.", step: 3 },
+  { who: 'ai', text: "Good — I'll combine **Census** for the population base with your **2016 IMS data** for diagnosis. I'd break both out by age band too, since diagnosis and treatment patterns tend to shift quite a bit across age groups in OA Knee. For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims data — do you have proprietary research for that?", step: 3 },
   { who: 'user', text: "Yes, we have proprietary market research.", step: 3 },
   { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3, hasTable: true },
   { who: 'ai', text: "Anything else to factor in before we move to Assumptions — market events, competitive dynamics, or other share adjustments?", step: 3 },
@@ -1864,7 +1933,7 @@ const chatScript: ChatStepDef[] = [
     const s = isScenario ? scenarioState : state;
     const h = isScenario ? handleScenarioChange : handleStateChange;
     return (
-    <>
+    <SliderContext.Provider value={{ scenariosEnabledMap, setScenariosEnabledMap, customCentersMap, setCustomCentersMap }}>
       <CollapsibleMainGroup title="Forecast Setup & Market Alignment" isOpen={openMainGroups.has('Forecast Setup & Market Alignment')} onToggle={() => toggleMainGroup('Forecast Setup & Market Alignment')}>
             <AccordionSection idx={0} title="Key Dates" color="#34495e" isOpen={openSections.has(0)} onQuickSet={(level) => handleQuickSet(0, level)} onToggle={() => toggleSection(0)}>
               <DateOrNeverControl label="Product Approval Date (Start of Promotion)" fieldKey="launchDate" value={s.launchDate} onChange={v => h('launchDate', v)} />
@@ -2052,7 +2121,7 @@ const chatScript: ChatStepDef[] = [
               </select>
             </div>
           </div>
-    </>
+    </SliderContext.Provider>
   );
   };
 
@@ -2149,17 +2218,17 @@ const chatScript: ChatStepDef[] = [
 
         {/* PAGE 2 : AI CONVERSATION */}
         <section className={`page ${activeTab === 2 ? 'active' : ''}`} id="page-2">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '20px' }}>
             <div>
               <h1 style={{ marginBottom: '4px' }}>Build your forecast in conversation</h1>
               <p className="lead" style={{ margin: 0 }}>The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
             </div>
-
+            <button className="btn" onClick={() => goPage(4)} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '10px 20px', fontSize: '14px' }}>Skip to Forecast →</button>
           </div>
 
 
             <div className="chat-wrap">
-              <div className="card chat-thread" style={{ background: '#f9fafb' }}>
+              <div className="card chat-thread" ref={chatRef} style={{ background: '#f9fafb', overflowY: 'auto' }}>
                 {newFlowScript.slice(0, newFlowStep + 1).map((msg, i, arr) => {
                   const isUser = msg.who === 'user';
                   
