@@ -2647,9 +2647,12 @@ const chatScript: ChatStepDef[] = [
 
         {/* PAGE 6 : SCENARIOS */}
                 <section className={`page ${activeTab === 6 ? 'active' : ''}`} id="page-6">
-          <div>
-            <h1>Scenario &amp; sensitivity analysis</h1>
-            <p className="lead">Drag any assumption and the forecast, peak metrics, and sensitivity ranking recalculate instantly.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ margin: 0, marginBottom: '8px' }}>Scenario &amp; sensitivity analysis</h1>
+              <p className="lead" style={{ margin: 0 }}>Drag any assumption and the forecast, peak metrics, and sensitivity ranking recalculate instantly.</p>
+            </div>
+            <button className="btn secondary" onClick={() => setScenarioState(JSON.parse(JSON.stringify(state)))}>Have base forecast assumptions populated</button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start', marginTop: '24px' }}>
