@@ -84,10 +84,7 @@ function SliderControl({
   const isScenariosEnabled = ctx?.scenariosEnabledMap?.[fieldKey] || false;
   const [localInput, setLocalInput] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    setLocalInput(null);
-  }, [currentValue]);
-  const onToggleScenarios = (val: boolean) => ctx?.setScenariosEnabledMap((p: any) => ({...p, [fieldKey]: val}));
+    const onToggleScenarios = (val: boolean) => ctx?.setScenariosEnabledMap((p: any) => ({...p, [fieldKey]: val}));
   const customCenter = ctx?.customCentersMap?.[fieldKey];
   const onSetCustomCenter = (val: number) => ctx?.setCustomCentersMap((p: any) => ({...p, [fieldKey]: val}));
 
@@ -143,15 +140,19 @@ function SliderControl({
             type="number" 
             value={localInput !== null ? localInput : (unit === '%' ? Math.round(currentValue * 10000)/100 : currentValue)}
             onChange={(e) => {
-              setLocalInput(e.target.value);
-              if (e.target.value === '') return;
-              const val = parseFloat(e.target.value);
-              if (!isNaN(val)) {
-                const finalVal = unit === '%' ? val / 100 : val;
-                onChange(finalVal);
-                onSetCustomCenter(finalVal);
-              }
-            }}
+                setLocalInput(e.target.value);
+                if (e.target.value === '') {
+                  onChange(0);
+                  onSetCustomCenter(0);
+                  return;
+                }
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                  const finalVal = unit === '%' ? val / 100 : val;
+                  onChange(finalVal);
+                  onSetCustomCenter(finalVal);
+                }
+              }}
             onBlur={() => setLocalInput(null)}
             style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100px', fontSize: '13px' }}
           />
@@ -265,22 +266,20 @@ function NumberControl({
 }) {
   const [localInput, setLocalInput] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    setLocalInput(null);
-  }, [currentValue]);
-
   const displayVal = unit === '%' ? Math.round(currentValue * 10000) / 100 : currentValue;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalInput(e.target.value);
-    if (e.target.value === '') return;
-    
-    let val = parseFloat(e.target.value);
-    if (!isNaN(val)) {
-      if (unit === '%') val = val / 100;
-      onChange(val);
-    }
-  };
+      setLocalInput(e.target.value);
+      if (e.target.value === '') {
+        onChange(0);
+        return;
+      }
+      let val = parseFloat(e.target.value);
+      if (!isNaN(val)) {
+        if (unit === '%') val = val / 100;
+        onChange(val);
+      }
+    };
 
   return (
     <div className={asDropdown ? "slider-control-row" : ""} style={!asDropdown ? { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' } : { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -538,6 +537,7 @@ const SHARE_BASE_13 = [0.001, 0.005, 0.016, 0.037, 0.060, 0.082, 0.099, 0.107,
 
 export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
+  const [showInsights, setShowInsights] = useState(false);
   const [maxTab, setMaxTab] = useState(1);
   const [state, setState] = useState<ForecastState>(defaultState);
   const [scenarioState, setScenarioState] = useState<ForecastState>(defaultState);
@@ -2138,7 +2138,7 @@ const chatScript: ChatStepDef[] = [
       { name: 'Addressable share', low: -(sensitivityLevel === 5 ? 0.04 : 0.085) * currentBasePeak, high: (sensitivityLevel === 5 ? 0.04 : 0.085) * currentBasePeak },
       { name: 'Diagnosis rate', low: -(sensitivityLevel === 5 ? 0.037 : 0.08) * currentBasePeak, high: (sensitivityLevel === 5 ? 0.037 : 0.08) * currentBasePeak }
     ];
-    const tabCheck = isScenario ? 6 : 4;
+    const tabCheck = isScenario ? 5 : 4;
 
     return (
       <div className="card">
@@ -2515,7 +2515,6 @@ const chatScript: ChatStepDef[] = [
           'AI conversation',
           'Assumptions',
           'Forecast',
-          'Key insights',
           'Scenarios',
           'Compare',
           'Export'
@@ -2860,96 +2859,144 @@ const chatScript: ChatStepDef[] = [
           <ModelArchitecturePanel state={state} />
           <div style={{ marginTop: '24px' }}></div>
 
-          <div style={{ textAlign: 'right' }}>
-            <button className="btn secondary" onClick={() => goPage(6)} style={{ marginRight: '8px' }}>Explore scenarios</button>
-            <button className="btn" onClick={() => goPage(5)}>View key insights →</button>
-          </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px' }}>
+              <button 
+                className="btn secondary" 
+                onClick={() => setShowInsights(!showInsights)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: showInsights ? 'var(--navy)' : 'white',
+                  color: showInsights ? 'white' : 'var(--navy)'
+                }}
+              >
+                <span>{String.fromCodePoint(0x1F4A1)}</span>
+                <span>Key Insights</span>
+              </button>
+              <button className="btn primary" onClick={() => goPage(5)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Explore scenarios <span style={{ fontSize: '18px' }}>&rarr;</span>
+              </button>
+            </div>
+
+            {/* Floating Insights Modal */}
+            {showInsights && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.45)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(4px)',
+                animation: 'fadeIn 0.2s ease'
+              }} onClick={() => setShowInsights(false)}>
+                <div style={{
+                  background: 'white',
+                  borderRadius: '16px',
+                  maxWidth: '720px',
+                  width: '90vw',
+                  maxHeight: '85vh',
+                  overflowY: 'auto',
+                  padding: '32px',
+                  boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
+                  position: 'relative',
+                  animation: 'slideUp 0.25s ease'
+                }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '22px', color: 'var(--navy)' }}>{String.fromCodePoint(0x1F4A1)} Key Insights</h2>
+                      <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>AI-generated read on what{String.fromCharCode(39)}s driving the forecast, and where it could break.</p>
                     </div>
-          </div>
-        </section>
+                    <button onClick={() => setShowInsights(false)} style={{
+                      background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--text-muted)',
+                      width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: '8px', transition: 'background 0.15s'
+                    }} onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                       onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}>
+                      {String.fromCharCode(0x2715)}
+                    </button>
+                  </div>
 
-        {/* PAGE 5 : KEY INSIGHTS */}
-        <section className={`page ${activeTab === 5 ? 'active' : ''}`} id="page-5">
-          <h1>Key insights</h1>
-          <p className="lead">AI-generated read on what's driving the forecast, and where it could break.</p>
+                  <div className="card" style={{ marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x25B6)} What{String.fromCharCode(39)}s driving this forecast</h3>
+                    {[
+                      `Peak share of <b>${fmtPct(state.peakShare * 100)}</b> is reached around year <b>${Math.ceil(state.yearsToPeak)}</b>, driven primarily by the durability differentiator versus the current standard of care.`,
+                      `The addressable pool is <b>${fmtNum(f.addressable)}</b> patients \u2014 <b>${fmtPct(state.addressableShare * 100)}</b> of treated patients \u2014 reflecting naive starts plus switch-eligible patients on shorter dosing intervals.`,
+                      `At <b>${fmtM(state.netPrice)}</b> net per injection and <b>${state.injectionsPerYear}</b> injections per year, peak-year net revenue reaches <b>${fmtM(f.peakRevenue)}</b>.`
+                    ].map((d, i) => (
+                      <div key={i} className="insight-item">
+                        <div className="insight-dot"></div>
+                        <div className="body" style={{ fontSize: '13.5px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: d }} />
+                      </div>
+                    ))}
+                  </div>
 
-          <div className="card">
-            <h3>What's driving this forecast</h3>
-            <div id="insightsDrivers">
-              {[
-                `Peak share of <b>${fmtPct(state.peakShare * 100)}</b> is reached around year <b>${Math.ceil(state.yearsToPeak)}</b>, driven primarily by the durability differentiator versus the current standard of care.`,
-                `The addressable pool is <b>${fmtNum(f.addressable)}</b> patients — <b>${fmtPct(state.addressableShare * 100)}</b> of treated patients — reflecting naive starts plus switch-eligible patients on shorter dosing intervals.`,
-                `At <b>${fmtM(state.netPrice)}</b> net per injection and <b>${state.injectionsPerYear}</b> injections per year, peak-year net revenue reaches <b>${fmtM(f.peakRevenue)}</b>.`
-              ].map((d, i) => (
-                <div key={i} className="insight-item">
-                  <div className="insight-dot"></div>
-                  <div className="body" style={{ fontSize: '13.5px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: d }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                    <div className="card" style={{ marginBottom: 0 }}>
+                      <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x26A0)} Risks to watch</h3>
+                      {[
+                        { title: 'Biosimilar price pressure', text: 'Biosimilar entrants are compressing net pricing across the class \u2014 a 15% further price erosion would cut peak revenue meaningfully.' },
+                        { title: 'Competitive response', text: 'Competitors could extend their own dosing intervals in response, narrowing your durability advantage.' },
+                        { title: 'Diagnosis funnel slippage', text: 'If diagnosis or treatment-initiation rates come in below plan, the addressable pool shrinks and every downstream number moves with it.' }
+                      ].map((r, i) => (
+                        <div key={i} className="insight-item">
+                          <div className="insight-dot risk"></div>
+                          <div className="body">
+                            <span className="risk-badge">Risk</span><br />
+                            <b>{r.title}</b>
+                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="card" style={{ marginBottom: 0 }}>
+                      <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x2B06)} Upside levers</h3>
+                      {[
+                        { title: 'Faster payer access', text: 'Favorable formulary placement could pull the uptake curve forward by a year, front-loading revenue.' },
+                        { title: 'Broader label or indication', text: 'Expansion beyond initial targets would grow the addressable pool independent of share gains.' },
+                        { title: 'Switch-driven share gains', text: 'A stronger-than-modeled switch rate from shorter-interval therapies could push peak share above the current assumption.' }
+                      ].map((r, i) => (
+                        <div key={i} className="insight-item">
+                          <div className="insight-dot"></div>
+                          <div className="body">
+                            <span className="opp-badge">Upside</span><br />
+                            <b>{r.title}</b>
+                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ marginBottom: 0 }}>
+                    <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>How this compares to recent analogues</h3>
+                    <p style={{ fontSize: '13.5px', lineHeight: '1.6', color: 'var(--text-muted)', margin: 0 }}>
+                      Recent analogues reached blockbuster status (&gt;$1B) within roughly two years of launch, aided by a differentiated story. Your asset{String.fromCharCode(39)}s {fmtPct(state.peakShare * 100)} peak share assumption over {Math.ceil(state.yearsToPeak)} years is {state.yearsToPeak <= 3 ? 'more aggressive' : (state.yearsToPeak >= 5 ? 'more conservative' : 'broadly comparable')} relative to that trajectory \u2014 worth stress-testing against a faster or slower competitive response on the scenarios page.
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid2">
-            <div className="card">
-              <h3>Risks to watch</h3>
-              <div id="insightsRisks">
-                {[
-                  { title: 'Biosimilar price pressure', text: 'Biosimilar entrants are compressing net pricing across the class — a 15% further price erosion would cut peak revenue meaningfully.' },
-                  { title: 'Competitive response', text: 'Competitors could extend their own dosing intervals in response, narrowing your durability advantage.' },
-                  { title: 'Diagnosis funnel slippage', text: 'If diagnosis or treatment-initiation rates come in below plan, the addressable pool shrinks and every downstream number moves with it.' }
-                ].map((r, i) => (
-                  <div key={i} className="insight-item">
-                    <div className="insight-dot risk"></div>
-                    <div className="body">
-                      <span className="risk-badge">Risk</span><br />
-                      <b>{r.title}</b>
-                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
-                    </div>
-                  </div>
-                ))}
               </div>
-            </div>
-            <div className="card">
-              <h3>Upside levers</h3>
-              <div id="insightsUpside">
-                {[
-                  { title: 'Faster payer access', text: 'Favorable formulary placement could pull the uptake curve forward by a year, front-loading revenue.' },
-                  { title: 'Broader label or indication', text: 'Expansion beyond initial targets would grow the addressable pool independent of share gains.' },
-                  { title: 'Switch-driven share gains', text: 'A stronger-than-modeled switch rate from shorter-interval therapies could push peak share above the current assumption.' }
-                ].map((r, i) => (
-                  <div key={i} className="insight-item">
-                    <div className="insight-dot"></div>
-                    <div className="body">
-                      <span className="opp-badge">Upside</span><br />
-                      <b>{r.title}</b>
-                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
+            )}
+
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>How this compares to recent analogues</h3>
-            <p style={{ fontSize: '13.5px', lineHeight: '1.6', color: 'var(--text-muted)', margin: 0 }}>
-              Recent analogues reached blockbuster status (&gt;$1B) within roughly two years of launch, aided by a differentiated story. Your asset's <span id="cmpShare">{fmtPct(state.peakShare * 100)}</span> peak share assumption over <span id="cmpYears">{Math.ceil(state.yearsToPeak)}</span> years is <span id="cmpPace">{state.yearsToPeak <= 3 ? 'more aggressive' : (state.yearsToPeak >= 5 ? 'more conservative' : 'broadly comparable')}</span> relative to that trajectory — worth stress-testing against a faster or slower competitive response on the scenarios page.
-            </p>
-          </div>
-
-          <div style={{ textAlign: 'right' }}>
-            <button className="btn" onClick={() => goPage(6)}>Run sensitivity analysis →</button>
           </div>
         </section>
 
-        {/* PAGE 6 : SCENARIOS */}
-                <section className={`page ${activeTab === 6 ? 'active' : ''}`} id="page-6">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* PAGE 5 : SCENARIOS */}
+                <section className={`page ${activeTab === 5 ? 'active' : ''}`} id="page-5">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <h1 style={{ margin: 0, marginBottom: '8px' }}>Scenario &amp; sensitivity analysis</h1>
               <p className="lead" style={{ margin: 0 }}>Drag any assumption and the forecast, peak metrics, and sensitivity ranking recalculate instantly.</p>
             </div>
-            <button className="btn secondary" onClick={() => setScenarioState(JSON.parse(JSON.stringify(state)))}>Have base forecast assumptions populated</button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+            <button className="btn secondary" style={{ fontSize: '13px', padding: '8px 16px' }} onClick={() => setScenarioState(JSON.parse(JSON.stringify(state)))}>Have base forecast assumptions populated</button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start', marginTop: '24px' }}>
@@ -3000,7 +3047,7 @@ const chatScript: ChatStepDef[] = [
               <div className="card">
                 <h3>Revenue forecast under current sliders</h3>
                 <div className="canvas-wrap">
-                  {activeTab === 6 && <Line 
+                  {activeTab === 5 && <Line 
                     options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
                     data={{
                       labels: scenarioF.years,
@@ -3014,15 +3061,15 @@ const chatScript: ChatStepDef[] = [
   
               {renderTornadoChart(true)}
             <div style={{ textAlign: 'right', marginTop: '24px' }}>
-              <button className="btn" onClick={() => goPage(7)}>Compare scenarios →</button>
+              <button className="btn" onClick={() => goPage(6)}>Compare scenarios →</button>
             </div>
 
           </div>
           </div>
         </section>
 
-        {/* PAGE 7 : COMPARE */}
-        <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
+        {/* PAGE 6 : COMPARE */}
+        <section className={`page ${activeTab === 6 ? 'active' : ''}`} id="page-6">
           <h1>Scenario comparison</h1>
           <p className="lead">The base case alongside any custom scenarios you've saved.</p>
 
@@ -3059,7 +3106,7 @@ const chatScript: ChatStepDef[] = [
           <div className="card">
             <h3>Year-by-year net revenue comparison</h3>
             <div className="canvas-wrap">
-              {activeTab === 7 && <Bar 
+              {activeTab === 6 && <Bar 
                 options={{ 
                   responsive: true, 
                   maintainAspectRatio: false, 
@@ -3080,12 +3127,12 @@ const chatScript: ChatStepDef[] = [
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <button className="btn" onClick={() => goPage(8)}>Export forecast →</button>
+            <button className="btn" onClick={() => goPage(7)}>Export forecast →</button>
           </div>
         </section>
 
-        {/* PAGE 8 : EXPORT */}
-        <section className={`page ${activeTab === 8 ? 'active' : ''}`} id="page-8">
+        {/* PAGE 7 : EXPORT */}
+        <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
           <h1>Export &amp; share</h1>
           <p className="lead">Send the current forecast out to the tools your team already works in.</p>
 
