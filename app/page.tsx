@@ -2593,7 +2593,7 @@ const chatScript: ChatStepDef[] = [
               <h1 style={{ marginBottom: '4px' }}>Build your forecast in conversation</h1>
               <p className="lead" style={{ margin: 0 }}>The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
             </div>
-            <button className="btn" onClick={() => goPage(4)} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '10px 20px', fontSize: '14px' }}>Skip to Forecast →</button>
+            <button className="btn" onClick={() => goPage(3)} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '10px 20px', fontSize: '14px' }}>Skip to Assumptions →</button>
           </div>
 
 
