@@ -2200,6 +2200,303 @@ const chatScript: ChatStepDef[] = [
     );
   };
 
+  const exportScenariosHTML = () => {
+    // BASE FORECAST DATA
+    const basePeak = f.peakRevenue;
+    const baseImpacts = [
+      { name: 'Net price (direct)', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
+      { name: 'Adherence boost', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
+      { name: 'Peak share', low: -(sensitivityLevel === 5 ? 0.042 : 0.09) * basePeak, high: (sensitivityLevel === 5 ? 0.042 : 0.09) * basePeak },
+      { name: 'Addressable share', low: -(sensitivityLevel === 5 ? 0.04 : 0.085) * basePeak, high: (sensitivityLevel === 5 ? 0.04 : 0.085) * basePeak },
+      { name: 'Diagnosis rate', low: -(sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak, high: (sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak }
+    ];
+
+    // SCENARIOS COMPARISON DATA
+    const tableRows = scenarios.map(sc => {
+      const fc = getRebasedForecast(sc.s);
+      return `<tr>
+        <td><strong>${sc.name}</strong></td>
+        <td>${fmtPct(fc.adjustedPeakShare * 100)}</td>
+        <td>${fmtM(sc.s.wacPrice)}</td>
+        <td>${Math.ceil(sc.s.yearsToPeak)}</td>
+        <td>${fmtM(fc.peakRevenue)}</td>
+        <td>${fmtM(fc.revenue[0])}</td>
+        <td>${fmtM(fc.revenue[1])}</td>
+        <td>${fmtM(fc.revenue[2])}</td>
+        <td>${fmtM(fc.revenue[3])}</td>
+        <td>${fmtM(fc.revenue[4])}</td>
+      </tr>`;
+    }).join('');
+
+    const compareChartDatasets = scenarios.map((sc, i) => {
+      const fc = getRebasedForecast(sc.s);
+      return {
+        label: sc.name,
+        data: fc.revenue.slice(0, 5),
+        backgroundColor: ['#e34948', '#898781', '#00b2a9', '#f25621', '#3b82f6'][i % 5] || '#94a3b8',
+        borderRadius: 4
+      };
+    });
+
+    const capturedAssumptions = [
+      { k: 'Product', v: 'Zilretta (triamcinolone acetonide ER)' },
+      { k: 'Indication', v: 'OA Knee only' },
+      { k: 'Geography', v: 'US only' },
+      { k: 'Launch Date', v: 'Oct 2017' },
+      { k: 'Horizon', v: '5 years' },
+      { k: 'Model', v: 'Patient-Based' },
+      { k: 'Specialty grain', v: 'Ortho / Rheum / PCP-Other' },
+      { k: 'Treatment grain', v: 'IAS / HA' },
+      { k: 'Demand source', v: 'Census + IMS' },
+      { k: 'Treated-pt source', v: 'Proprietary research' },
+      { k: 'Share source', v: 'Mkt research + brand plan' },
+      { k: 'Finance source', v: 'WAC, brand plan' },
+      { k: 'Other factors', v: 'None flagged' }
+    ];
+
+    const baseAssumptionsRows = Object.entries(state).map(([key, val]) => {
+      const formattedKey = key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase());
+      
+      let formattedVal = String(val);
+      if (typeof val === 'number') {
+        const lower = formattedKey.toLowerCase();
+        if (lower.includes('price') || lower.includes('revenue')) {
+          formattedVal = '$' + val.toLocaleString();
+        } else if (val < 2 && val > -2 && val !== 0 && !lower.includes('year') && !lower.includes('month')) {
+          formattedVal = (Math.round(val * 1000) / 10).toString() + '%';
+        } else {
+          formattedVal = val.toLocaleString();
+        }
+      }
+      return { name: formattedKey, val: formattedVal };
+    });
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Forecast & Comparison Export</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8f9fa; padding: 40px; color: #334155; margin: 0; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { color: #0f172a; font-size: 28px; margin-top: 40px; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+    h1:first-child { margin-top: 0; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    h3 { margin-top: 0; font-size: 16px; color: #334155; margin-bottom: 16px; font-weight: 600; }
+    .canvas-wrap { height: 300px; width: 100%; position: relative; }
+    
+    .grid6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
+    .metric { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+    .metric .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
+    .metric .value { font-size: 18px; font-weight: 600; color: #0f172a; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th, td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    th { background: #f8fafc; font-weight: 600; color: #475569; }
+    tbody tr:hover { background: #f1f5f9; }
+
+    .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px; gap: 16px; }
+    .tab-btn { background: none; border: none; font-size: 16px; font-weight: 600; color: #64748b; padding: 12px 16px; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab-btn:hover { color: #0f172a; }
+    .tab-btn.active { color: #0f7696; border-bottom-color: #0f7696; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <div style="margin-bottom: 32px;">
+      <h1 style="font-size: 32px; color: #0f172a; margin: 0; border: none; padding: 0;">Interactive Forecast Export</h1>
+      <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Exported forecast, assumptions, and scenario analysis.</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('forecast', this)">Forecast</button>
+      <button class="tab-btn" onclick="switchTab('compare', this)">Compare</button>
+      <button class="tab-btn" onclick="switchTab('assumptions', this)">Assumptions</button>
+    </div>
+
+    <!-- FORECAST TAB -->
+    <div id="forecast" class="tab-content active">
+      <div class="grid6">
+        <div class="metric"><div class="label">Net Rev - Peak</div><div class="value">${fmtM(f.peakRevenue)}</div></div>
+        <div class="metric"><div class="label">Peak Share (Adj)</div><div class="value">${fmtPct((f as any).adjustedPeakShare * 100)}</div></div>
+        <div class="metric"><div class="label">Peak Patients</div><div class="value">${fmtNum((f as any).adjustedPeakPatients)}</div></div>
+        <div class="metric"><div class="label">2016 Net Rev</div><div class="value">${fmtM(f.revenue[0])}</div></div>
+        <div class="metric"><div class="label">2017 Net Rev</div><div class="value">${fmtM(f.revenue[1])}</div></div>
+        <div class="metric"><div class="label">2018 Net Rev</div><div class="value">${fmtM(f.revenue[2])}</div></div>
+      </div>
+      
+      <div class="card">
+        <h3>Net year revenue forecast, US ($)</h3>
+        <div class="canvas-wrap"><canvas id="forecastLineChart"></canvas></div>
+      </div>
+      
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin:0;">Scenario impacts on peak revenue</h3>
+          <span style="font-size:13px; border:1px solid #ccc; padding:4px 8px; border-radius:4px;">±${sensitivityLevel}% Sensitivity</span>
+        </div>
+        <div class="canvas-wrap"><canvas id="forecastTornadoChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- COMPARE TAB -->
+    <div id="compare" class="tab-content">
+      <div class="card" style="overflow-x: auto;">
+        <h3>Summary</h3>
+        <table>
+          <thead>
+            <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>2016 net</th><th>2017 net</th><th>2018 net</th><th>2019 net</th><th>2020 net</th></tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="card">
+        <h3>Year-by-year net revenue comparison</h3>
+        <div class="canvas-wrap"><canvas id="compareBarChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ASSUMPTIONS TAB -->
+    <div id="assumptions" class="tab-content">
+      <div class="grid2">
+        <div class="card">
+          <h3>Base Case Inputs (All State Variables)</h3>
+          <table>
+            <thead>
+              <tr><th style="width: 40px;">#</th><th>Assumption</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              ${baseAssumptionsRows.map((r, i) => `<tr><td style="color: #94a3b8;">${i + 1}</td><td>${r.name}</td><td><strong>${r.val}</strong></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="card">
+          <h3>Captured Assumptions (Assistant)</h3>
+          <table>
+            <thead>
+              <tr><th style="width: 40px;">#</th><th>Property</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              ${capturedAssumptions.map((r, i) => `<tr><td style="color: #94a3b8;">${i + 1}</td><td>${r.k}</td><td><strong>${r.v}</strong></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  
+  <script>
+    function switchTab(tabId, element) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      element.classList.add('active');
+    }
+
+    // 1. Forecast Line Chart
+    new Chart(document.getElementById('forecastLineChart'), {
+      type: 'line',
+      data: {
+        labels: ${JSON.stringify(f.years)},
+        datasets: [{
+          label: 'Net Rev',
+          data: ${JSON.stringify(f.revenue)},
+          borderColor: '#2a78d6',
+          backgroundColor: 'rgba(42,120,214,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { ticks: { callback: function(v) { return '$' + (v/1000000).toFixed(1) + 'M'; } } } }
+      }
+    });
+
+    // 2. Forecast Tornado Chart
+    new Chart(document.getElementById('forecastTornadoChart'), {
+      type: 'bar',
+      data: {
+        labels: ${JSON.stringify(baseImpacts.map(i => i.name))},
+        datasets: [
+          {
+            label: 'Low Case',
+            data: ${JSON.stringify(baseImpacts.map(i => i.low))},
+            backgroundColor: '#f87171',
+            borderRadius: 4
+          },
+          {
+            label: 'High Case',
+            data: ${JSON.stringify(baseImpacts.map(i => i.high))},
+            backgroundColor: '#34d399',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                var val = ctx.raw;
+                var sign = val > 0 ? '+' : '';
+                return 'Impact: ' + sign + '$' + (val/1000000).toFixed(1) + 'M';
+              }
+            }
+          }
+        },
+        scales: { x: { ticks: { callback: function(v) { return '$' + (v/1000000).toFixed(1) + 'M'; } } } }
+      }
+    });
+
+    // 3. Compare Bar Chart
+    new Chart(document.getElementById('compareBarChart'), {
+      type: 'bar',
+      data: {
+        labels: ['2016', '2017', '2018', '2019', '2020'],
+        datasets: ${JSON.stringify(compareChartDatasets)}
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { ticks: { callback: function(v) { return '$' + (v/1000000).toFixed(1) + 'M'; } } } }
+      }
+    });
+  </script>
+</body>
+</html>`;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Axpaxli_Forecast_And_Compare.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <header className="topbar" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--border)', padding: '6px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2811,6 +3108,14 @@ const chatScript: ChatStepDef[] = [
               <div className="edesc">A dynamic, high-level summary designed for executive and leadership review.</div>
             </div>
             <button className="btn" onClick={() => {}}>Open the model</button>
+          </div>
+
+          <div className="card export-card">
+            <div>
+              <div className="etitle">Export Scenarios (HTML)</div>
+              <div className="edesc">Download all saved scenarios as an interactive HTML document, exactly as they appear in the Scenarios tab.</div>
+            </div>
+            <button className="btn" onClick={exportScenariosHTML}>Download Scenarios HTML</button>
           </div>
 
 
