@@ -75,7 +75,8 @@ nav.tabs button.active {
 }
 nav.tabs button:hover { color: #fff; }
 
-main { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; }
+.main-content { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; transition: max-width 0.3s ease; width: 100%; }
+.main-content.wide { max-width: 100%; padding: 28px; }
 
 .page { display: none; }
 .page.active { display: block; animation: fadein .25s ease; }
@@ -224,6 +225,20 @@ table th { color: var(--text-muted); font-weight: 600; font-size: 12px; text-tra
 .tag-down { background: #fbeceb; color: var(--danger); }
 .tag-base { background: #eef1f2; color: var(--navy); }
 .tag-up { background: var(--teal-light); color: var(--teal); }
+
+.scenario-layout {
+  display: grid;
+  grid-template-columns: minmax(460px, 0.95fr) minmax(560px, 1.25fr);
+  gap: 32px;
+  align-items: start;
+  margin-top: 24px;
+}
+
+@media (max-width: 1120px) {
+  .scenario-layout {
+    grid-template-columns: 1fr;
+  }
+}
 
 .export-card { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; }
 .export-card .etitle { font-weight: 600; font-size: 14.5px; margin-bottom: 2px; }
