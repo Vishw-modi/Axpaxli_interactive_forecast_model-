@@ -2928,67 +2928,69 @@ const chatScript: ChatStepDef[] = [
 
         {/* PAGE 3 : RESOURCE GATHERING */}
         <section className={`page ${activeTab === 3 ? 'active' : ''}`} id="page-3">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '20px' }}>
-            <div>
-              <h1 style={{ marginBottom: '4px' }}>Resource Gathering</h1>
-              <p className="lead" style={{ margin: 0 }}>Please upload the required data sheets so the forecast model can populate accurately.</p>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', textAlign: 'center' }}>
+              <div>
+                <h1 style={{ marginBottom: '8px' }}>Resource Gathering</h1>
+                <p className="lead" style={{ margin: 0 }}>Please upload the required data sheets so the forecast model can populate accurately.</p>
+              </div>
             </div>
-          </div>
-          <div className="grid3" style={{ gridTemplateColumns: '1fr', gap: '16px', maxWidth: '800px' }}>
-            {[
-              { id: 1, name: 'Census population data' },
-              { id: 2, name: '2016 IMS diagnosed-patient data' },
-              { id: 3, name: 'Proprietary market research' },
-              { id: 4, name: 'Existing forecast model (optional)' }
-            ].map(sheet => {
-              const sheetNum = sheet.id;
-              const isUploaded = uploadedSheets[sheetNum];
-              return (
-                <div key={sheetNum} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: isUploaded ? '#e6f7f6' : '#f1f5f9', color: isUploaded ? '#00b2a9' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+            <div className="grid3" style={{ gridTemplateColumns: '1fr', gap: '16px' }}>
+              {[
+                { id: 1, name: 'Census population data' },
+                { id: 2, name: '2016 IMS diagnosed-patient data' },
+                { id: 3, name: 'Proprietary market research' },
+                { id: 4, name: 'Existing forecast model (optional)' }
+              ].map(sheet => {
+                const sheetNum = sheet.id;
+                const isUploaded = uploadedSheets[sheetNum];
+                return (
+                  <div key={sheetNum} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: isUploaded ? '#e6f7f6' : '#f1f5f9', color: isUploaded ? '#00b2a9' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                      </div>
+                      <div>
+                        <h3 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{sheet.name}</h3>
+                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--sub)' }}>{isUploaded ? 'Data successfully processed' : 'Pending upload'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{sheet.name}</h3>
-                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--sub)' }}>{isUploaded ? 'Data successfully processed' : 'Pending upload'}</p>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <input 
+                        type="file" 
+                        id={`file-upload-${sheetNum}`} 
+                        style={{ display: 'none' }} 
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            setUploadedSheets(prev => ({ ...prev, [sheetNum]: true }));
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                      {isUploaded && (
+                        <button className="btn" onClick={() => setPreviewSheet(sheetNum)} style={{ padding: '6px 12px', fontSize: '13px' }}>Preview data</button>
+                      )}
+                      <button 
+                        className={`btn ${isUploaded ? '' : 'primary'}`} 
+                        onClick={() => {
+                          if (isUploaded) {
+                            setUploadedSheets(prev => ({ ...prev, [sheetNum]: false }));
+                          } else {
+                            document.getElementById(`file-upload-${sheetNum}`)?.click();
+                          }
+                        }} 
+                        style={{ padding: '6px 12px', fontSize: '13px', background: isUploaded ? 'transparent' : undefined, color: isUploaded ? 'var(--sub)' : undefined, border: isUploaded ? '1px solid var(--line)' : undefined }}
+                      >
+                        {isUploaded ? 'Remove' : 'Upload File'}
+                      </button>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <input 
-                      type="file" 
-                      id={`file-upload-${sheetNum}`} 
-                      style={{ display: 'none' }} 
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          setUploadedSheets(prev => ({ ...prev, [sheetNum]: true }));
-                          e.target.value = '';
-                        }
-                      }}
-                    />
-                    {isUploaded && (
-                      <button className="btn" onClick={() => setPreviewSheet(sheetNum)} style={{ padding: '6px 12px', fontSize: '13px' }}>Preview data</button>
-                    )}
-                    <button 
-                      className={`btn ${isUploaded ? '' : 'primary'}`} 
-                      onClick={() => {
-                        if (isUploaded) {
-                          setUploadedSheets(prev => ({ ...prev, [sheetNum]: false }));
-                        } else {
-                          document.getElementById(`file-upload-${sheetNum}`)?.click();
-                        }
-                      }} 
-                      style={{ padding: '6px 12px', fontSize: '13px', background: isUploaded ? 'transparent' : undefined, color: isUploaded ? 'var(--sub)' : undefined, border: isUploaded ? '1px solid var(--line)' : undefined }}
-                    >
-                      {isUploaded ? 'Remove' : 'Upload File'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-start' }}>
-             <button className="btn primary" onClick={() => goPage(4)} style={{ padding: '10px 20px' }}>Continue to Assumptions →</button>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-start' }}>
+               <button className="btn primary" onClick={() => goPage(4)} style={{ padding: '10px 20px' }}>Continue to Assumptions →</button>
+            </div>
           </div>
         </section>
 
