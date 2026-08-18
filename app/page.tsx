@@ -69,9 +69,11 @@ const SliderContext = React.createContext<any>(null);
 function SliderControl({
   label, fieldKey, stops: defaultStops, currentValue, unit, onAskAI,
   onChange,
-  asDropdown
+  asDropdown,
+  hideSlider
 }: {
   asDropdown?: boolean;
+  hideSlider?: boolean;
   label: string;
   fieldKey: string;
   stops: number[];          // exactly 5 values
@@ -123,6 +125,72 @@ function SliderControl({
             return <option key={i} value={i}>{t} ({valStr})</option>;
           })}
         </select>
+      </div>
+    );
+  }
+
+  // hideSlider mode: keep input + checkbox but suppress the range slider when scenarios is enabled
+  // diagnosisRate gets a slider directly instead of textbox
+  if (hideSlider) {
+    const showSliderForThis = fieldKey === 'diagnosisRate';
+    return (
+      <div className="slider-control-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="slider-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '0' }}>
+          <span className="slider-label" style={{ marginBottom: 0 }}>{label}</span>
+          <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
+        </div>
+        
+        {showSliderForThis ? (
+          <div style={{ padding: '0 0 8px 0', position: 'relative' }}>
+            <span className="slider-value-chip" style={{ position: 'absolute', top: '-18px', right: '0', backgroundColor: activeColor + '20', color: activeColor, padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 600 }}>
+              {`${(currentValue * 100).toLocaleString('en-US', {maximumFractionDigits: 2})}%`}
+            </span>
+            <input
+              type="range"
+              min={0} max={4} step={1}
+              value={currentIdx}
+              className="slider-input"
+              onChange={e => onChange(dynamicStops[parseInt(e.target.value)])}
+              style={{ background: `linear-gradient(to right, ${activeColor} ${(currentIdx / 4) * 100}%, #e2e8f0 ${(currentIdx / 4) * 100}%, #e2e8f0 100%)`, color: activeColor, width: '100%' }}
+            />
+            <div className="slider-ticks" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '11px', color: '#9ca3af' }}>
+              {['Conservative','Semi-Conservative','Centered','Semi-Aggressive','Aggressive'].map((t,i) => (
+                <span key={i} className={`tick-label ${i === currentIdx ? 'active' : ''}`} style={{ color: i === currentIdx ? activeColor : undefined, flex: 1, textAlign: i === 0 ? 'left' : i === 4 ? 'right' : 'center', fontWeight: i === currentIdx ? 600 : 400 }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input 
+              type="number" 
+              value={localInput !== null ? localInput : (unit === '%' ? Math.round(currentValue * 10000)/100 : currentValue)}
+              onChange={(e) => {
+                  setLocalInput(e.target.value);
+                  if (e.target.value === '') {
+                    onChange(0);
+                    onSetCustomCenter(0);
+                    return;
+                  }
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) {
+                    const finalVal = unit === '%' ? val / 100 : val;
+                    onChange(finalVal);
+                    onSetCustomCenter(finalVal);
+                  }
+                }}
+              onBlur={() => setLocalInput(null)}
+              style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100px', fontSize: '13px' }}
+            />
+            <span style={{ fontSize: '13px', color: '#4b5563' }}>{unit === '$' ? '' : unit}</span>
+            
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4b5563', cursor: 'pointer', marginLeft: 'auto' }}>
+              <input type="checkbox" checked={isScenariosEnabled} onChange={(e) => {
+                if (onToggleScenarios) onToggleScenarios(e.target.checked);
+              }} />
+              Enable Scenarios
+            </label>
+          </div>
+        )}
       </div>
     );
   }
@@ -639,7 +707,36 @@ const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleStr
 const newFlowScript = [
   { who: 'ai', text: "Hello! I'm your forecasting assistant. How can I help you today?", step: 1 },
   { who: 'user', text: "I want to build a forecast for Zilretta.", step: 1 },
-  { who: 'ai', text: "Happy to help build this out. We'll work through three steps before you move into Assumptions to fine-tune the numbers:<br><br><b>1. Setup</b> — Align on the basics (Brand, indication, market/geography, launch timing, forecast horizon)<br><b>2. Approach</b> — Agree on methodology (Forecasting approach + the grain we'll track it at)<br><b>3. Input Alignment</b> — Confirm data needs (Must-have inputs and the data sources we'll use for each)", step: 1 },
+  { who: 'ai', text: `Happy to help build this out. We'll work through three steps before you move into Assumptions to fine-tune the numbers:
+<div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; font-size: 13px;">
+  <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">HOW THIS WILL GO</div>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead style="background: #ffffff; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase;">
+      <tr>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Step</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">What we'll do</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Expected outcomes</th>
+      </tr>
+    </thead>
+    <tbody style="background: #ffffff;">
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">1. Setup</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Align on the basics</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Brand, indication, market/geography, launch timing, forecast horizon</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">2. Approach</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Agree on methodology</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Forecasting approach + the grain we'll track it at</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">3. Input Alignment</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Confirm data needs</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Must-have inputs and the data sources we'll use for each</td>
+      </tr>
+    </tbody>
+  </table>
+</div>`, step: 1 },
   { who: 'ai', text: "Let's start with Setup. A few things to confirm:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Indication</b> → Zilretta is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li><li><b>Geography</b> → given the primary market is US, I'll scope this as US-only unless another market needs covering.</li><li><b>Launch Date</b> → based on drug approval records, launch looks to be around October 2017, so I'll anchor to that.</li><li><b>Forecast Horizon</b> → OA Knee is a mature, stable category, so a 5-year horizon is typical.</li></ul>Does all of that look right, or should any of these change?", step: 1 },
   { who: 'user', text: "That all works.", step: 1 },
   { who: 'ai', text: "Two ways to structure this: **Patient-Based** — a snapshot of the diagnosed/treated market by specialty — or **Patient-Flow** — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.\n\nOA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, **Patient-Based** is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.", step: 2 },
@@ -648,11 +745,43 @@ const newFlowScript = [
   { who: 'user', text: "Let's go with specialty and treatment type.", step: 2 },
   { who: 'ai', text: "Looking at OA Knee specifically — the primary specialties treating this are orthopedic surgeons and rheumatologists, with PCPs picking up a smaller share. And based on Zilretta's patient eligibility, the treatment side splits into intra-articular steroid (IAS), which is where Zilretta sits, and hyaluronic acid (HA), a different injectable class. Shall we track the model along those lines?", step: 2 },
   { who: 'user', text: "Yes.", step: 2 },
-  { who: 'ai', text: "With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.\n\n_Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._\n\nA few source options worth considering:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Census / population data</b></li><li><b>DRG claims</b></li><li><b>IMS/IQVIA commercial claims</b></li><li><b>Kantar / syndicated epi studies</b></li></ul>Do you have access to any of these directly, or should I default to Census as the base?", step: 3 },
+  { who: 'ai', text: `With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.
+<div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; margin-bottom: 12px; font-size: 13px;">
+  <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">MUST-HAVE vs. GOOD-TO-HAVE</div>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead style="background: #ffffff; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase;">
+      <tr>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Category</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Must-Have</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Good-to-Have</th>
+      </tr>
+    </thead>
+    <tbody style="background: #ffffff;">
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Demand</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Epi, diagnosed & treated (IAS/HA)</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Regional splits</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Share</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Peak Share, Time to Peak</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Uptake curve, analogs</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Finance</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">WAC Price</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Rebates, GTN %</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+_Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._
+
+A few source options worth considering:<ul style="margin:8px 0 8px; padding-left:18px;"><li><b>Census / population data</b></li><li><b>DRG claims</b></li><li><b>IMS/IQVIA commercial claims</b></li><li><b>Kantar / syndicated epi studies</b></li></ul>Do you have access to any of these directly, or should I default to Census as the base?`, step: 3 },
   { who: 'user', text: "We have 2016 IMS data on diagnosed OA Knee patients we can use.", step: 3 },
   { who: 'ai', text: "Good — I'll combine **Census** for the population base with your **2016 IMS data** for diagnosis. I'd break both out by age band too, since diagnosis and treatment patterns tend to shift quite a bit across age groups in OA Knee. For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims data — do you have proprietary research for that?", step: 3 },
   { who: 'user', text: "Yes, we have proprietary market research.", step: 3 },
-  { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3, hasTable: true },
+  { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3 },
   { who: 'ai', text: "Anything else to factor in before we move to Assumptions — market events, competitive dynamics, or other share adjustments?", step: 3 },
   { who: 'user', text: "Nothing else for now.", step: 3 },
   { who: 'ai', text: "Great. For detailed parameter inputs and adjustments, we will be moving to the **Assumptions section**.", step: 4 }
@@ -1930,182 +2059,186 @@ const chatScript: ChatStepDef[] = [
   ];
   const scenarios = [...defaultScenarios, ...savedScenarios];
 
-  const renderAssumptions = (asDropdown = false, isScenario = false) => {
+  const renderAssumptions = (asDropdown = false, isScenario = false, hideSlider = false) => {
     const s = isScenario ? scenarioState : state;
     const h = isScenario ? handleScenarioChange : handleStateChange;
     let sn = 1;
     const l = (lbl: string) => asDropdown ? lbl : `${sn++}. ${lbl}`;
     return (
     <SliderContext.Provider value={{ scenariosEnabledMap, setScenariosEnabledMap, customCentersMap, setCustomCentersMap }}>
-      <CollapsibleMainGroup title="Forecast Setup & Market Alignment" isOpen={openMainGroups.has('Forecast Setup & Market Alignment')} onToggle={() => toggleMainGroup('Forecast Setup & Market Alignment')}>
-            <AccordionSection idx={0} title="Key Dates" color="#34495e" isOpen={openSections.has(0)} onQuickSet={(level) => handleQuickSet(0, level)} onToggle={() => toggleSection(0)}>
-              <DateOrNeverControl label={l("Product Approval Date (Start of Promotion)")} fieldKey="launchDate" value={s.launchDate} onChange={v => h('launchDate', v)} />
-              <DateOrNeverControl label={l("Availability Date (must be ≥ 1A)")} fieldKey="availabilityDate" value={s.availabilityDate} onChange={v => h('availabilityDate', v)} />
-            </AccordionSection>
+      <CollapsibleMainGroup title="1. Forecast setup" isOpen={openMainGroups.has('1. Forecast setup')} onToggle={() => toggleMainGroup('1. Forecast setup')}>
+        <div style={{ padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border)', fontSize: '13.5px', color: 'var(--text)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px' }}>
+            <strong>Product:</strong> <span>Zilretta (triamcinolone acetonide ER)</span>
+            <strong>Indication:</strong> <span>OA Knee only</span>
+            <strong>Geography:</strong> <span>US only</span>
+          </div>
+        </div>
+        <AccordionSection idx={0} title="1A. Key Dates" color="#34495e" isOpen={openSections.has(0)} onQuickSet={(level) => handleQuickSet(0, level)} onToggle={() => toggleSection(0)}>
+          <DateOrNeverControl label={l("Product Approval Date (Start of Promotion)")} fieldKey="launchDate" value={s.launchDate} onChange={v => h('launchDate', v)} />
+          <DateOrNeverControl label={l("Availability Date (must be ≥ 1A)")} fieldKey="availabilityDate" value={s.availabilityDate} onChange={v => h('availabilityDate', v)} />
+        </AccordionSection>
       </CollapsibleMainGroup>
 
-      {!asDropdown && (
-        <CollapsibleMainGroup title={<span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Foundation / Data <InfoTooltip text="Monthly-interpolated between yearly Census projections to build the population base" /></span>} isOpen={openMainGroups.has('Foundation / Data')} onToggle={() => toggleMainGroup('Foundation / Data')}>
-              <AccordionSection idx={101} title="US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
-                <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                    US Population Census (by Year & Age Bucket)
-                  </div>
-                  {!asDropdown && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="btn secondary" onClick={() => document.getElementById('upload-census')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                        <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                      </button>
-                      <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                      <button className="btn secondary" onClick={() => handleViewFile('Book1.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                        <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </AccordionSection>
-        </CollapsibleMainGroup>
-      )}
-
-      <CollapsibleMainGroup title="Core Demand Modeling" isOpen={openMainGroups.has('Core Demand Modeling')} onToggle={() => toggleMainGroup('Core Demand Modeling')}>
-        <AccordionSection idx={1} title="Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
-              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
-                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                  2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age) <InfoTooltip text="Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range" />
-                </div>
-                {!asDropdown && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn secondary" onClick={() => document.getElementById('upload-ims')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                      <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                    </button>
-                    <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                    <button className="btn secondary" onClick={() => handleViewFile('insured and uninsured patients.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                      <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                    </button>
-                  </div>
-                )}
+      <CollapsibleMainGroup title="2. Demand" isOpen={openMainGroups.has('2. Demand')} onToggle={() => toggleMainGroup('2. Demand')}>
+        {!asDropdown && (
+          <AccordionSection idx={101} title="2A. US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
+            <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+                US Population Census (by Year & Age Bucket)
               </div>
-              <SliderControl asDropdown={asDropdown} label={l("Diagnosis rate (base year)")} fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={s.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => h('diagnosisRate', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Diagnosis annual growth rate")} fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={s.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => h('diagnosisAnnualGrowthRate', v)} />
-            </AccordionSection>
-
-            <AccordionSection idx={2} title="Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
-              <SliderControl asDropdown={asDropdown} label={l("IAS treated % of diagnosed (base yr)")} fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={s.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => h('iasTreatedPctOfDiagnosed', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("IAS treated annual growth rate")} fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={s.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => h('iasTreatedGrowthRate', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("HA-to-IAS ratio")} fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={s.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => h('haRatioToIAS', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("HA ratio annual growth rate")} fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={s.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => h('haRatioGrowthRate', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("IAS+HA treated (both) %")} fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={s.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => h('iasAndHATreatedBoth', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Initial promotional market lift")} fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={s.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => h('initialAdditionalMarketGrowth', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Annual decay of promo lift")} fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={s.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => h('annualDecayRateOfAdditionalGrowth', v)} />
-              <div style={{ padding: '12px 0 8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
-                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                  Rx Analysis — Treatment Share × Physician Type
-                </div>
-                {!asDropdown && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn secondary" onClick={() => document.getElementById('upload-rx')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                      <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                    </button>
-                    <input type="file" id="upload-rx" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                    <button className="btn secondary" onClick={() => handleViewFile('step 5.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                      <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                    </button>
-                  </div>
-                )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn secondary" onClick={() => document.getElementById('upload-census')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                </button>
+                <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                <button className="btn secondary" onClick={() => handleViewFile('Book1.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                </button>
               </div>
-            </AccordionSection>
+            </div>
+          </AccordionSection>
+        )}
 
-            <AccordionSection idx={3} title="Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
-              <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
-                <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                  Primary market research for peak share
-                </div>
-                {!asDropdown && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn secondary" onClick={() => document.getElementById('upload-pmr')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                      <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                    </button>
-                    <input type="file" id="upload-pmr" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                    <button className="btn secondary" onClick={() => handleViewFile('3rd_excel.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                      <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                    </button>
-                  </div>
-                )}
+        <AccordionSection idx={1} title="2B. Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
+          <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+              2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age) <InfoTooltip text="Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range" />
+            </div>
+            {!asDropdown && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn secondary" onClick={() => document.getElementById('upload-ims')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                </button>
+                <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                <button className="btn secondary" onClick={() => handleViewFile('insured and uninsured patients.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                </button>
               </div>
-              <SliderControl asDropdown={asDropdown} label={l("Overstatement adjustment factor")} fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={s.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => h('overstatementAdjFactor', v)} />
-              <ToggleControl label={l("WOMAC pain-score data available?")} fieldKey="womacScoreAvailable" value={s.womacScoreAvailable} onChange={v => h('womacScoreAvailable', v)} />
-              <ToggleControl label={l("Diabetes/glycemic data available?")} fieldKey="diabetesGlycemicDataAvailable" value={s.diabetesGlycemicDataAvailable} onChange={v => h('diabetesGlycemicDataAvailable', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("WAC price per injection")} fieldKey="wacPrice" stops={[400, 500, 575, 800, 1000]} currentValue={s.wacPrice} unit="$" onAskAI={() => openAiModal('wacPrice')} onChange={v => h('wacPrice', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Market research adj. — Ortho")} fieldKey="newMarketResearchAdjOrtho" stops={[0.95, 1.10, 1.25, 1.40, 1.55]} currentValue={s.newMarketResearchAdjOrtho} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjOrtho')} onChange={v => h('newMarketResearchAdjOrtho', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Market research adj. — Rheum/PCP")} fieldKey="newMarketResearchAdjRheum" stops={[0.90, 0.95, 1.00, 1.05, 1.10]} currentValue={s.newMarketResearchAdjRheum} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjRheum')} onChange={v => h('newMarketResearchAdjRheum', v)} />
-            </AccordionSection>
+            )}
+          </div>
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Diagnosis rate (base year)")} fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={s.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => h('diagnosisRate', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Diagnosis annual growth rate")} fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={s.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => h('diagnosisAnnualGrowthRate', v)} />
+        </AccordionSection>
 
+        <AccordionSection idx={2} title="2C. Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("IAS treated % of diagnosed (base yr)")} fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={s.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => h('iasTreatedPctOfDiagnosed', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("IAS treated annual growth rate")} fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={s.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => h('iasTreatedGrowthRate', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("HA-to-IAS ratio")} fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={s.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => h('haRatioToIAS', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("HA ratio annual growth rate")} fieldKey="haRatioGrowthRate" stops={[-0.02, -0.015, -0.01, -0.005, 0.0]} currentValue={s.haRatioGrowthRate} unit="%" onAskAI={() => openAiModal('haRatioGrowthRate')} onChange={v => h('haRatioGrowthRate', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("IAS+HA treated (both) %")} fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={s.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => h('iasAndHATreatedBoth', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Initial promotional market lift")} fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={s.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => h('initialAdditionalMarketGrowth', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Annual decay of promo lift")} fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={s.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => h('annualDecayRateOfAdditionalGrowth', v)} />
+          <div style={{ padding: '12px 0 8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+              Rx Analysis — Treatment Share × Physician Type
+            </div>
+            {!asDropdown && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn secondary" onClick={() => document.getElementById('upload-rx')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                </button>
+                <input type="file" id="upload-rx" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                <button className="btn secondary" onClick={() => handleViewFile('step 5.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                </button>
+              </div>
+            )}
+          </div>
+        </AccordionSection>
       </CollapsibleMainGroup>
 
-      <CollapsibleMainGroup title="Access & Competitive Friction Adjustments" isOpen={openMainGroups.has('Access & Competitive Friction Adjustments')} onToggle={() => toggleMainGroup('Access & Competitive Friction Adjustments')}>
-            <AccordionSection idx={4} title="Payer Access" color="#d9534f" isOpen={openSections.has(4)} onQuickSet={(level) => handleQuickSet(4, level)} onToggle={() => toggleSection(4)}>
-              <SelectControl label={l("Payer access requirement")} fieldKey="payerAccessRequirement" options={[{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}]} value={s.payerAccessRequirement} onAskAI={() => openAiModal('payerAccessRequirement')} onChange={v => h('payerAccessRequirement', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Pricing adj. — access impact (% surviving)")} fieldKey="pricingAdjFactorAccessImpact" stops={[0.90, 0.92, 0.96, 0.97, 0.98]} currentValue={s.pricingAdjFactorAccessImpact} unit="%" onAskAI={() => openAiModal('pricingAdjFactorAccessImpact')} onChange={v => h('pricingAdjFactorAccessImpact', v)} />
-              <ToggleControl label={l("Patient assistance program in place?")} fieldKey="patientAssistanceProgramInPlace" value={s.patientAssistanceProgramInPlace} onChange={v => h('patientAssistanceProgramInPlace', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Pricing adj. — PAP lift")} fieldKey="pricingAdjPatientAssistanceImpact" stops={[1.00, 1.05, 1.10, 1.15, 1.20]} currentValue={s.pricingAdjPatientAssistanceImpact} unit="%" onAskAI={() => openAiModal('pricingAdjPatientAssistanceImpact')} onChange={v => h('pricingAdjPatientAssistanceImpact', v)} />
-            </AccordionSection>
-
-            <AccordionSection idx={5} title="Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
-              <SliderControl asDropdown={asDropdown} label={l("Years to peak share")} fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={s.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => h('yearsToPeak', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Ortho/Rheum reached by month 12")} fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={s.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => h('pctORSReachedByMonth12', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Ortho/Rheum reached by year 2")} fieldKey="pctORSReachedByYear2" stops={[0.70, 0.75, 0.80, 0.85, 0.90]} currentValue={s.pctORSReachedByYear2} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear2')} onChange={v => h('pctORSReachedByYear2', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Ortho/Rheum reached by year 3+")} fieldKey="pctORSReachedByYear3Plus" stops={[0.75, 0.80, 0.85, 0.90, 0.95]} currentValue={s.pctORSReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear3Plus')} onChange={v => h('pctORSReachedByYear3Plus', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("PCP/Other reached by month 12")} fieldKey="pctPCPReachedByMonth12" stops={[0.40, 0.46, 0.524, 0.58, 0.64]} currentValue={s.pctPCPReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctPCPReachedByMonth12')} onChange={v => h('pctPCPReachedByMonth12', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("PCP/Other reached by year 2")} fieldKey="pctPCPReachedByYear2" stops={[0.52, 0.56, 0.60, 0.64, 0.68]} currentValue={s.pctPCPReachedByYear2} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear2')} onChange={v => h('pctPCPReachedByYear2', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("PCP/Other reached by year 3+")} fieldKey="pctPCPReachedByYear3Plus" stops={[0.56, 0.60, 0.65, 0.70, 0.75]} currentValue={s.pctPCPReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear3Plus')} onChange={v => h('pctPCPReachedByYear3Plus', v)} />
-            </AccordionSection>
-
-            <AccordionSection idx={6} title="Access Friction" color="#d9534f" isOpen={openSections.has(6)} onQuickSet={(level) => handleQuickSet(6, level)} onToggle={() => toggleSection(6)}>
-              <SliderControl asDropdown={asDropdown} label={l("J-Code window duration")} fieldKey="jCodeWindowMonths" stops={[6, 9, 12, 15, 18]} currentValue={s.jCodeWindowMonths} unit=" mo" onAskAI={() => openAiModal('jCodeWindowMonths')} onChange={v => h('jCodeWindowMonths', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("J-Code retention rate (misc code)")} fieldKey="jCodeRetentionRate" stops={[0.80, 0.84, 0.88, 0.91, 0.94]} currentValue={s.jCodeRetentionRate} unit="%" onAskAI={() => openAiModal('jCodeRetentionRate')} onChange={v => h('jCodeRetentionRate', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Refrigeration requirement duration")} fieldKey="refrigerationDurationMonths" stops={[12, 15, 18, 24, 120]} currentValue={s.refrigerationDurationMonths} unit=" mo" onAskAI={() => openAiModal('refrigerationDurationMonths')} onChange={v => h('refrigerationDurationMonths', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Refrigeration retention — Ortho/Surgical")} fieldKey="refrigerationRetentionORS" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={s.refrigerationRetentionORS} unit="%" onAskAI={() => openAiModal('refrigerationRetentionORS')} onChange={v => h('refrigerationRetentionORS', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Refrigeration retention — Rheum/Other")} fieldKey="refrigerationRetentionRheumOther" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={s.refrigerationRetentionRheumOther} unit="%" onAskAI={() => openAiModal('refrigerationRetentionRheumOther')} onChange={v => h('refrigerationRetentionRheumOther', v)} />
-            </AccordionSection>
-
-            <AccordionSection idx={7} title="Competitive Events" color="#c0392b" isOpen={openSections.has(7)} onQuickSet={(level) => handleQuickSet(7, level)} onToggle={() => toggleSection(7)}>
-              <div className="competitor-card">
-                <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
-                <DateOrNeverControl label={l("Launch Date")} fieldKey="cingalLaunchDate" value={s.cingalLaunchDate} onChange={v => h('cingalLaunchDate', v)} />
-                <SliderControl asDropdown={asDropdown} label={l("Retention Ortho")} fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={s.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => h('cingalRetentionOrtho', v)} />
-                <SliderControl asDropdown={asDropdown} label={l("Retention PCP")} fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={s.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => h('cingalRetentionPCP', v)} />
+      <CollapsibleMainGroup title="3. Share" isOpen={openMainGroups.has('3. Share')} onToggle={() => toggleMainGroup('3. Share')}>
+        <AccordionSection idx={3} title="3A. Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
+          <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
+              Primary market research for peak share
+            </div>
+            {!asDropdown && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn secondary" onClick={() => document.getElementById('upload-pmr')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
+                </button>
+                <input type="file" id="upload-pmr" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
+                <button className="btn secondary" onClick={() => handleViewFile('3rd_excel.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
+                </button>
               </div>
-              
-              <div className="competitor-card">
-                <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
-                <DateOrNeverControl label={l("Launch Date")} fieldKey="ampionLaunchDate" value={s.ampionLaunchDate} onChange={v => h('ampionLaunchDate', v)} />
-                <SliderControl asDropdown={asDropdown} label={l("Retention Ortho")} fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={s.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => h('ampionRetentionOrtho', v)} />
-                <SliderControl asDropdown={asDropdown} label={l("Retention PCP")} fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={s.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => h('ampionRetentionPCP', v)} />
-              </div>
-
-              <div className="competitor-card">
-                <div className="competitor-card-title">Anti-NGF class</div>
-                <DateOrNeverControl label={l("Launch Date")} fieldKey="antiNGFLaunchDate" value={s.antiNGFLaunchDate} onChange={v => h('antiNGFLaunchDate', v)} />
-                <SliderControl asDropdown={asDropdown} label={l("Retention Ortho")} fieldKey="antiNGFRetentionOrtho" stops={[0.80, 0.85, 0.90, 0.95, 1.00]} currentValue={s.antiNGFRetentionOrtho} unit="%" onAskAI={() => openAiModal('antiNGFRetentionOrtho')} onChange={v => h('antiNGFRetentionOrtho', v)} />
-                <SliderControl asDropdown={asDropdown} label={l("Retention PCP")} fieldKey="antiNGFRetentionPCP" stops={[0.90, 0.92, 0.95, 0.97, 1.00]} currentValue={s.antiNGFRetentionPCP} unit="%" onAskAI={() => openAiModal('antiNGFRetentionPCP')} onChange={v => h('antiNGFRetentionPCP', v)} />
-              </div>
-            </AccordionSection>
+            )}
+          </div>
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Overstatement adjustment factor")} fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={s.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => h('overstatementAdjFactor', v)} />
+          <ToggleControl label={l("WOMAC pain-score data available?")} fieldKey="womacScoreAvailable" value={s.womacScoreAvailable} onChange={v => h('womacScoreAvailable', v)} />
+          <ToggleControl label={l("Diabetes/glycemic data available?")} fieldKey="diabetesGlycemicDataAvailable" value={s.diabetesGlycemicDataAvailable} onChange={v => h('diabetesGlycemicDataAvailable', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("WAC price per injection")} fieldKey="wacPrice" stops={[400, 500, 575, 800, 1000]} currentValue={s.wacPrice} unit="$" onAskAI={() => openAiModal('wacPrice')} onChange={v => h('wacPrice', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Market research adj. — Ortho")} fieldKey="newMarketResearchAdjOrtho" stops={[0.95, 1.10, 1.25, 1.40, 1.55]} currentValue={s.newMarketResearchAdjOrtho} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjOrtho')} onChange={v => h('newMarketResearchAdjOrtho', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Market research adj. — Rheum/PCP")} fieldKey="newMarketResearchAdjRheum" stops={[0.90, 0.95, 1.00, 1.05, 1.10]} currentValue={s.newMarketResearchAdjRheum} unit="%" onAskAI={() => openAiModal('newMarketResearchAdjRheum')} onChange={v => h('newMarketResearchAdjRheum', v)} />
+        </AccordionSection>
       </CollapsibleMainGroup>
 
-      <CollapsibleMainGroup title="Volume & Revenue Output" isOpen={openMainGroups.has('Volume & Revenue Output')} onToggle={() => toggleMainGroup('Volume & Revenue Output')}>
-            <AccordionSection idx={8} title="Volume & Sampling" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
-              <SliderControl asDropdown={asDropdown} label={l("Injection frequency (per patient/year)")} fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={s.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => h('frequencyOfInjectionsYearly', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Peak sampling intensity")} fieldKey="peakSamplingIntensity" stops={[0.05, 0.10, 0.15, 0.20, 0.25]} currentValue={s.peakSamplingIntensity} unit="%" onAskAI={() => openAiModal('peakSamplingIntensity')} onChange={v => h('peakSamplingIntensity', v)} />
-              <SliderControl asDropdown={asDropdown} label={l("Steady-state sample rate")} fieldKey="steadyStateSampleRate" stops={[0.01, 0.03, 0.05, 0.08, 0.10]} currentValue={s.steadyStateSampleRate} unit="%" onAskAI={() => openAiModal('steadyStateSampleRate')} onChange={v => h('steadyStateSampleRate', v)} />
-            </AccordionSection>
+      <CollapsibleMainGroup title="4. Adjustments (Competitive and Payer Friction)" isOpen={openMainGroups.has('4. Adjustments (Competitive and Payer Friction)')} onToggle={() => toggleMainGroup('4. Adjustments (Competitive and Payer Friction)')}>
+        <AccordionSection idx={4} title="4A. Payer Access" color="#d9534f" isOpen={openSections.has(4)} onQuickSet={(level) => handleQuickSet(4, level)} onToggle={() => toggleSection(4)}>
+          <SelectControl label={l("Payer access requirement")} fieldKey="payerAccessRequirement" options={[{value: 'none', label: 'None'}, {value: 'prior_auth_only', label: 'Prior Auth'}, {value: 'pre_cert', label: 'Pre-Cert'}, {value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit'}, {value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit'}]} value={s.payerAccessRequirement} onAskAI={() => openAiModal('payerAccessRequirement')} onChange={v => h('payerAccessRequirement', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Pricing adj. — access impact (% surviving)")} fieldKey="pricingAdjFactorAccessImpact" stops={[0.90, 0.92, 0.96, 0.97, 0.98]} currentValue={s.pricingAdjFactorAccessImpact} unit="%" onAskAI={() => openAiModal('pricingAdjFactorAccessImpact')} onChange={v => h('pricingAdjFactorAccessImpact', v)} />
+          <ToggleControl label={l("Patient assistance program in place?")} fieldKey="patientAssistanceProgramInPlace" value={s.patientAssistanceProgramInPlace} onChange={v => h('patientAssistanceProgramInPlace', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Pricing adj. — PAP lift")} fieldKey="pricingAdjPatientAssistanceImpact" stops={[1.00, 1.05, 1.10, 1.15, 1.20]} currentValue={s.pricingAdjPatientAssistanceImpact} unit="%" onAskAI={() => openAiModal('pricingAdjPatientAssistanceImpact')} onChange={v => h('pricingAdjPatientAssistanceImpact', v)} />
+        </AccordionSection>
 
-            <AccordionSection idx={9} title={<>Quarterly Overrides <span style={{ color: '#888' }}>(override is applied on the total zilretta treatments)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
-              <NumberControl asDropdown={asDropdown} label={l("Q4-2017 Override Adjustment")} fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
-              <NumberControl asDropdown={asDropdown} label={l("Q1-2018 Override Adjustment")} fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
-              <NumberControl asDropdown={asDropdown} label={l("Q2-2018 Override Adjustment")} fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
-              <NumberControl asDropdown={asDropdown} label={l("Q3-2018 Override Adjustment")} fieldKey="q3_2018_OverrideAdj" currentValue={s.q3_2018_OverrideAdj} unit="%" onChange={v => h('q3_2018_OverrideAdj', v)} />
-              <NumberControl asDropdown={asDropdown} label={l("Q4-2018 Override Adjustment")} fieldKey="q4_2018_OverrideAdj" currentValue={s.q4_2018_OverrideAdj} unit="%" onChange={v => h('q4_2018_OverrideAdj', v)} />
-            </AccordionSection>
+        <AccordionSection idx={5} title="4B. Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Years to peak share")} fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={s.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => h('yearsToPeak', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Ortho/Rheum reached by month 12")} fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={s.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => h('pctORSReachedByMonth12', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Ortho/Rheum reached by year 2")} fieldKey="pctORSReachedByYear2" stops={[0.70, 0.75, 0.80, 0.85, 0.90]} currentValue={s.pctORSReachedByYear2} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear2')} onChange={v => h('pctORSReachedByYear2', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Ortho/Rheum reached by year 3+")} fieldKey="pctORSReachedByYear3Plus" stops={[0.75, 0.80, 0.85, 0.90, 0.95]} currentValue={s.pctORSReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear3Plus')} onChange={v => h('pctORSReachedByYear3Plus', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("PCP/Other reached by month 12")} fieldKey="pctPCPReachedByMonth12" stops={[0.40, 0.46, 0.524, 0.58, 0.64]} currentValue={s.pctPCPReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctPCPReachedByMonth12')} onChange={v => h('pctPCPReachedByMonth12', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("PCP/Other reached by year 2")} fieldKey="pctPCPReachedByYear2" stops={[0.52, 0.56, 0.60, 0.64, 0.68]} currentValue={s.pctPCPReachedByYear2} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear2')} onChange={v => h('pctPCPReachedByYear2', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("PCP/Other reached by year 3+")} fieldKey="pctPCPReachedByYear3Plus" stops={[0.56, 0.60, 0.65, 0.70, 0.75]} currentValue={s.pctPCPReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear3Plus')} onChange={v => h('pctPCPReachedByYear3Plus', v)} />
+        </AccordionSection>
+
+        <AccordionSection idx={6} title="4C. Access Friction" color="#d9534f" isOpen={openSections.has(6)} onQuickSet={(level) => handleQuickSet(6, level)} onToggle={() => toggleSection(6)}>
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("J-Code window duration")} fieldKey="jCodeWindowMonths" stops={[6, 9, 12, 15, 18]} currentValue={s.jCodeWindowMonths} unit=" mo" onAskAI={() => openAiModal('jCodeWindowMonths')} onChange={v => h('jCodeWindowMonths', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("J-Code retention rate (misc code)")} fieldKey="jCodeRetentionRate" stops={[0.80, 0.84, 0.88, 0.91, 0.94]} currentValue={s.jCodeRetentionRate} unit="%" onAskAI={() => openAiModal('jCodeRetentionRate')} onChange={v => h('jCodeRetentionRate', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Refrigeration requirement duration")} fieldKey="refrigerationDurationMonths" stops={[12, 15, 18, 24, 120]} currentValue={s.refrigerationDurationMonths} unit=" mo" onAskAI={() => openAiModal('refrigerationDurationMonths')} onChange={v => h('refrigerationDurationMonths', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Refrigeration retention — Ortho/Surgical")} fieldKey="refrigerationRetentionORS" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={s.refrigerationRetentionORS} unit="%" onAskAI={() => openAiModal('refrigerationRetentionORS')} onChange={v => h('refrigerationRetentionORS', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Refrigeration retention — Rheum/Other")} fieldKey="refrigerationRetentionRheumOther" stops={[0.70, 0.80, 0.88, 0.92, 0.95]} currentValue={s.refrigerationRetentionRheumOther} unit="%" onAskAI={() => openAiModal('refrigerationRetentionRheumOther')} onChange={v => h('refrigerationRetentionRheumOther', v)} />
+        </AccordionSection>
+
+        <AccordionSection idx={7} title="4D. Competitive Events" color="#c0392b" isOpen={openSections.has(7)} onQuickSet={(level) => handleQuickSet(7, level)} onToggle={() => toggleSection(7)}>
+          <div className="competitor-card">
+            <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
+            <DateOrNeverControl label={l("Launch Date")} fieldKey="cingalLaunchDate" value={s.cingalLaunchDate} onChange={v => h('cingalLaunchDate', v)} />
+            <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention Ortho")} fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={s.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => h('cingalRetentionOrtho', v)} />
+            <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention PCP")} fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={s.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => h('cingalRetentionPCP', v)} />
+          </div>
+          
+          <div className="competitor-card">
+            <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
+            <DateOrNeverControl label={l("Launch Date")} fieldKey="ampionLaunchDate" value={s.ampionLaunchDate} onChange={v => h('ampionLaunchDate', v)} />
+            <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention Ortho")} fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={s.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => h('ampionRetentionOrtho', v)} />
+            <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention PCP")} fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={s.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => h('ampionRetentionPCP', v)} />
+          </div>
+
+          <div className="competitor-card">
+            <div className="competitor-card-title">Anti-NGF class</div>
+            <DateOrNeverControl label={l("Launch Date")} fieldKey="antiNGFLaunchDate" value={s.antiNGFLaunchDate} onChange={v => h('antiNGFLaunchDate', v)} />
+            <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention Ortho")} fieldKey="antiNGFRetentionOrtho" stops={[0.80, 0.85, 0.90, 0.95, 1.00]} currentValue={s.antiNGFRetentionOrtho} unit="%" onAskAI={() => openAiModal('antiNGFRetentionOrtho')} onChange={v => h('antiNGFRetentionOrtho', v)} />
+            <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention PCP")} fieldKey="antiNGFRetentionPCP" stops={[0.90, 0.92, 0.95, 0.97, 1.00]} currentValue={s.antiNGFRetentionPCP} unit="%" onAskAI={() => openAiModal('antiNGFRetentionPCP')} onChange={v => h('antiNGFRetentionPCP', v)} />
+          </div>
+        </AccordionSection>
+      </CollapsibleMainGroup>
+
+      <CollapsibleMainGroup title="5. Volume & Revenue Output" isOpen={openMainGroups.has('5. Volume & Revenue Output')} onToggle={() => toggleMainGroup('5. Volume & Revenue Output')}>
+        <AccordionSection idx={8} title="5A. Volume & Sampling" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Injection frequency (per patient/year)")} fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={s.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => h('frequencyOfInjectionsYearly', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Peak sampling intensity")} fieldKey="peakSamplingIntensity" stops={[0.05, 0.10, 0.15, 0.20, 0.25]} currentValue={s.peakSamplingIntensity} unit="%" onAskAI={() => openAiModal('peakSamplingIntensity')} onChange={v => h('peakSamplingIntensity', v)} />
+          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Steady-state sample rate")} fieldKey="steadyStateSampleRate" stops={[0.01, 0.03, 0.05, 0.08, 0.10]} currentValue={s.steadyStateSampleRate} unit="%" onAskAI={() => openAiModal('steadyStateSampleRate')} onChange={v => h('steadyStateSampleRate', v)} />
+        </AccordionSection>
+
+        <AccordionSection idx={9} title={<>5B. Quarterly Overrides <span style={{ color: '#888' }}>(override is applied on the total zilretta treatments)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
+          <NumberControl asDropdown={asDropdown} label={l("Q4-2017 Override Adjustment")} fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q1-2018 Override Adjustment")} fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q2-2018 Override Adjustment")} fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q3-2018 Override Adjustment")} fieldKey="q3_2018_OverrideAdj" currentValue={s.q3_2018_OverrideAdj} unit="%" onChange={v => h('q3_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q4-2018 Override Adjustment")} fieldKey="q4_2018_OverrideAdj" currentValue={s.q4_2018_OverrideAdj} unit="%" onChange={v => h('q4_2018_OverrideAdj', v)} />
+        </AccordionSection>
       </CollapsibleMainGroup>
     </SliderContext.Provider>
   );
@@ -2628,26 +2761,6 @@ const chatScript: ChatStepDef[] = [
                                 <button className="btn" onClick={() => goPage(3)}>Continue to Assumptions →</button>
                               </div>
                             )}
-                            
-                            {msg.hasTable && (
-                              <div style={{ margin: '10px 0 10px 0', border: '1px solid var(--line, #E4E8EE)', borderRadius: '9px', overflow: 'hidden' }}>
-                                <div style={{ background: '#F4F6F9', color: 'var(--sub)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '.04em', padding: '6px 12px', borderBottom: '1px solid var(--line)' }}>MUST-HAVE vs. GOOD-TO-HAVE</div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.8px' }}>
-                                  <thead>
-                                    <tr>
-                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Category</th>
-                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Must-Have</th>
-                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Good-to-Have</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <tr><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Demand</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Epi, diagnosed & treated (IAS/HA)</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Regional splits</td></tr>
-                                    <tr><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Share</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Peak Share, Time to Peak</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Uptake curve, analogs</td></tr>
-                                    <tr><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>Finance</td><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>WAC Price</td><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>Rebates, GTN %</td></tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
                           </div>
                           
                           {isUser && (
@@ -2750,8 +2863,7 @@ const chatScript: ChatStepDef[] = [
             <strong>What is ✨ Ask AI?</strong> Click this button next to any assumption to open the AI assistant. You can use it to validate your inputs against market research, ask for suggested values based on recent data, or even upload documents to automatically extract the right number.
           </div>
 
-          {renderAssumptions(false)}
-          {renderForecastingAlgorithm()}
+          {renderAssumptions(false, false, true)}
 
           <div style={{ textAlign: 'right', marginTop: '24px' }}>
             <button className="btn secondary" onClick={resetAssumptions} style={{ marginRight: '8px' }}>Reset to conversation defaults</button>
@@ -2996,7 +3108,7 @@ const chatScript: ChatStepDef[] = [
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-            <button className="btn secondary" style={{ fontSize: '13px', padding: '8px 16px' }} onClick={() => setScenarioState(JSON.parse(JSON.stringify(state)))}>Have base forecast assumptions populated</button>
+            <button className="btn primary" style={{ fontSize: '13px', padding: '8px 16px' }} onClick={() => setScenarioState(JSON.parse(JSON.stringify(state)))}>Have base forecast assumptions populated</button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start', marginTop: '24px' }}>
