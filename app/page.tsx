@@ -616,6 +616,9 @@ export default function ForecastApp() {
   const [scenarioNameInput, setScenarioNameInput] = useState('');
   const [sensitivityLevel, setSensitivityLevel] = useState<5 | 10>(5);
   
+  // Resource Gathering state
+  const [uploadedSheets, setUploadedSheets] = useState<Record<number, boolean>>({});
+  const [previewSheet, setPreviewSheet] = useState<number | null>(null);
   // Chat state
   const [chatStarted, setChatStarted] = useState(false);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
@@ -722,30 +725,70 @@ const newFlowScript = [
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">1. Setup</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Align on the basics</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Brand, indication, market/geography, launch timing, forecast horizon</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">
+          <ul style="margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Brand & indication</li>
+            <li>Geography</li>
+            <li>Launch timing</li>
+            <li>Forecast horizon</li>
+          </ul>
+        </td>
       </tr>
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">2. Approach</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Agree on methodology</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Forecasting approach + the grain we'll track it at</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">
+          <ul style="margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Recommended forecasting approach</li>
+            <li>Segmentation level (e.g., specialty, treatment type, age, gender)</li>
+          </ul>
+        </td>
       </tr>
       <tr>
         <td style="padding: 12px; color: #334155; vertical-align: top;">3. Input Alignment</td>
         <td style="padding: 12px; color: #334155; vertical-align: top;">Confirm data needs</td>
-        <td style="padding: 12px; color: #334155; vertical-align: top;">Must-have inputs and the data sources we'll use for each</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">
+          <ul style="margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Must-have vs. good-to-have inputs</li>
+            <li>Recommended data source per input</li>
+          </ul>
+        </td>
       </tr>
     </tbody>
   </table>
 </div>`, step: 1 },
-  { who: 'ai', text: "Let's start with Setup. A few things to confirm:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Indication</b> → Zilretta is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li><li><b>Geography</b> → given the primary market is US, I'll scope this as US-only unless another market needs covering.</li><li><b>Launch Date</b> → based on drug approval records, launch looks to be around October 2017, so I'll anchor to that.</li><li><b>Forecast Horizon</b> → OA Knee is a mature, stable category, so a 5-year horizon is typical.</li></ul>Does all of that look right, or should any of these change?", step: 1 },
+  { who: 'ai', text: `<div style="background: #fdfaf0; border: 1px solid #f5e6b3; border-radius: 8px; border-left: 4px solid #d4af37; padding: 16px; font-size: 14px; color: #334155;">
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #9c8022; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
+    <span>✦</span> AI RECOMMENDATION
+  </div>
+  <p style="margin-top: 0; margin-bottom: 12px;">Let's start with Setup. A few things to confirm:</p>
+  <ul style="margin: 0 0 12px 0; padding-left: 20px; line-height: 1.6;">
+    <li style="margin-bottom: 4px;"><strong>Indication</strong> → Zilretta is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li>
+    <li style="margin-bottom: 4px;"><strong>Geography</strong> → given the primary market is US, I'll scope this as <strong>US-only</strong> unless another market needs covering.</li>
+    <li style="margin-bottom: 4px;"><strong>Launch Date</strong> → based on drug approval records, launch looks to be around <strong>October 2017</strong>, so I'll anchor to that.</li>
+    <li style="margin-bottom: 4px;"><strong>Forecast Horizon</strong> → OA Knee is a mature, stable category, so a <strong>5-year horizon</strong> is typical.</li>
+  </ul>
+  <p style="margin: 0;">Does all of that look right, or should any of these change?</p>
+</div>`, step: 1 },
   { who: 'user', text: "That all works.", step: 1 },
-  { who: 'ai', text: "Two ways to structure this: **Patient-Based** — a snapshot of the diagnosed/treated market by specialty — or **Patient-Flow** — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.\n\nOA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, **Patient-Based** is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.", step: 2 },
+  { who: 'ai', sectionHeader: '2 - APPROACH', sectionSub: 'Model structure recommendation', text: `<div style="background: #fdfaf0; border: 1px solid #f5e6b3; border-radius: 8px; border-left: 4px solid #d4af37; padding: 16px; font-size: 14px; color: #334155;">
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #9c8022; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
+    <span>✦</span> AI RECOMMENDATION
+  </div>
+  <p style="margin-top: 0; margin-bottom: 12px;">Two ways to structure this: <strong>Patient-Based</strong> — a snapshot of the diagnosed/treated market by specialty — or <strong>Patient-Flow</strong> — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.</p>
+  <p style="margin: 0;">OA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, <strong>Patient-Based</strong> is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.</p>
+</div>`, step: 2 },
   { who: 'user', text: "Agreed, let's go with Patient-Based.", step: 2 },
   { who: 'ai', text: "Good. Beyond the core inputs — epidemiology, treatment rates, and so on, which we'll cover in input alignment — accurate Patient-Based forecasts are usually built around one or two grains. Common ones are treatment type, specialty, patient age, or gender. Which of these do you want this built around?", step: 2 },
   { who: 'user', text: "Let's go with specialty and treatment type.", step: 2 },
-  { who: 'ai', text: "Looking at OA Knee specifically — the primary specialties treating this are orthopedic surgeons and rheumatologists, with PCPs picking up a smaller share. And based on Zilretta's patient eligibility, the treatment side splits into intra-articular steroid (IAS), which is where Zilretta sits, and hyaluronic acid (HA), a different injectable class. Shall we track the model along those lines?", step: 2 },
+  { who: 'ai', text: `<div style="background: #fdfaf0; border: 1px solid #f5e6b3; border-radius: 8px; border-left: 4px solid #d4af37; padding: 16px; font-size: 14px; color: #334155;">
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #9c8022; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
+    <span>✦</span> AI RECOMMENDATION
+  </div>
+  Looking at OA Knee specifically — the primary specialties treating this are <strong>orthopedic surgeons and rheumatologists</strong>, with PCPs picking up a smaller share. And based on Zilretta's patient eligibility, the treatment side splits into <strong>intra-articular steroid (IAS)</strong>, which is where Zilretta sits, and <strong>hyaluronic acid (HA)</strong>, a different injectable class. Shall we track the model along those lines?
+</div>`, step: 2 },
   { who: 'user', text: "Yes.", step: 2 },
-  { who: 'ai', text: `With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.
+  { who: 'ai', sectionHeader: '3 - INPUT ALIGNMENT', sectionSub: 'Must-have inputs and recommended data sources', sectionColor: '#1f7a6c', text: `With Patient-Based confirmed at the specialty × IAS/HA grain, here's the input framework I'll work through with you — what's must-have to get a credible forecast running, versus good-to-have refinement:
 <div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; margin-bottom: 12px; font-size: 13px;">
   <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">MUST-HAVE vs. GOOD-TO-HAVE</div>
   <table style="width: 100%; border-collapse: collapse;">
@@ -768,23 +811,29 @@ const newFlowScript = [
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Uptake curve, analogs</td>
       </tr>
       <tr>
-        <td style="padding: 12px; color: #334155; vertical-align: top;">Finance</td>
-        <td style="padding: 12px; color: #334155; vertical-align: top;">WAC Price</td>
-        <td style="padding: 12px; color: #334155; vertical-align: top;">Rebates, GTN %</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Finance</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">WAC Price</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Rebates, GTN %</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Other<br/>Adjustments</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">—</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Payer access, competitive events, broader market events</td>
       </tr>
     </tbody>
   </table>
-</div>
-_Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._
-
-A few source options worth considering:<ul style="margin:8px 0 8px; padding-left:18px;"><li><b>Census / population data</b></li><li><b>DRG claims</b></li><li><b>IMS/IQVIA commercial claims</b></li><li><b>Kantar / syndicated epi studies</b></li></ul>Do you have access to any of these directly, or should I default to Census as the base?`, step: 3 },
-  { who: 'user', text: "We have 2016 IMS data on diagnosed OA Knee patients we can use.", step: 3 },
-  { who: 'ai', text: "Good — I'll combine **Census** for the population base with your **2016 IMS data** for diagnosis. I'd break both out by age band too, since diagnosis and treatment patterns tend to shift quite a bit across age groups in OA Knee. For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims data — do you have proprietary research for that?", step: 3 },
-  { who: 'user', text: "Yes, we have proprietary market research.", step: 3 },
-  { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3 },
-  { who: 'ai', text: "Anything else to factor in before we move to Assumptions — market events, competitive dynamics, or other share adjustments?", step: 3 },
-  { who: 'user', text: "Nothing else for now.", step: 3 },
-  { who: 'ai', text: "Great. For detailed parameter inputs and adjustments, we will be moving to the **Assumptions section**.", step: 4 }
+</div>`, step: 3 },
+  { who: 'ai', text: `Starting with <strong>Demand</strong> — I'll need epidemiology, diagnosed, and treated-patient counts.
+<br><br>
+<span style="font-size: 12px; color: #6b7280; font-style: italic;">Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market.</span>
+<br><br>
+For epi and diagnosis, a few options: Census, DRG claims, IMS/IQVIA, or Kantar.<br/>
+For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims. Do you have access to any of these directly?`, step: 3 },
+  { who: 'user', text: "We have 2016 IMS data on diagnosed OA Knee patients, and proprietary market research for treated-patient splits.", step: 3 },
+  { who: 'ai', text: "Good — <strong>Census</strong> for the population base, your <strong>2016 IMS data</strong> for diagnosis (both by age band, since patterns shift quite a bit across age groups here), and your <strong>proprietary research</strong> for treated-patient splits. I'd use that same research for <strong>Share</strong> — Peak Share and Time to Peak — supplemented with <strong>brand planning</strong>, and for <strong>Finance</strong>, WAC price from brand planning too.", step: 3 },
+  { who: 'ai', text: "Last category — <strong>Other Adjustments</strong>. Usual factors for a forecast like this: payer access/reimbursement friction, competitive launches, and broader market events. Anything relevant, and would that be research-driven too?", step: 3 },
+  { who: 'user', text: "Yes — access and competitive launches, same proprietary research.", step: 3 },
+  { who: 'ai', text: "That covers everything. Let's move to uploading the inputs from Census, IMS diagnosed, and market research data sources before finalizing the parameters and assumptions.", step: 4 }
 ];
 
 const chatScript: ChatStepDef[] = [
@@ -1886,7 +1935,7 @@ const chatScript: ChatStepDef[] = [
     setIsUploadingModel(true);
     setTimeout(() => {
       setIsUploadingModel(false);
-      goPage(4);
+      goPage(5);
     }, 2000);
   };
 
@@ -2646,6 +2695,7 @@ const chatScript: ChatStepDef[] = [
         {[
           'Welcome',
           'AI conversation',
+          'Resource Gathering',
           'Assumptions',
           'Forecast',
           'Scenarios',
@@ -2669,7 +2719,7 @@ const chatScript: ChatStepDef[] = [
         })}
       </nav>
 
-      <main style={{ maxWidth: activeTab === 4 ? '100%' : '1080px', transition: 'max-width 0.3s ease', padding: activeTab === 4 ? '28px' : '28px 24px 80px' }}>
+      <main style={{ maxWidth: activeTab === 5 ? '100%' : '1080px', transition: 'max-width 0.3s ease', padding: activeTab === 5 ? '28px' : '28px 24px 80px' }}>
         {/* PAGE 1 : WELCOME */}
         <section className={`page ${activeTab === 1 ? 'active' : ''}`} id="page-1">
           <h1>Forecast through conversation, not spreadsheets</h1>
@@ -2726,7 +2776,10 @@ const chatScript: ChatStepDef[] = [
               <h1 style={{ marginBottom: '4px' }}>Build your forecast in conversation</h1>
               <p className="lead" style={{ margin: 0 }}>The assistant asks targeted questions, one topic at a time, and captures every answer as a structured assumption on the right.</p>
             </div>
-            <button className="btn" onClick={() => goPage(3)} style={{ whiteSpace: 'nowrap', flexShrink: 0, padding: '10px 20px', fontSize: '14px' }}>Skip to Assumptions →</button>
+            <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+              <button className="btn secondary" onClick={() => goPage(3)} style={{ whiteSpace: 'nowrap', padding: '10px 20px', fontSize: '14px' }}>Skip to Resource Gathering</button>
+              <button className="btn" onClick={() => goPage(4)} style={{ whiteSpace: 'nowrap', padding: '10px 20px', fontSize: '14px' }}>Skip to Assumptions →</button>
+            </div>
           </div>
 
 
@@ -2737,7 +2790,13 @@ const chatScript: ChatStepDef[] = [
                   
                   return (
                     <React.Fragment key={i}>
-                      
+                      {(msg as any).sectionHeader && (
+                        <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0 16px', gap: '16px' }}>
+                          <div style={{ background: (msg as any).sectionColor || '#d97706', color: 'white', padding: '4px 12px', borderRadius: '16px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px' }}>{(msg as any).sectionHeader}</div>
+                          <div style={{ height: '1px', background: 'var(--line, #E4E8EE)', flex: 1 }}></div>
+                          {(msg as any).sectionSub && <div style={{ fontSize: '11px', color: 'var(--sub)', fontWeight: 600 }}>{(msg as any).sectionSub}</div>}
+                        </div>
+                      )}
                         <div style={{ display: 'flex', margin: '10px 0', gap: '9px', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
                           {!isUser && <div style={{ width: '26px', height: '26px', borderRadius: '8px', flex: '0 0 26px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: 'white', background: 'var(--teal, #1F7A6C)' }}>AI</div>}
                           
@@ -2755,12 +2814,6 @@ const chatScript: ChatStepDef[] = [
                             ) : (
                               <span dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<span style="display:block; margin-top:6px; font-size:11px; color:var(--sub, #616B77); font-style:italic;">$1</span>').replace(/\n\n/g, '<br><br>') }} />
                             )}
-                            
-                            {msg.step === 4 && i === arr.length - 1 && (
-                              <div style={{ marginTop: '16px' }}>
-                                <button className="btn" onClick={() => goPage(3)}>Continue to Assumptions →</button>
-                              </div>
-                            )}
                           </div>
                           
                           {isUser && (
@@ -2769,6 +2822,25 @@ const chatScript: ChatStepDef[] = [
                             </div>
                           )}
                         </div>
+                        
+                        {msg.step === 4 && i === arr.length - 1 && (
+                          <div style={{ marginLeft: '35px', marginTop: '12px' }}>
+                            <button onClick={() => goPage(3)} style={{ background: '#1F7A6C', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Go to Data Upload →</button>
+                            
+                            <div style={{ marginTop: '24px', background: '#fffcf0', border: '1px solid #d4af37', borderRadius: '8px', padding: '20px', width: '100%', boxSizing: 'border-box' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#b48600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>NEXT STEPS — OUTSIDE THE CHAT</div>
+                              <h4 style={{ margin: '0 0 8px 0', color: '#20242b', fontSize: '16px' }}>Data Upload → Assumptions</h4>
+                              <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#616b77', lineHeight: 1.5 }}>A quick sequential upload — census, IMS, and your market research — before Assumptions opens with those values already in place, editable via sliders, categorical options, and AI-calculated Conservative → Aggressive ranges.</p>
+                              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📄 Census population data</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📊 2016 IMS diagnosed-patient data</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>✏️ Proprietary market research</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>⬆️ Existing forecast model (optional)</span>
+                              </div>
+                              <button onClick={() => goPage(3)} style={{ background: '#1e3a8a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Go to Data Upload →</button>
+                            </div>
+                          </div>
+                        )}
                     </React.Fragment>
                   );
                 })}
@@ -2854,8 +2926,57 @@ const chatScript: ChatStepDef[] = [
 
         </section>
 
-        {/* PAGE 3 : ASSUMPTIONS REVIEW */}
+        {/* PAGE 3 : RESOURCE GATHERING */}
         <section className={`page ${activeTab === 3 ? 'active' : ''}`} id="page-3">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '20px' }}>
+            <div>
+              <h1 style={{ marginBottom: '4px' }}>Resource Gathering</h1>
+              <p className="lead" style={{ margin: 0 }}>Please upload the required data sheets so the forecast model can populate accurately.</p>
+            </div>
+          </div>
+          <div className="grid3" style={{ gridTemplateColumns: '1fr', gap: '16px', maxWidth: '800px' }}>
+            {[
+              { id: 1, name: 'Census population data' },
+              { id: 2, name: '2016 IMS diagnosed-patient data' },
+              { id: 3, name: 'Proprietary market research' },
+              { id: 4, name: 'Existing forecast model (optional)' }
+            ].map(sheet => {
+              const sheetNum = sheet.id;
+              const isUploaded = uploadedSheets[sheetNum];
+              return (
+                <div key={sheetNum} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: isUploaded ? '#e6f7f6' : '#f1f5f9', color: isUploaded ? '#00b2a9' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                    </div>
+                    <div>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{sheet.name}</h3>
+                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--sub)' }}>{isUploaded ? 'Data successfully processed' : 'Pending upload'}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    {isUploaded && (
+                      <button className="btn" onClick={() => setPreviewSheet(sheetNum)} style={{ padding: '6px 12px', fontSize: '13px' }}>Preview data</button>
+                    )}
+                    <button 
+                      className={`btn ${isUploaded ? '' : 'primary'}`} 
+                      onClick={() => setUploadedSheets(prev => ({ ...prev, [sheetNum]: !isUploaded }))} 
+                      style={{ padding: '6px 12px', fontSize: '13px', background: isUploaded ? 'transparent' : undefined, color: isUploaded ? 'var(--sub)' : undefined, border: isUploaded ? '1px solid var(--line)' : undefined }}
+                    >
+                      {isUploaded ? 'Remove' : 'Upload File'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-start' }}>
+             <button className="btn primary" onClick={() => goPage(4)} style={{ padding: '10px 20px' }}>Continue to Assumptions →</button>
+          </div>
+        </section>
+
+        {/* PAGE 4 : ASSUMPTIONS REVIEW */}
+        <section className={`page ${activeTab === 4 ? 'active' : ''}`} id="page-4">
           <h1>Assumptions review</h1>
           <p className="lead">Everything the assistant captured, now editable directly. Adjust any field and the patient funnel updates immediately.</p>
           
@@ -2867,12 +2988,12 @@ const chatScript: ChatStepDef[] = [
 
           <div style={{ textAlign: 'right', marginTop: '24px' }}>
             <button className="btn secondary" onClick={resetAssumptions} style={{ marginRight: '8px' }}>Reset to conversation defaults</button>
-            <button className="btn" onClick={() => goPage(4)}>Generate forecast →</button>
+            <button className="btn" onClick={() => goPage(5)}>Generate forecast →</button>
           </div>
         </section>
 
         {/* PAGE 4 : FORECAST DASHBOARD */}
-        <section className={`page ${activeTab === 4 ? 'active' : ''}`} id="page-4">
+        <section className={`page ${activeTab === 5 ? 'active' : ''}`} id="page-5">
           <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start' }}>
             <div style={{ position: 'sticky', top: '24px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', paddingRight: '8px' }}>
               {renderForecastingAlgorithm()}
@@ -2912,7 +3033,7 @@ const chatScript: ChatStepDef[] = [
               <span><span className="legend-dot" style={{ background: '#2a78d6' }}></span>Net year revenue</span>
             </div>
             <div className="canvas-wrap">
-              {activeTab === 4 && <Line 
+              {activeTab === 5 && <Line 
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
                 data={{ labels: f.years, datasets: [{ label: 'Net Rev', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
               />}
@@ -2925,7 +3046,7 @@ const chatScript: ChatStepDef[] = [
             <div className="card">
               <h3>Treatments by Months</h3>
               <div className="canvas-wrap" style={{ height: '240px' }}>
-                {activeTab === 4 && <Line 
+                {activeTab === 5 && <Line 
                   options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v: any) => fmtNum(Number(v)) } } } }}
                   data={{ labels: CHART_LABELS_13, datasets: [{ label: 'Patients', data: dynamicPatients, borderColor: '#00b2a9', backgroundColor: 'rgba(0,178,169,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
                 />}
@@ -2934,7 +3055,7 @@ const chatScript: ChatStepDef[] = [
             <div className="card">
               <h3>Market share of treated patients (%)</h3>
               <div className="canvas-wrap" style={{ height: '240px' }}>
-                {activeTab === 4 && <Line 
+                {activeTab === 5 && <Line 
                   options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v: any) => `${Number(v).toFixed(1)}%` } } } }}
                   data={{ labels: CHART_LABELS_13, datasets: [{ label: 'Share %', data: dynamicShare, borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
                 />}
@@ -2986,7 +3107,7 @@ const chatScript: ChatStepDef[] = [
                 <span>{String.fromCodePoint(0x1F4A1)}</span>
                 <span>Key Insights</span>
               </button>
-              <button className="btn primary" onClick={() => goPage(5)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button className="btn primary" onClick={() => goPage(6)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Explore scenarios <span style={{ fontSize: '18px' }}>&rarr;</span>
               </button>
             </div>
@@ -3100,7 +3221,7 @@ const chatScript: ChatStepDef[] = [
         </section>
 
         {/* PAGE 5 : SCENARIOS */}
-                <section className={`page ${activeTab === 5 ? 'active' : ''}`} id="page-5">
+                <section className={`page ${activeTab === 6 ? 'active' : ''}`} id="page-6">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <h1 style={{ margin: 0, marginBottom: '8px' }}>Scenario &amp; sensitivity analysis</h1>
@@ -3159,7 +3280,7 @@ const chatScript: ChatStepDef[] = [
               <div className="card">
                 <h3>Revenue forecast under current sliders</h3>
                 <div className="canvas-wrap">
-                  {activeTab === 5 && <Line 
+                  {activeTab === 6 && <Line 
                     options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
                     data={{
                       labels: scenarioF.years,
@@ -3173,7 +3294,7 @@ const chatScript: ChatStepDef[] = [
   
               {renderTornadoChart(true)}
             <div style={{ textAlign: 'right', marginTop: '24px' }}>
-              <button className="btn" onClick={() => goPage(6)}>Compare scenarios →</button>
+              <button className="btn" onClick={() => goPage(7)}>Compare scenarios →</button>
             </div>
 
           </div>
@@ -3181,7 +3302,7 @@ const chatScript: ChatStepDef[] = [
         </section>
 
         {/* PAGE 6 : COMPARE */}
-        <section className={`page ${activeTab === 6 ? 'active' : ''}`} id="page-6">
+        <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
           <h1>Scenario comparison</h1>
           <p className="lead">The base case alongside any custom scenarios you've saved.</p>
 
@@ -3218,7 +3339,7 @@ const chatScript: ChatStepDef[] = [
           <div className="card">
             <h3>Year-by-year net revenue comparison</h3>
             <div className="canvas-wrap">
-              {activeTab === 6 && <Bar 
+              {activeTab === 7 && <Bar 
                 options={{ 
                   responsive: true, 
                   maintainAspectRatio: false, 
@@ -3239,12 +3360,12 @@ const chatScript: ChatStepDef[] = [
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <button className="btn" onClick={() => goPage(7)}>Export forecast →</button>
+            <button className="btn" onClick={() => goPage(8)}>Export forecast →</button>
           </div>
         </section>
 
         {/* PAGE 7 : EXPORT */}
-        <section className={`page ${activeTab === 7 ? 'active' : ''}`} id="page-7">
+        <section className={`page ${activeTab === 8 ? 'active' : ''}`} id="page-8">
           <h1>Export &amp; share</h1>
           <p className="lead">Send the current forecast out to the tools your team already works in.</p>
 
@@ -3298,6 +3419,43 @@ const chatScript: ChatStepDef[] = [
                             {cell}
                           </td>
                         ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {previewSheet !== null && (
+          <div onClick={() => setPreviewSheet(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '800px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0, fontSize: '18px' }}>Sheet {previewSheet} Preview</h2>
+                <button onClick={() => setPreviewSheet(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sub)' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div style={{ overflow: 'auto', flex: 1, border: '1px solid var(--line)', borderRadius: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
+                    <tr>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>ID</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>Metric</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>2016</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>2017</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>2018</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[1,2,3,4,5,6,7,8,9,10].map(row => (
+                      <tr key={row} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 12px', color: 'var(--ink)' }}>{row}00{previewSheet}</td>
+                        <td style={{ padding: '10px 12px', color: 'var(--ink)' }}>Sample Metric {row}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ink)' }}>{(Math.random() * 100).toFixed(1)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ink)' }}>{(Math.random() * 100).toFixed(1)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ink)' }}>{(Math.random() * 100).toFixed(1)}</td>
                       </tr>
                     ))}
                   </tbody>
