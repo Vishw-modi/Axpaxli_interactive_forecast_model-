@@ -2955,12 +2955,29 @@ const chatScript: ChatStepDef[] = [
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>
+                    <input 
+                      type="file" 
+                      id={`file-upload-${sheetNum}`} 
+                      style={{ display: 'none' }} 
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setUploadedSheets(prev => ({ ...prev, [sheetNum]: true }));
+                          e.target.value = '';
+                        }
+                      }}
+                    />
                     {isUploaded && (
                       <button className="btn" onClick={() => setPreviewSheet(sheetNum)} style={{ padding: '6px 12px', fontSize: '13px' }}>Preview data</button>
                     )}
                     <button 
                       className={`btn ${isUploaded ? '' : 'primary'}`} 
-                      onClick={() => setUploadedSheets(prev => ({ ...prev, [sheetNum]: !isUploaded }))} 
+                      onClick={() => {
+                        if (isUploaded) {
+                          setUploadedSheets(prev => ({ ...prev, [sheetNum]: false }));
+                        } else {
+                          document.getElementById(`file-upload-${sheetNum}`)?.click();
+                        }
+                      }} 
                       style={{ padding: '6px 12px', fontSize: '13px', background: isUploaded ? 'transparent' : undefined, color: isUploaded ? 'var(--sub)' : undefined, border: isUploaded ? '1px solid var(--line)' : undefined }}
                     >
                       {isUploaded ? 'Remove' : 'Upload File'}
