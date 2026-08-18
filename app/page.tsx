@@ -2320,7 +2320,7 @@ const chatScript: ChatStepDef[] = [
       { name: 'Addressable share', low: -(sensitivityLevel === 5 ? 0.04 : 0.085) * currentBasePeak, high: (sensitivityLevel === 5 ? 0.04 : 0.085) * currentBasePeak },
       { name: 'Diagnosis rate', low: -(sensitivityLevel === 5 ? 0.037 : 0.08) * currentBasePeak, high: (sensitivityLevel === 5 ? 0.037 : 0.08) * currentBasePeak }
     ];
-    const tabCheck = isScenario ? 5 : 4;
+    const tabCheck = isScenario ? 6 : 5;
 
     return (
       <div className="card">
@@ -2719,7 +2719,7 @@ const chatScript: ChatStepDef[] = [
         })}
       </nav>
 
-      <main style={{ maxWidth: activeTab === 5 ? '100%' : '1080px', transition: 'max-width 0.3s ease', padding: activeTab === 5 ? '28px' : '28px 24px 80px' }}>
+      <main className={`main-content ${[2, 5, 6].includes(activeTab) ? 'wide' : ''}`}>
         {/* PAGE 1 : WELCOME */}
         <section className={`page ${activeTab === 1 ? 'active' : ''}`} id="page-1">
           <h1>Forecast through conversation, not spreadsheets</h1>
@@ -3249,7 +3249,7 @@ const chatScript: ChatStepDef[] = [
             <button className="btn primary" style={{ fontSize: '13px', padding: '8px 16px' }} onClick={() => setScenarioState(JSON.parse(JSON.stringify(state)))}>Have base forecast assumptions populated</button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start', marginTop: '24px' }}>
+          <div className="scenario-layout">
             <div style={{ position: 'sticky', top: '24px', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', paddingRight: '8px' }}>
               {renderAssumptions(true, true)}
               {renderForecastingAlgorithm()}
