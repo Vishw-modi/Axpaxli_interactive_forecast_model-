@@ -707,7 +707,36 @@ const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleStr
 const newFlowScript = [
   { who: 'ai', text: "Hello! I'm your forecasting assistant. How can I help you today?", step: 1 },
   { who: 'user', text: "I want to build a forecast for Zilretta.", step: 1 },
-  { who: 'ai', text: "Happy to help build this out. We'll work through three steps before you move into Assumptions to fine-tune the numbers:<br><br><b>1. Setup</b> — Align on the basics (Brand, indication, market/geography, launch timing, forecast horizon)<br><b>2. Approach</b> — Agree on methodology (Forecasting approach + the grain we'll track it at)<br><b>3. Input Alignment</b> — Confirm data needs (Must-have inputs and the data sources we'll use for each)", step: 1 },
+  { who: 'ai', text: `Happy to help build this out. We'll work through three steps before you move into Assumptions to fine-tune the numbers:
+<div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; font-size: 13px;">
+  <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">HOW THIS WILL GO</div>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead style="background: #ffffff; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase;">
+      <tr>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Step</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">What we'll do</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Expected outcomes</th>
+      </tr>
+    </thead>
+    <tbody style="background: #ffffff;">
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">1. Setup</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Align on the basics</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Brand, indication, market/geography, launch timing, forecast horizon</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">2. Approach</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Agree on methodology</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Forecasting approach + the grain we'll track it at</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">3. Input Alignment</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Confirm data needs</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Must-have inputs and the data sources we'll use for each</td>
+      </tr>
+    </tbody>
+  </table>
+</div>`, step: 1 },
   { who: 'ai', text: "Let's start with Setup. A few things to confirm:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Indication</b> → Zilretta is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li><li><b>Geography</b> → given the primary market is US, I'll scope this as US-only unless another market needs covering.</li><li><b>Launch Date</b> → based on drug approval records, launch looks to be around October 2017, so I'll anchor to that.</li><li><b>Forecast Horizon</b> → OA Knee is a mature, stable category, so a 5-year horizon is typical.</li></ul>Does all of that look right, or should any of these change?", step: 1 },
   { who: 'user', text: "That all works.", step: 1 },
   { who: 'ai', text: "Two ways to structure this: **Patient-Based** — a snapshot of the diagnosed/treated market by specialty — or **Patient-Flow** — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.\n\nOA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, **Patient-Based** is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.", step: 2 },
@@ -716,11 +745,43 @@ const newFlowScript = [
   { who: 'user', text: "Let's go with specialty and treatment type.", step: 2 },
   { who: 'ai', text: "Looking at OA Knee specifically — the primary specialties treating this are orthopedic surgeons and rheumatologists, with PCPs picking up a smaller share. And based on Zilretta's patient eligibility, the treatment side splits into intra-articular steroid (IAS), which is where Zilretta sits, and hyaluronic acid (HA), a different injectable class. Shall we track the model along those lines?", step: 2 },
   { who: 'user', text: "Yes.", step: 2 },
-  { who: 'ai', text: "With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.\n\n_Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._\n\nA few source options worth considering:<ul style=\"margin:8px 0 8px; padding-left:18px;\"><li><b>Census / population data</b></li><li><b>DRG claims</b></li><li><b>IMS/IQVIA commercial claims</b></li><li><b>Kantar / syndicated epi studies</b></li></ul>Do you have access to any of these directly, or should I default to Census as the base?", step: 3 },
+  { who: 'ai', text: `With Patient-Based confirmed at the specialty × IAS/HA grain, let's align on inputs. For **Demand**, I'll need epidemiology and diagnosed-patient counts.
+<div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; margin-bottom: 12px; font-size: 13px;">
+  <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">MUST-HAVE vs. GOOD-TO-HAVE</div>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead style="background: #ffffff; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase;">
+      <tr>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Category</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Must-Have</th>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Good-to-Have</th>
+      </tr>
+    </thead>
+    <tbody style="background: #ffffff;">
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Demand</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Epi, diagnosed & treated (IAS/HA)</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Regional splits</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Share</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Peak Share, Time to Peak</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Uptake curve, analogs</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Finance</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">WAC Price</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Rebates, GTN %</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+_Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market._
+
+A few source options worth considering:<ul style="margin:8px 0 8px; padding-left:18px;"><li><b>Census / population data</b></li><li><b>DRG claims</b></li><li><b>IMS/IQVIA commercial claims</b></li><li><b>Kantar / syndicated epi studies</b></li></ul>Do you have access to any of these directly, or should I default to Census as the base?`, step: 3 },
   { who: 'user', text: "We have 2016 IMS data on diagnosed OA Knee patients we can use.", step: 3 },
   { who: 'ai', text: "Good — I'll combine **Census** for the population base with your **2016 IMS data** for diagnosis. I'd break both out by age band too, since diagnosis and treatment patterns tend to shift quite a bit across age groups in OA Knee. For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims data — do you have proprietary research for that?", step: 3 },
   { who: 'user', text: "Yes, we have proprietary market research.", step: 3 },
-  { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3, hasTable: true },
+  { who: 'ai', text: "For **Share** — Peak Share and Time to Peak — since this needs to be sourced at the same specialty × treatment grain we just aligned on, I'd recommend using that same proprietary market research, supplemented with brand planning. For **Finance**, WAC price from brand planning.", step: 3 },
   { who: 'ai', text: "Anything else to factor in before we move to Assumptions — market events, competitive dynamics, or other share adjustments?", step: 3 },
   { who: 'user', text: "Nothing else for now.", step: 3 },
   { who: 'ai', text: "Great. For detailed parameter inputs and adjustments, we will be moving to the **Assumptions section**.", step: 4 }
@@ -2698,26 +2759,6 @@ const chatScript: ChatStepDef[] = [
                             {msg.step === 4 && i === arr.length - 1 && (
                               <div style={{ marginTop: '16px' }}>
                                 <button className="btn" onClick={() => goPage(3)}>Continue to Assumptions →</button>
-                              </div>
-                            )}
-                            
-                            {msg.hasTable && (
-                              <div style={{ margin: '10px 0 10px 0', border: '1px solid var(--line, #E4E8EE)', borderRadius: '9px', overflow: 'hidden' }}>
-                                <div style={{ background: '#F4F6F9', color: 'var(--sub)', fontSize: '9.5px', fontWeight: 800, letterSpacing: '.04em', padding: '6px 12px', borderBottom: '1px solid var(--line)' }}>MUST-HAVE vs. GOOD-TO-HAVE</div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.8px' }}>
-                                  <thead>
-                                    <tr>
-                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Category</th>
-                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Must-Have</th>
-                                      <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: '9.5px', textTransform: 'uppercase', letterSpacing: '.02em', color: 'var(--sub)', background: '#FAFBFD', borderBottom: '1px solid var(--line)' }}>Good-to-Have</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <tr><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Demand</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Epi, diagnosed & treated (IAS/HA)</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Regional splits</td></tr>
-                                    <tr><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Share</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Peak Share, Time to Peak</td><td style={{ padding: '6px 10px', borderBottom: '1px solid #F0F2F5', color: 'var(--ink)' }}>Uptake curve, analogs</td></tr>
-                                    <tr><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>Finance</td><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>WAC Price</td><td style={{ padding: '6px 10px', color: 'var(--ink)' }}>Rebates, GTN %</td></tr>
-                                  </tbody>
-                                </table>
                               </div>
                             )}
                           </div>
