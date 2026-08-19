@@ -2760,8 +2760,23 @@ const exportScenariosHTML = async () => {
     /* ---------- Layout ---------- */
     .main-content { max-width: 1400px; margin: 0 auto; padding: 24px; }
     .page-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
-    .left-stack, .right-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    @media (max-width: 1100px) { .page-grid { grid-template-columns: 1fr; } }
+    .left-stack {
+      display: flex; flex-direction: column; gap: 16px; min-width: 0;
+      position: sticky;
+      top: 24px;
+      height: calc(100vh - 48px);
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .left-stack::-webkit-scrollbar { width: 6px; }
+    .left-stack::-webkit-scrollbar-track { background: transparent; }
+    .left-stack::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .left-stack::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .right-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    @media (max-width: 1100px) { 
+      .page-grid { grid-template-columns: 1fr; } 
+      .left-stack { position: static; height: auto; overflow-y: visible; padding-right: 0; }
+    }
 
     /* ---------- Cards ---------- */
     .card {
