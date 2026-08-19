@@ -2402,51 +2402,50 @@ const chatScript: ChatStepDef[] = [
 const exportScenariosHTML = async () => {
   // ----- Control schema (drives the live sidebar in the exported HTML) -----
   const exportControlSchema = [
-    // { section: 'Demand', type: 'range', key: 'prevalence', label: 'Population base', min: 1000000, max: 3000000, step: 25000, unit: '' },
-    { section: 'Demand', type: 'range', key: 'diagnosisRate', label: 'Diagnosis rate', min: 0.03, max: 0.08, step: 0.001, unit: '%' },
-    { section: 'Demand', type: 'range', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth', min: 0.01, max: 0.06, step: 0.001, unit: '%' },
-    { section: 'Demand', type: 'range', key: 'treatmentRate', label: 'Treatment rate', min: 0.80, max: 0.98, step: 0.005, unit: '%' },
-    { section: 'Demand', type: 'range', key: 'addressableShare', label: 'Addressable share', min: 0.40, max: 0.80, step: 0.01, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'peakShare', label: 'Peak share', min: 0.10, max: 0.40, step: 0.005, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'yearsToPeak', label: 'Years to peak', min: 3, max: 7, step: 1, unit: ' yrs' },
-    { section: 'Core forecast', type: 'range', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed', min: 0.20, max: 0.40, step: 0.005, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth', min: 0.00, max: 0.05, step: 0.005, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'haRatioToIAS', label: 'HA ratio to IAS', min: 0.25, max: 0.60, step: 0.01, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'haRatioGrowthRate', label: 'HA ratio annual growth', min: -0.02, max: 0.02, step: 0.005, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'iasAndHATreatedBoth', label: 'Both IAS + HA', min: 0.05, max: 0.25, step: 0.005, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'initialAdditionalMarketGrowth', label: 'Promotion lift', min: 0.00, max: 0.10, step: 0.005, unit: '%' },
-    { section: 'Core forecast', type: 'range', key: 'annualDecayRateOfAdditionalGrowth', label: 'Promotion decay', min: 0.10, max: 0.30, step: 0.005, unit: '%' },
-    { section: 'Preference', type: 'range', key: 'overstatementAdjFactor', label: 'Overstatement discount', min: 0.05, max: 0.40, step: 0.01, unit: '%' },
-    { section: 'Preference', type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC score data available' },
-    { section: 'Preference', type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available' },
-    { section: 'Preference', type: 'range', key: 'wacPrice', label: 'WAC price', min: 400, max: 1000, step: 25, unit: '$' },
-    { section: 'Preference', type: 'range', key: 'newMarketResearchAdjOrtho', label: 'Ortho research shift', min: -0.05, max: 0.15, step: 0.01, unit: '%' },
-    { section: 'Preference', type: 'range', key: 'newMarketResearchAdjRheum', label: 'Rheum/PCP research shift', min: -0.05, max: 0.15, step: 0.01, unit: '%' },
-    { section: 'Access', type: 'select', key: 'payerAccessRequirement', label: 'Payer access requirement', options: [
+    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisRate', label: 'Diagnosis rate', min: 0.03, max: 0.08, step: 0.001, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth', min: 0.01, max: 0.06, step: 0.001, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'treatmentRate', label: 'Treatment rate', min: 0.80, max: 0.98, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'addressableShare', label: 'Addressable share', min: 0.40, max: 0.80, step: 0.01, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed', min: 0.20, max: 0.40, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth', min: 0.00, max: 0.05, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'haRatioToIAS', label: 'HA ratio to IAS', min: 0.25, max: 0.60, step: 0.01, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'haRatioGrowthRate', label: 'HA ratio annual growth', min: -0.02, max: 0.02, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasAndHATreatedBoth', label: 'Both IAS + HA', min: 0.05, max: 0.25, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'initialAdditionalMarketGrowth', label: 'Promotion lift', min: 0.00, max: 0.10, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'annualDecayRateOfAdditionalGrowth', label: 'Promotion decay', min: 0.10, max: 0.30, step: 0.005, unit: '%' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'peakShare', label: 'Peak share', min: 0.10, max: 0.40, step: 0.005, unit: '%' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'overstatementAdjFactor', label: 'Overstatement discount', min: 0.05, max: 0.40, step: 0.01, unit: '%' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC score data available' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'wacPrice', label: 'WAC price', min: 400, max: 1000, step: 25, unit: '$' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'newMarketResearchAdjOrtho', label: 'Ortho research shift', min: -0.05, max: 0.15, step: 0.01, unit: '%' },
+    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'newMarketResearchAdjRheum', label: 'Rheum/PCP research shift', min: -0.05, max: 0.15, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4A. Payer Access', type: 'select', key: 'payerAccessRequirement', label: 'Payer access requirement', options: [
       { value: 'none', label: 'None' },
       { value: 'prior_auth_only', label: 'Prior Auth' },
       { value: 'pre_cert', label: 'Pre-Cert' },
       { value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit' },
       { value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit' }
     ] },
-    { section: 'Access', type: 'range', key: 'pricingAdjFactorAccessImpact', label: 'Access survival rate', min: 0.90, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Access', type: 'toggle', key: 'patientAssistanceProgramInPlace', label: 'Patient assistance program' },
-    { section: 'Access', type: 'range', key: 'pricingAdjPatientAssistanceImpact', label: 'Patient assistance lift', min: 0.00, max: 0.20, step: 0.01, unit: '%' },
-    { section: 'Friction', type: 'range', key: 'jCodeWindowMonths', label: 'J-code transition window', min: 0, max: 24, step: 1, unit: ' mo' },
-    { section: 'Friction', type: 'range', key: 'jCodeRetentionRate', label: 'J-code retention rate', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Friction', type: 'range', key: 'refrigerationDurationMonths', label: 'Refrigeration duration', min: 0, max: 36, step: 3, unit: ' mo' },
-    { section: 'Friction', type: 'range', key: 'refrigerationRetentionORS', label: 'Refrigeration retention - Ortho', min: 0.70, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Friction', type: 'range', key: 'refrigerationRetentionRheumOther', label: 'Refrigeration retention - Rheum/Other', min: 0.70, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Competition', type: 'monthOrNever', key: 'cingalLaunchDate', label: 'Product Y launch date' },
-    { section: 'Competition', type: 'range', key: 'cingalRetentionOrtho', label: 'Product Y retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Competition', type: 'range', key: 'cingalRetentionPCP', label: 'Product Y retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Competition', type: 'monthOrNever', key: 'ampionLaunchDate', label: 'Product Z launch date' },
-    { section: 'Competition', type: 'range', key: 'ampionRetentionOrtho', label: 'Product Z retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Competition', type: 'range', key: 'ampionRetentionPCP', label: 'Product Z retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Competition', type: 'monthOrNever', key: 'antiNGFLaunchDate', label: 'Product W launch date' },
-    { section: 'Competition', type: 'range', key: 'antiNGFRetentionOrtho', label: 'Product W retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Competition', type: 'range', key: 'antiNGFRetentionPCP', label: 'Product W retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { section: 'Volume', type: 'range', key: 'frequencyOfInjectionsYearly', label: 'Frequency of injections', min: 1.0, max: 3.0, step: 0.1, unit: ' /yr' }
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4A. Payer Access', type: 'range', key: 'pricingAdjFactorAccessImpact', label: 'Access survival rate', min: 0.90, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4A. Payer Access', type: 'toggle', key: 'patientAssistanceProgramInPlace', label: 'Patient assistance program' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4A. Payer Access', type: 'range', key: 'pricingAdjPatientAssistanceImpact', label: 'Patient assistance lift', min: 0.00, max: 0.20, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4B. Market Uptake & Reach', type: 'range', key: 'yearsToPeak', label: 'Years to peak', min: 3, max: 7, step: 1, unit: ' yrs' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4C. Access Friction', type: 'range', key: 'jCodeWindowMonths', label: 'J-code transition window', min: 0, max: 24, step: 1, unit: ' mo' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4C. Access Friction', type: 'range', key: 'jCodeRetentionRate', label: 'J-code retention rate', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4C. Access Friction', type: 'range', key: 'refrigerationDurationMonths', label: 'Refrigeration duration', min: 0, max: 36, step: 3, unit: ' mo' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4C. Access Friction', type: 'range', key: 'refrigerationRetentionORS', label: 'Refrigeration retention - Ortho', min: 0.70, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4C. Access Friction', type: 'range', key: 'refrigerationRetentionRheumOther', label: 'Refrigeration retention - Rheum/Other', min: 0.70, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'monthOrNever', key: 'cingalLaunchDate', label: 'Product Y launch date' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'cingalRetentionOrtho', label: 'Product Y retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'cingalRetentionPCP', label: 'Product Y retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'monthOrNever', key: 'ampionLaunchDate', label: 'Product Z launch date' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'ampionRetentionOrtho', label: 'Product Z retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'ampionRetentionPCP', label: 'Product Z retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'monthOrNever', key: 'antiNGFLaunchDate', label: 'Product W launch date' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'antiNGFRetentionOrtho', label: 'Product W retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'antiNGFRetentionPCP', label: 'Product W retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { mainGroup: '5. Volume & Revenue Output', subGroup: '5A. Volume & Sampling', type: 'range', key: 'frequencyOfInjectionsYearly', label: 'Frequency of injections', min: 1.0, max: 3.0, step: 0.1, unit: ' /yr' }
   ];
 
   const exportAssumptions: Array<{ key: keyof ForecastState; name: string }> = [
@@ -3061,92 +3060,112 @@ const exportScenariosHTML = async () => {
     // ---------- Renderers ----------
 
     function renderControls() {
-      const groups = DATA.controlSchema.reduce(function(acc, c) { (acc[c.section] = acc[c.section] || []).push(c); return acc; }, {});
-      const order = ['Demand', 'Core forecast', 'Preference', 'Access', 'Friction', 'Competition', 'Volume'];
-      const html = order.filter(function(sec) { return groups[sec]; }).map(function(sec) {
-        return '<div class="section-header">' + esc(sec) + '</div>' + groups[sec].map(function(control) {
-          const value = state[control.key];
-          if (control.type === 'toggle') {
-            return '<div class="control"><div class="toggle"><label>' + esc(control.label) + '</label><label class="switch"><input type="checkbox" ' + (value ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked)"><span class="slider"></span></label></div></div>';
-          }
-          if (control.type === 'select') {
-            return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + control.options.map(function(opt) { return '<option value="' + esc(opt.value) + '" ' + (String(opt.value) === String(value) ? 'selected' : '') + '>' + esc(opt.label) + '</option>'; }).join('') + '</select></div>';
-          }
-          if (control.type === 'monthOrNever') {
-            const never = value === 'does_not_launch';
-            return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label><div class="val">' + esc(never ? 'Never' : value) + '</div></div><div class="inline-row"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><input type="checkbox" ' + (never ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked ? \\'does_not_launch\\' : \\'2025-01\\')">Does not launch</label><input class="grow" type="month" value="' + (never ? '' : value) + '" ' + (never ? 'disabled' : '') + ' onchange="setField(\\'' + control.key + '\\', this.value)"></div></div>';
-          }
-          // range -> dropdown
-          let optionsHtml = '';
-          const cMin = Number(control.min);
-          const cMax = Number(control.max);
-          const cValue = Number(value);
-          
-          const exactStopsMap = {
-            diagnosisRate: [0.048, 0.049, 0.051, 0.052, 0.053],
-            diagnosisAnnualGrowthRate: [0.019, 0.025, 0.032, 0.045, 0.055],
-            iasTreatedPctOfDiagnosed: [0.244, 0.264, 0.284, 0.304, 0.324],
-            iasTreatedGrowthRate: [0.01, 0.02, 0.03, 0.035, 0.04],
-            haRatioToIAS: [0.30, 0.40, 0.45, 0.50, 0.55],
-            haRatioGrowthRate: [-0.02, -0.015, -0.01, -0.005, 0.0],
-            iasAndHATreatedBoth: [0.10, 0.125, 0.15, 0.175, 0.20],
-            initialAdditionalMarketGrowth: [0.025, 0.035, 0.045, 0.055, 0.065],
-            annualDecayRateOfAdditionalGrowth: [0.15, 0.175, 0.20, 0.225, 0.25],
-            overstatementAdjFactor: [0.10, 0.16, 0.22, 0.25, 0.30],
-            wacPrice: [400, 500, 575, 800, 1000],
-            newMarketResearchAdjOrtho: [0.95, 1.10, 1.25, 1.40, 1.55],
-            newMarketResearchAdjRheum: [0.90, 0.95, 1.00, 1.05, 1.10],
-            pricingAdjFactorAccessImpact: [0.90, 0.92, 0.96, 0.97, 0.98],
-            pricingAdjPatientAssistanceImpact: [1.00, 1.05, 1.10, 1.15, 1.20],
-            yearsToPeak: [7, 6, 5, 4, 3],
-            jCodeWindowMonths: [6, 9, 12, 15, 18],
-            jCodeRetentionRate: [0.80, 0.84, 0.88, 0.91, 0.94],
-            refrigerationDurationMonths: [12, 15, 18, 24, 120],
-            refrigerationRetentionORS: [0.70, 0.80, 0.88, 0.92, 0.95],
-            refrigerationRetentionRheumOther: [0.70, 0.80, 0.88, 0.92, 0.95],
-            cingalRetentionOrtho: [0.70, 0.72, 0.74, 0.78, 0.90],
-            cingalRetentionPCP: [0.80, 0.82, 0.85, 0.90, 1.00],
-            ampionRetentionOrtho: [0.75, 0.80, 0.865, 0.90, 0.95],
-            ampionRetentionPCP: [0.75, 0.80, 0.84, 0.90, 0.95],
-            antiNGFRetentionOrtho: [0.80, 0.85, 0.90, 0.95, 1.00],
-            antiNGFRetentionPCP: [0.90, 0.92, 0.95, 0.97, 1.00],
-            frequencyOfInjectionsYearly: [1.0, 1.3, 1.5, 1.7, 2.0]
-          };
-          
-          const stops = exactStopsMap[control.key] || [
-            cMin,
-            cMin + (cMax - cMin) * 0.25,
-            cMin + (cMax - cMin) * 0.50,
-            cMin + (cMax - cMin) * 0.75,
-            cMax
-          ];
-          const labels = ['Conservative', 'Semi-Cons.', 'Centered', 'Semi-Agg.', 'Aggressive'];
+      // Group by mainGroup, then by subGroup
+      const groups = {};
+      const order = [];
+      DATA.controlSchema.forEach(function(c) {
+        if (!groups[c.mainGroup]) {
+          groups[c.mainGroup] = { order: [], subGroups: {} };
+          order.push(c.mainGroup);
+        }
+        if (!groups[c.mainGroup].subGroups[c.subGroup]) {
+          groups[c.mainGroup].subGroups[c.subGroup] = [];
+          groups[c.mainGroup].order.push(c.subGroup);
+        }
+        groups[c.mainGroup].subGroups[c.subGroup].push(c);
+      });
 
-          let closestIdx = 0;
-          let minDiff = Infinity;
-          for (let i = 0; i < 5; i++) {
-             let diff = Math.abs(stops[i] - cValue);
-             if (diff < minDiff) {
-                 minDiff = diff;
-                 closestIdx = i;
-             }
-          }
+      const html = order.map(function(mainGroup) {
+        let mainHtml = '<details class="main-group" open><summary>' + esc(mainGroup) + '</summary>';
+        groups[mainGroup].order.forEach(function(subGroup) {
+          mainHtml += '<details class="sub-group" open><summary>' + esc(subGroup) + '</summary><div class="sub-group-content">';
+          mainHtml += groups[mainGroup].subGroups[subGroup].map(function(control) {
+            const value = state[control.key];
+            if (control.type === 'toggle') {
+              return '<div class="control"><div class="toggle"><label>' + esc(control.label) + '</label><label class="switch"><input type="checkbox" ' + (value ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked)"><span class="slider"></span></label></div></div>';
+            }
+            if (control.type === 'select') {
+              return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + control.options.map(function(opt) { return '<option value="' + esc(opt.value) + '" ' + (String(opt.value) === String(value) ? 'selected' : '') + '>' + esc(opt.label) + '</option>'; }).join('') + '</select></div>';
+            }
+            if (control.type === 'monthOrNever') {
+              const never = value === 'does_not_launch';
+              return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label><div class="val">' + esc(never ? 'Never' : value) + '</div></div><div class="inline-row"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><input type="checkbox" ' + (never ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked ? \\'does_not_launch\\' : \\'2025-01\\')">Does not launch</label><input class="grow" type="month" value="' + (never ? '' : value) + '" ' + (never ? 'disabled' : '') + ' onchange="setField(\\'' + control.key + '\\', this.value)"></div></div>';
+            }
+            // range -> dropdown
+            let optionsHtml = '';
+            const cMin = Number(control.min);
+            const cMax = Number(control.max);
+            const cValue = Number(value);
+            
+            const exactStopsMap = {
+              diagnosisRate: [0.048, 0.049, 0.051, 0.052, 0.053],
+              diagnosisAnnualGrowthRate: [0.019, 0.025, 0.032, 0.045, 0.055],
+              iasTreatedPctOfDiagnosed: [0.244, 0.264, 0.284, 0.304, 0.324],
+              iasTreatedGrowthRate: [0.01, 0.02, 0.03, 0.035, 0.04],
+              haRatioToIAS: [0.30, 0.40, 0.45, 0.50, 0.55],
+              haRatioGrowthRate: [-0.02, -0.015, -0.01, -0.005, 0.0],
+              iasAndHATreatedBoth: [0.10, 0.125, 0.15, 0.175, 0.20],
+              initialAdditionalMarketGrowth: [0.025, 0.035, 0.045, 0.055, 0.065],
+              annualDecayRateOfAdditionalGrowth: [0.15, 0.175, 0.20, 0.225, 0.25],
+              overstatementAdjFactor: [0.10, 0.16, 0.22, 0.25, 0.30],
+              wacPrice: [400, 500, 575, 800, 1000],
+              newMarketResearchAdjOrtho: [0.95, 1.10, 1.25, 1.40, 1.55],
+              newMarketResearchAdjRheum: [0.90, 0.95, 1.00, 1.05, 1.10],
+              pricingAdjFactorAccessImpact: [0.90, 0.92, 0.96, 0.97, 0.98],
+              pricingAdjPatientAssistanceImpact: [1.00, 1.05, 1.10, 1.15, 1.20],
+              yearsToPeak: [7, 6, 5, 4, 3],
+              jCodeWindowMonths: [6, 9, 12, 15, 18],
+              jCodeRetentionRate: [0.80, 0.84, 0.88, 0.91, 0.94],
+              refrigerationDurationMonths: [12, 15, 18, 24, 120],
+              refrigerationRetentionORS: [0.70, 0.80, 0.88, 0.92, 0.95],
+              refrigerationRetentionRheumOther: [0.70, 0.80, 0.88, 0.92, 0.95],
+              cingalRetentionOrtho: [0.70, 0.72, 0.74, 0.78, 0.90],
+              cingalRetentionPCP: [0.80, 0.82, 0.85, 0.90, 1.00],
+              ampionRetentionOrtho: [0.75, 0.80, 0.865, 0.90, 0.95],
+              ampionRetentionPCP: [0.75, 0.80, 0.84, 0.90, 0.95],
+              antiNGFRetentionOrtho: [0.80, 0.85, 0.90, 0.95, 1.00],
+              antiNGFRetentionPCP: [0.90, 0.92, 0.95, 0.97, 1.00],
+              frequencyOfInjectionsYearly: [1.0, 1.3, 1.5, 1.7, 2.0]
+            };
+            
+            const stops = exactStopsMap[control.key] || [
+              cMin,
+              cMin + (cMax - cMin) * 0.25,
+              cMin + (cMax - cMin) * 0.50,
+              cMin + (cMax - cMin) * 0.75,
+              cMax
+            ];
+            const labels = ['Conservative', 'Semi-Cons.', 'Centered', 'Semi-Agg.', 'Aggressive'];
 
-          for (let i = 0; i < 5; i++) {
-             let v = stops[i];
-             let safeV = parseFloat(v.toFixed(6));
-             let optDisplay;
-             if (control.unit === '$') optDisplay = '$' + safeV.toLocaleString('en-US');
-             else if (control.unit === ' mo') optDisplay = safeV + ' mo';
-             else if (control.unit === ' yrs') optDisplay = safeV + ' yrs';
-             else if (control.unit === ' /yr') optDisplay = safeV.toFixed(1) + ' /yr';
-             else if (control.unit === '') optDisplay = safeV.toLocaleString('en-US');
-             else optDisplay = formatPercent(safeV * 100);
-             let isSelected = (i === closestIdx) ? 'selected' : '';
-             optionsHtml += '<option value="' + safeV + '" ' + isSelected + '>' + labels[i] + ' (' + esc(optDisplay) + ')</option>';
-          }
-          return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + optionsHtml + '</select></div>';
-        }).join('');
+            let closestIdx = 0;
+            let minDiff = Infinity;
+            for (let i = 0; i < 5; i++) {
+               let diff = Math.abs(stops[i] - cValue);
+               if (diff < minDiff) {
+                   minDiff = diff;
+                   closestIdx = i;
+               }
+            }
+
+            for (let i = 0; i < 5; i++) {
+               let v = stops[i];
+               let safeV = parseFloat(v.toFixed(6));
+               let optDisplay;
+               if (control.unit === '$') optDisplay = '$' + safeV.toLocaleString('en-US');
+               else if (control.unit === ' mo') optDisplay = safeV + ' mo';
+               else if (control.unit === ' yrs') optDisplay = safeV + ' yrs';
+               else if (control.unit === ' /yr') optDisplay = safeV.toFixed(1) + ' /yr';
+               else if (control.unit === '') optDisplay = safeV.toLocaleString('en-US');
+               else optDisplay = formatPercent(safeV * 100);
+               let isSelected = (i === closestIdx) ? 'selected' : '';
+               optionsHtml += '<option value="' + safeV + '" ' + isSelected + '>' + labels[i] + ' (' + esc(optDisplay) + ')</option>';
+            }
+            return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + optionsHtml + '</select></div>';
+          }).join('');
+          mainHtml += '</div></details>';
+        });
+        mainHtml += '</details>';
+        return mainHtml;
       }).join('');
       return '<div class="card"><div class="card-title">Model assumptions</div><div class="card-sub">Tweak the drivers below. Every change updates the forecast live.</div>' + html + '</div>';
     }
