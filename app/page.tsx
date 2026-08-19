@@ -742,11 +742,15 @@ const resourcePreviewData: Record<number, { title: string; headers: string[]; ro
   },
   3: {
     title: 'Treated Patients (rate, growth & specialty split)',
-    headers: ['Specialty', 'IAS Treated', 'HA Treated', 'Repeat Treatment'],
+    headers: ['Metric', 'Value'],
     rows: [
-      ['Orthopedics', '612,000', '288,000', '42%'],
-      ['Rheumatology', '206,000', '94,000', '37%'],
-      ['PCP / Other', '138,000', '41,000', '28%']
+      ['IAS Treated % of Diagnosed', '28.4%'],
+      ['IAS Treated % - Annual Growth', '3.5%'],
+      ['HA Ratio to IAS Treated', '30%'],
+      ['HA Ratio - Annual Growth', '-1.0%'],
+      ['Treated with Both (IAS + HA)', '15.0%'],
+      ['Additional Market Growth - Promotion (Initial)', '5.5%'],
+      ['Additional Market Growth - Annual Decay', '20.0%']
     ]
   },
   4: {
@@ -791,26 +795,26 @@ const resourceStages: ResourceStage[] = [
     icon: 'D',
     sheets: [
       { id: 1, title: 'Epidemiology / Population Base', subtitle: 'Pending upload' },
-      { id: 2, title: 'Diagnosed Patients (2016 IMS data)', subtitle: 'Pending upload' },
+      { id: 2, title: 'Diagnosed Patients (IMS Data)', subtitle: 'Pending upload' },
       { id: 3, title: 'Treated Patients (rate, growth & specialty split)', subtitle: 'Pending upload' }
     ]
   },
   {
     id: 2,
     title: 'Share & Pricing',
-    description: 'Preference share research - WAC price is captured in the same dataset, not separately',
+    description: 'Preference share research',
     color: '#b187d7',
     iconBg: '#f1e9fb',
     icon: 'S',
     lockedBy: 'Demand',
     sheets: [
-      { id: 4, title: 'Preference Share Research (incl. WAC Price)', subtitle: 'Pending upload' }
+      { id: 4, title: 'Preference Share Research', subtitle: 'Pending upload' }
     ]
   },
   {
     id: 3,
-    title: 'Other Adjustments (Market Events)',
-    description: 'One consolidated file capturing competitive/market factors relevant to the forecast',
+    title: 'Other Adjustments',
+    description: 'One consolidated file capturing payers/competitive/market factors relevant to the forecast',
     color: '#e7aa7f',
     iconBg: '#fff0e8',
     icon: 'C',
@@ -2089,6 +2093,35 @@ const chatScript: ChatStepDef[] = [
     MONTH_LABELS_60.length
   ).map((v: number) => Math.round(v));
   const monthlyShareSeries = buildInterpolatedSeries(fAnnual.share, MONTH_LABELS_60.length);
+  const peakYearIndex = f.revenue.reduce((bestIdx, value, idx, arr) => (
+    value > arr[bestIdx] ? idx : bestIdx
+  ), 0);
+  const launchYear = state.launchDate === 'does_not_launch' ? null : Number(state.launchDate.slice(0, 4));
+  const peakCalendarYear = launchYear !== null && !Number.isNaN(launchYear)
+    ? launchYear + Math.ceil(state.yearsToPeak)
+    : null;
+  const peakTreatedPatients = f.patients[peakYearIndex] ?? f.adjustedPeakPatients ?? 0;
+  const peakAnnualInjections = peakTreatedPatients * state.injectionsPerYear;
+  const peakGrossRevenue = peakAnnualInjections * state.wacPrice;
+  const payerAccessLabels: Record<ForecastState['payerAccessRequirement'], string> = {
+    none: 'no formal access hurdle',
+    prior_auth_only: 'prior auth only',
+    pre_cert: 'pre-cert',
+    pre_cert_step_edit: 'pre-cert + step edit',
+    prior_auth_plus_step_edit: 'prior auth + step edit'
+  };
+  const modeledCompetitorLaunches = [
+    { name: 'Product Y', launchDate: state.cingalLaunchDate, orthoRetention: state.cingalRetentionOrtho, pcpRetention: state.cingalRetentionPCP },
+    { name: 'Product Z', launchDate: state.ampionLaunchDate, orthoRetention: state.ampionRetentionOrtho, pcpRetention: state.ampionRetentionPCP },
+    { name: 'Product W', launchDate: state.antiNGFLaunchDate, orthoRetention: state.antiNGFRetentionOrtho, pcpRetention: state.antiNGFRetentionPCP }
+  ].reduce<Array<{ name: string; launchDate: string; launchYear: number; orthoRetention: number; pcpRetention: number }>>((acc, item) => {
+    if (item.launchDate === 'does_not_launch') return acc;
+    const launchYearValue = Number(item.launchDate.slice(0, 4));
+    if (Number.isNaN(launchYearValue)) return acc;
+    acc.push({ ...item, launchDate: item.launchDate, launchYear: launchYearValue });
+    return acc;
+  }, []).sort((a, b) => a.launchYear - b.launchYear);
+  const earliestCompetitorLaunch = modeledCompetitorLaunches[0] ?? null;
 
 
 
@@ -2849,24 +2882,6 @@ const chatScript: ChatStepDef[] = [
                           )}
                         </div>
                         
-                        {msg.step === 4 && i === arr.length - 1 && (
-                          <div style={{ marginLeft: '35px', marginTop: '12px' }}>
-                            <button onClick={() => goPage(3)} style={{ background: '#1F7A6C', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Go to Data Upload →</button>
-                            
-                            <div style={{ marginTop: '24px', background: '#fffcf0', border: '1px solid #d4af37', borderRadius: '8px', padding: '20px', width: '100%', boxSizing: 'border-box' }}>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#b48600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>NEXT STEPS — OUTSIDE THE CHAT</div>
-                              <h4 style={{ margin: '0 0 8px 0', color: '#20242b', fontSize: '16px' }}>Data Upload → Assumptions</h4>
-                              <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#616b77', lineHeight: 1.5 }}>A quick sequential upload — census, IMS, and your market research — before Assumptions opens with those values already in place, editable via sliders, categorical options, and AI-calculated Conservative → Aggressive ranges.</p>
-                              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📄 Census population data</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📊 Year 1 IMS diagnosed-patient data</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>✏️ Proprietary market research</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>⬆️ Existing forecast model (optional)</span>
-                              </div>
-                              <button onClick={() => goPage(3)} style={{ background: '#1e3a8a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Go to Data Upload →</button>
-                            </div>
-                          </div>
-                        )}
                     </React.Fragment>
                   );
                 })}
@@ -2901,6 +2916,13 @@ const chatScript: ChatStepDef[] = [
                       onClick={advanceNewFlow}
                       disabled={newFlowInput.trim() === ''}
                     >Send</button>
+                  </div>
+                )}
+                {newFlowStep >= newFlowScript.length - 1 && (
+                  <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="btn" onClick={() => goPage(3)} style={{ whiteSpace: 'nowrap' }}>
+                      Go to Resource Gathering →
+                    </button>
                   </div>
                 )}
               </div>
@@ -3239,13 +3261,19 @@ const chatScript: ChatStepDef[] = [
                   <div className="card" style={{ marginBottom: '16px' }}>
                     <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x25B6)} What{String.fromCharCode(39)}s driving this forecast</h3>
                     {[
-                      `Peak share of <b>${fmtPct(state.peakShare * 100)}</b> is reached around year <b>${Math.ceil(state.yearsToPeak)}</b>, driven primarily by the durability differentiator versus the current standard of care.`,
-                      `The addressable pool is <b>${fmtNum(f.addressable)}</b> patients \u2014 <b>${fmtPct(state.addressableShare * 100)}</b> of treated patients \u2014 reflecting naive starts plus switch-eligible patients on shorter dosing intervals.`,
-                      `At <b>${fmtM(state.netPrice)}</b> net per injection and <b>${state.injectionsPerYear}</b> injections per year, peak-year net revenue reaches <b>${fmtM(f.peakRevenue)}</b>.`
+                      <>
+                        Peak share of <strong>{fmtPct(f.adjustedPeakShare * 100)}</strong> is reached around <strong>{`Year ${Math.ceil(state.yearsToPeak)}${peakCalendarYear ? ` (${peakCalendarYear})` : ''}`}</strong>, driven by the current uptake curve and access-retention assumptions.
+                      </>,
+                      <>
+                        Peak-year volume reaches approximately <strong>{fmtNum(peakTreatedPatients)}</strong> patients treated - about <strong>{fmtNum(peakAnnualInjections)}</strong> annual injections at <strong>{state.injectionsPerYear}</strong> injections per patient per year.
+                      </>,
+                      <>
+                        At <strong>{fmtM(state.wacPrice)}</strong> WAC, peak-year revenue reaches <strong>{fmtM(peakGrossRevenue)}</strong> gross - <strong>{fmtM(f.peakRevenue)}</strong> net after sample demand.
+                      </>
                     ].map((d, i) => (
                       <div key={i} className="insight-item">
                         <div className="insight-dot"></div>
-                        <div className="body" style={{ fontSize: '13.5px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: d }} />
+                        <div className="body" style={{ fontSize: '13.5px', lineHeight: '1.6' }}>{d}</div>
                       </div>
                     ))}
                   </div>
@@ -3254,15 +3282,33 @@ const chatScript: ChatStepDef[] = [
                     <div className="card" style={{ marginBottom: 0 }}>
                       <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x26A0)} Risks to watch</h3>
                       {[
-                        { title: 'Biosimilar price pressure', text: 'Biosimilar entrants are compressing net pricing across the class \u2014 a 15% further price erosion would cut peak revenue meaningfully.' },
-                        { title: 'Competitive response', text: 'Competitors could extend their own dosing intervals in response, narrowing your durability advantage.' },
-                        { title: 'Diagnosis funnel slippage', text: 'If diagnosis or treatment-initiation rates come in below plan, the addressable pool shrinks and every downstream number moves with it.' }
+                        earliestCompetitorLaunch
+                          ? {
+                              title: 'Competitive launch timing',
+                              text: (
+                                <>
+                                  The earliest modeled competitor launch is <strong>{earliestCompetitorLaunch.name}</strong> in <strong>{earliestCompetitorLaunch.launchYear}</strong>, with specialty retention ranging from <strong>{fmtPct(Math.min(earliestCompetitorLaunch.orthoRetention, earliestCompetitorLaunch.pcpRetention) * 100)}</strong> to <strong>{fmtPct(Math.max(earliestCompetitorLaunch.orthoRetention, earliestCompetitorLaunch.pcpRetention) * 100)}</strong>. An earlier launch would pull share pressure forward.
+                                </>
+                              )
+                            }
+                          : {
+                              title: 'Competitive launch timing',
+                              text: <>No competitive launch is currently modeled, so timing pressure stays muted in the forecast.</>
+                            },
+                        {
+                          title: 'Payer access friction',
+                          text: (
+                            <>
+                              Payer access is modeled as <strong>{payerAccessLabels[state.payerAccessRequirement]}</strong> with <strong>{fmtPct(state.pricingAdjFactorAccessImpact * 100)}</strong> retention. Broader payer restriction than assumed could meaningfully delay time-to-peak.
+                            </>
+                          )
+                        }
                       ].map((r, i) => (
                         <div key={i} className="insight-item">
                           <div className="insight-dot risk"></div>
                           <div className="body">
                             <span className="risk-badge">Risk</span><br />
-                            <b>{r.title}</b>
+                            <strong>{r.title}</strong>
                             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
                           </div>
                         </div>
@@ -3271,15 +3317,28 @@ const chatScript: ChatStepDef[] = [
                     <div className="card" style={{ marginBottom: 0 }}>
                       <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x2B06)} Upside levers</h3>
                       {[
-                        { title: 'Faster payer access', text: 'Favorable formulary placement could pull the uptake curve forward by a year, front-loading revenue.' },
-                        { title: 'Broader label or indication', text: 'Expansion beyond initial targets would grow the addressable pool independent of share gains.' },
-                        { title: 'Switch-driven share gains', text: 'A stronger-than-modeled switch rate from shorter-interval therapies could push peak share above the current assumption.' }
+                        {
+                          title: 'Refrigeration-free reformulation',
+                          text: (
+                            <>
+                              The model still carries <strong>{state.refrigerationDurationMonths}</strong> months of refrigeration friction, with <strong>{fmtPct(state.refrigerationRetentionORS * 100)}</strong> Ortho/Surgical retention and <strong>{fmtPct(state.refrigerationRetentionRheumOther * 100)}</strong> Rheum/Other retention. Removing that cold-chain requirement could lift retention across both channels.
+                            </>
+                          )
+                        },
+                        {
+                          title: 'Broader treatment-type capture',
+                          text: (
+                            <>
+                              Gains in the <strong>Both IAS + HA</strong> segment beyond the modeled <strong>{fmtPct(state.iasAndHATreatedBoth * 100)}</strong> would expand the addressable pool independently of core share gains.
+                            </>
+                          )
+                        }
                       ].map((r, i) => (
                         <div key={i} className="insight-item">
                           <div className="insight-dot"></div>
                           <div className="body">
                             <span className="opp-badge">Upside</span><br />
-                            <b>{r.title}</b>
+                            <strong>{r.title}</strong>
                             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
                           </div>
                         </div>
@@ -3287,12 +3346,6 @@ const chatScript: ChatStepDef[] = [
                     </div>
                   </div>
 
-                  <div className="card" style={{ marginBottom: 0 }}>
-                    <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>How this compares to recent analogues</h3>
-                    <p style={{ fontSize: '13.5px', lineHeight: '1.6', color: 'var(--text-muted)', margin: 0 }}>
-                      Recent analogues reached blockbuster status (&gt;$1B) within roughly two years of launch, aided by a differentiated story. Your asset{String.fromCharCode(39)}s {fmtPct(state.peakShare * 100)} peak share assumption over {Math.ceil(state.yearsToPeak)} years is {state.yearsToPeak <= 3 ? 'more aggressive' : (state.yearsToPeak >= 5 ? 'more conservative' : 'broadly comparable')} relative to that trajectory \u2014 worth stress-testing against a faster or slower competitive response on the scenarios page.
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
@@ -3524,26 +3577,22 @@ const chatScript: ChatStepDef[] = [
               <div style={{ overflow: 'auto', flex: 1, border: '1px solid var(--line)', borderRadius: '8px' }}>
                 {previewSheet === 3 ? (
                   <div style={{ padding: '12px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: '#f7f7fb', color: '#667085', fontSize: '11px', fontWeight: 700, marginBottom: '10px' }}>
+                      <span>Data Source:</span>
+                      <span style={{ color: '#475569' }}>Proprietary Market Research</span>
+                    </div>
+
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '14px' }}>
-                      <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Expected format - treatment rate & growth</div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ background: '#fff' }}>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Metric</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Value</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>METRIC</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>VALUE</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {[
-                            ['IAS Treated % of Diagnosed', '28.4%'],
-                            ['IAS Treated % - Annual Growth', '3.5%'],
-                            ['HA Ratio to IAS Treated', '30%'],
-                            ['HA Ratio - Annual Growth', '-1.0%'],
-                            ['Treated with Both (IAS + HA)', '15.0%'],
-                            ['Additional Market Growth - Promotion (Initial)', '5.5%'],
-                            ['Additional Market Growth - Annual Decay', '20.0%']
-                          ].map((row, rowIndex) => (
-                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          {(resourcePreviewData[3]?.rows || []).map((row, rowIndex) => (
+                            <tr key={`treated-metric-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '7px 12px', color: 'var(--ink)' }}>{row[0]}</td>
                               <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{row[1]}</td>
                             </tr>
@@ -3551,15 +3600,16 @@ const chatScript: ChatStepDef[] = [
                         </tbody>
                       </table>
                     </div>
+
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
                       <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Specialty split (same research, by physician type)</div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ background: '#fff' }}>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Specialty</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>SPECIALTY</th>
                             <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>IAS</th>
                             <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>HA</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Both</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>BOTH</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3568,7 +3618,7 @@ const chatScript: ChatStepDef[] = [
                             ['Rheumatologists', '28%', '46%', '26%'],
                             ['PCP / Other', '19%', '55%', '26%']
                           ].map((row, rowIndex) => (
-                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <tr key={`treated-specialty-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '7px 12px', color: 'var(--ink)' }}>{row[0]}</td>
                               <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[1]}</td>
                               <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[2]}</td>
@@ -3577,6 +3627,9 @@ const chatScript: ChatStepDef[] = [
                           ))}
                         </tbody>
                       </table>
+                      <div style={{ padding: '8px 12px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', borderTop: '1px solid #e2e8f0' }}>
+                        Once uploaded, these values populate treatment rates and specialty splits in Assumptions.
+                      </div>
                     </div>
                   </div>
                 ) : previewSheet === 4 ? (
