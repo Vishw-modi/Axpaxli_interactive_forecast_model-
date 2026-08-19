@@ -244,14 +244,14 @@ page3_replacement = '''<section className={`page ${activeTab === 3 ? 'active' : 
 
           <AccordionSection idx={7} title="SECTION 7 — ⚔️ Competitive Events (Stages 11–13)" color="#c0392b" isOpen={openSections.has(7)} onToggle={() => toggleSection(7)}>
             <div className="competitor-card">
-              <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
+              <div className="competitor-card-title">Product Y (HA+steroid combo)</div>
               <DateOrNeverControl label="Launch Date" fieldKey="cingalLaunchDate" value={state.cingalLaunchDate} onChange={v => handleStateChange('cingalLaunchDate', v)} />
               <SliderControl label="Retention Ortho" fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={state.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => handleStateChange('cingalRetentionOrtho', v)} />
               <SliderControl label="Retention PCP" fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={state.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => handleStateChange('cingalRetentionPCP', v)} />
             </div>
             
             <div className="competitor-card">
-              <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
+              <div className="competitor-card-title">Product Z (biologic) — base case: Does Not Launch</div>
               <DateOrNeverControl label="Launch Date" fieldKey="ampionLaunchDate" value={state.ampionLaunchDate} onChange={v => handleStateChange('ampionLaunchDate', v)} />
               <SliderControl label="Retention Ortho" fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={state.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => handleStateChange('ampionRetentionOrtho', v)} />
               <SliderControl label="Retention PCP" fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={state.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => handleStateChange('ampionRetentionPCP', v)} />

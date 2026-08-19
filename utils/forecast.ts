@@ -41,13 +41,6 @@ export type ForecastState = {
   pricingAdjPatientAssistanceImpact: number;
 
   // STAGE 7
-  pctORSReachedByMonth12: number;
-  pctORSReachedByYear2: number;
-  pctORSReachedByYear3Plus: number;
-  pctPCPReachedByMonth12: number;
-  pctPCPReachedByYear2: number;
-  pctPCPReachedByYear3Plus: number;
-
   // STAGE 8
   jCodeWindowMonths: number;
   jCodeRetentionRate: number;
@@ -74,10 +67,6 @@ export type ForecastState = {
 
   // STAGE 14
   frequencyOfInjectionsYearly: number;
-
-  // STAGE 15
-  peakSamplingIntensity: number;
-  steadyStateSampleRate: number;
 
   // STAGE 18
   q4_2017_OverrideAdj: number;
@@ -129,14 +118,6 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   patientAssistanceProgramInPlace: false,
   pricingAdjPatientAssistanceImpact: 1.10,
 
-  // STAGE 7
-  pctORSReachedByMonth12: 0.70,
-  pctORSReachedByYear2: 0.80,
-  pctORSReachedByYear3Plus: 0.85,
-  pctPCPReachedByMonth12: 0.524,
-  pctPCPReachedByYear2: 0.60,
-  pctPCPReachedByYear3Plus: 0.65,
-
   // STAGE 8
   jCodeWindowMonths: 12,
   jCodeRetentionRate: 0.88,
@@ -164,10 +145,6 @@ export const DEFAULT_FORECAST_STATE: ForecastState = {
   // STAGE 14
   frequencyOfInjectionsYearly: 1.5,
 
-  // STAGE 15
-  peakSamplingIntensity: 0.15,
-  steadyStateSampleRate: 0.05,
-
   // STAGE 18
   q4_2017_OverrideAdj: 0.0,
   q1_2018_OverrideAdj: 0.0,
@@ -190,6 +167,27 @@ export function fmtM(n: number): string {
 
 export function fmtPct(n: number): string {
   return (Math.round(n * 10) / 10) + '%';
+}
+
+export function buildSequentialLabels(prefix: string, count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `${prefix}${i + 1}`);
+}
+
+export function buildInterpolatedSeries(values: number[], pointCount: number): number[] {
+  if (pointCount <= 0) return [];
+  if (values.length === 0) return Array.from({ length: pointCount }, () => 0);
+  if (values.length === 1) return Array.from({ length: pointCount }, () => values[0]);
+
+  const lastIndex = values.length - 1;
+  const lastPoint = pointCount - 1;
+
+  return Array.from({ length: pointCount }, (_, pointIdx) => {
+    const t = (pointIdx / lastPoint) * lastIndex;
+    const leftIdx = Math.floor(t);
+    const rightIdx = Math.min(leftIdx + 1, lastIndex);
+    const frac = t - leftIdx;
+    return values[leftIdx] + ((values[rightIdx] - values[leftIdx]) * frac);
+  });
 }
 
 function smoothstep(t: number): number {
@@ -236,15 +234,13 @@ export function computeForecast(s: ForecastState) {
     const accessAdjustedPeakShare = adjustedPeakShare;
 
     // STAGE 7
-    let reachFactor = 0;
-    const orthoReachedAdj = t === 0 ? s.pctORSReachedByMonth12 : (t === 1 ? s.pctORSReachedByYear2 : s.pctORSReachedByYear3Plus);
-    const pcpReachedAdj = t === 0 ? s.pctPCPReachedByMonth12 : (t === 1 ? s.pctPCPReachedByYear2 : s.pctPCPReachedByYear3Plus);
+    const orthoReachedAdj = t === 0 ? 0.70 : (t === 1 ? 0.80 : 0.85);
+    const pcpReachedAdj = t === 0 ? 0.524 : (t === 1 ? 0.60 : 0.65);
     
     // Apply market research adjs
     const finalOrthoReached = orthoReachedAdj * s.newMarketResearchAdjOrtho;
     const finalPcpReached = pcpReachedAdj * s.newMarketResearchAdjRheum;
-    
-    reachFactor = (ORS_WEIGHT * finalOrthoReached) + (PCP_WEIGHT * finalPcpReached);
+    const reachFactor = (ORS_WEIGHT * finalOrthoReached) + (PCP_WEIGHT * finalPcpReached);
     const rawX = Math.min((t + 1) / s.yearsToPeak, 1.0);
     const uptakeCurve = rawX * rawX * (3 - 2 * rawX); // smoothstep
     let monthlyShare = accessAdjustedPeakShare * uptakeCurve * reachFactor;
@@ -287,9 +283,11 @@ export function computeForecast(s: ForecastState) {
     // STAGE 15
     const annualPatients = patientsOnTherapy * 1;
 
-    // Sampling discount logic (decaying from peakSamplingIntensity to steadyStateSampleRate)
+    // Sampling discount logic uses fixed demo assumptions so the UI does not expose them.
     const samplingDecayRate = 0.5; // decays halfway each year
-    const currentSampleRate = s.steadyStateSampleRate + (s.peakSamplingIntensity - s.steadyStateSampleRate) * Math.pow(1 - samplingDecayRate, t);
+    const peakSamplingIntensity = 0.15;
+    const steadyStateSampleRate = 0.05;
+    const currentSampleRate = steadyStateSampleRate + (peakSamplingIntensity - steadyStateSampleRate) * Math.pow(1 - samplingDecayRate, t);
 
     // STAGE 16
     // Apply sampling discount to revenue (free injections don't generate revenue)

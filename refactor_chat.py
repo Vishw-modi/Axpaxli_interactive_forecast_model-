@@ -135,7 +135,7 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage11_q0',
     who: 'ai',
-    text: "Before modeling competitive launches — what market events or competitor launches should we factor into the share curve? Based on primary research, we'd typically flag: Cingal (HA+steroid combo), Ampion (biologic), and the anti-NGF class. Do those three cover it for now?"
+    text: "Before modeling competitive launches — what market events or competitor launches should we factor into the share curve? Based on primary research, we'd typically flag: Product Y (HA+steroid combo), Product Z (biologic), and the Product W class. Do those three cover it for now?"
   },
   {
     id: 'stage11_a0',
@@ -145,30 +145,30 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage11_q1',
     who: 'ai',
-    text: "Starting with Cingal — when, if ever, does it launch? And what % of share do we retain once it does?",
+    text: "Starting with Product Y — when, if ever, does it launch? And what % of share do we retain once it does?",
     controls: [
-      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Cingal Launch Date' },
+      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Product Y Launch Date' },
       { type: 'slider', key: 'cingalRetentionOrtho', label: 'Retention Ortho', stops: [0.70, 0.72, 0.74, 0.78, 0.90], unit: '%' },
       { type: 'slider', key: 'cingalRetentionPCP', label: 'Retention PCP', stops: [0.80, 0.82, 0.85, 0.90, 1.00], unit: '%' }
     ],
     getUserReply: (s) => `${s.cingalLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.cingalLaunchDate}`,
     getAssumptions: (s) => [
-      {k:'Cingal Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate},
-      {k:'Cingal Retention ORS', v: `${(s.cingalRetentionOrtho*100).toFixed(0)}%`}
+      {k:'Product Y Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate},
+      {k:'Product Y Retention ORS', v: `${(s.cingalRetentionOrtho*100).toFixed(0)}%`}
     ]
   },
   {
     id: 'stage11_q2',
     who: 'ai',
-    text: "Next, Ampion (biologic) — base case is typically Does Not Launch.",
+    text: "Next, Product Z (biologic) — base case is typically Does Not Launch.",
     controls: [
-      { type: 'dateOrNever', key: 'ampionLaunchDate', label: 'Ampion Launch Date' },
+      { type: 'dateOrNever', key: 'ampionLaunchDate', label: 'Product Z Launch Date' },
       { type: 'slider', key: 'ampionRetentionOrtho', label: 'Retention Ortho', stops: [0.75, 0.80, 0.865, 0.90, 0.95], unit: '%' },
       { type: 'slider', key: 'ampionRetentionPCP', label: 'Retention PCP', stops: [0.75, 0.80, 0.84, 0.90, 0.95], unit: '%' }
     ],
     getUserReply: (s) => `${s.ampionLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.ampionLaunchDate}`,
     getAssumptions: (s) => [
-      {k:'Ampion Launch', v: s.ampionLaunchDate === 'does_not_launch' ? 'Never' : s.ampionLaunchDate}
+      {k:'Product Z Launch', v: s.ampionLaunchDate === 'does_not_launch' ? 'Never' : s.ampionLaunchDate}
     ]
   },
   {

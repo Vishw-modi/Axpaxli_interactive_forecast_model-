@@ -34,18 +34,18 @@
 32,Access & Competitive Friction Adjustments,9,Effect of Refrigeration — Rheum/Other,9C,Direct Input (Slider/List),—,—,Slider,0.95,70% (Cons.) → 95% (Aggr.)
 33,Access & Competitive Friction Adjustments,10,Office Mgmt. Rejection Rate,10A,Direct Input (Slider/List),—,—,Linked / Fixed,Auto-linked to WAC Price (Param 5D) via two-stage lookup table — no separate input,Auto-linked to WAC Price (Param 5D) via two-stage lookup table — no separate input
 34,Access & Competitive Friction Adjustments,10,Office Rejection Rate — Annual Growth,10B,Direct Input (Slider/List),—,—,Slider,-0.01,0.0% (Cons.) → -2.0% (Aggr.)
-35,Access & Competitive Friction Adjustments,11,Cingal Combo Product Launch Date,11A,Direct Input (Slider/List),—,—,Date Picker,2019-11-01 00:00:00,"Jul 2017 – Dec 2020, or “Does Not Launch”  (selected: Nov 2019)"
-36,Access & Competitive Friction Adjustments,11,Effect of Cingal Launch (% retained) — Ortho/Rheum,11B,Direct Input (Slider/List),—,—,Slider,0.74,70% (Cons.) → 90% (Aggr.)
-37,Access & Competitive Friction Adjustments,11,Effect of Cingal Launch (% retained) — PCP/Other,11C,Direct Input (Slider/List),—,—,Slider,0.85,80% (Cons.) → 100% (Aggr.)
-38,Access & Competitive Friction Adjustments,12,Ampion Biologic Product Launch Date,12A,Direct Input (Slider/List),—,—,Date Picker,Does Not Launch,"Jul 2017 – Dec 2020, or “Does Not Launch”  (selected: Does Not Launch)"
-39,Access & Competitive Friction Adjustments,12,Effect of Ampion Launch (% retained) — Ortho/Rheum,12B,Direct Input (Slider/List),—,—,Slider,0.865,75% (Cons.) → 95% (Aggr.)
-40,Access & Competitive Friction Adjustments,12,Effect of Ampion Launch (% retained) — PCP/Other,12C,Direct Input (Slider/List),—,—,Slider,0.84,75% (Cons.) → 95% (Aggr.)
-41,Access & Competitive Friction Adjustments,13,Anti-NGF Product Launch Date,13A,Direct Input (Slider/List),—,—,Date Picker,2020-01-01 00:00:00,"Apr 2019 – Dec 2022, or “Does Not Launch”  (selected: Jan 2020)"
-42,Access & Competitive Friction Adjustments,13,Effect of Anti-NGF Launch (% retained) — Ortho/Rheum,13B,Direct Input (Slider/List),—,—,Slider,0.9,80% (Cons.) → 100% (Aggr.)
-43,Access & Competitive Friction Adjustments,13,Effect of Anti-NGF Launch (% retained) — PCP/Other,13C,Direct Input (Slider/List),—,—,Slider,0.95,90% (Cons.) → 100% (Aggr.)
+35,Access & Competitive Friction Adjustments,11,Product Y Launch Date,11A,Direct Input (Slider/List),—,—,Date Picker,2019-11-01 00:00:00,"Jul 2017 – Dec 2020, or “Does Not Launch”  (selected: Nov 2019)"
+36,Access & Competitive Friction Adjustments,11,Effect of Product Y Launch (% retained) — Ortho/Rheum,11B,Direct Input (Slider/List),—,—,Slider,0.74,70% (Cons.) → 90% (Aggr.)
+37,Access & Competitive Friction Adjustments,11,Effect of Product Y Launch (% retained) — PCP/Other,11C,Direct Input (Slider/List),—,—,Slider,0.85,80% (Cons.) → 100% (Aggr.)
+38,Access & Competitive Friction Adjustments,12,Product Z Biologic Product Launch Date,12A,Direct Input (Slider/List),—,—,Date Picker,Does Not Launch,"Jul 2017 – Dec 2020, or “Does Not Launch”  (selected: Does Not Launch)"
+39,Access & Competitive Friction Adjustments,12,Effect of Product Z Launch (% retained) — Ortho/Rheum,12B,Direct Input (Slider/List),—,—,Slider,0.865,75% (Cons.) → 95% (Aggr.)
+40,Access & Competitive Friction Adjustments,12,Effect of Product Z Launch (% retained) — PCP/Other,12C,Direct Input (Slider/List),—,—,Slider,0.84,75% (Cons.) → 95% (Aggr.)
+41,Access & Competitive Friction Adjustments,13,Product W Product Launch Date,13A,Direct Input (Slider/List),—,—,Date Picker,2020-01-01 00:00:00,"Apr 2019 – Dec 2022, or “Does Not Launch”  (selected: Jan 2020)"
+42,Access & Competitive Friction Adjustments,13,Effect of Product W Launch (% retained) — Ortho/Rheum,13B,Direct Input (Slider/List),—,—,Slider,0.9,80% (Cons.) → 100% (Aggr.)
+43,Access & Competitive Friction Adjustments,13,Effect of Product W Launch (% retained) — PCP/Other,13C,Direct Input (Slider/List),—,—,Slider,0.95,90% (Cons.) → 100% (Aggr.)
 44,Volume & Revenue Output,14,Frequency of Injections (yearly),14A,Direct Input (Slider/List),—,—,Slider,1.5,1.0 (Cons.) → 2.0 (Aggr.)
 45,Volume & Revenue Output,15,Sample Start Peak %,15A,Direct Input (Slider/List),—,—,Slider,0.25,35% (Cons.) → 15% (Aggr.)
 46,Volume & Revenue Output,15,Sample Long-Term % Asymptote,15B,Direct Input (Slider/List),—,—,Slider,0.02,4.0% (Cons.) → 1.0% (Aggr.)
-47,Volume & Revenue Output,16,Monthly Seasonality Index (Jan–Dec),—,Indirect Input (Uploadable),Default seasonality pattern (modeled on Synvisc 2013–15 monthly volumes),"Captures predictable within-year demand swings, independent of the calendar-day correction below",Excel Upload,Synvisc-analog 12-month index,Upload replaces the default 12-month index
+47,Volume & Revenue Output,16,Monthly Seasonality Index (Jan–Dec),—,Indirect Input (Uploadable),Default seasonality pattern (modeled on Product V 2013–15 monthly volumes),"Captures predictable within-year demand swings, independent of the calendar-day correction below",Excel Upload,Product V-analog 12-month index,Upload replaces the default 12-month index
 48,Volume & Revenue Output,18,Launch-Quarter Actuals / Override % (by Quarter),—,Indirect Input (Uploadable),Raw model quarterly totals for the current scenario,"Override % is applied to each flagged quarter, then reconciled back down to the underlying months",Direct Value,Baseline ships with overrides in the first 5 quarters,Analyst-entered % per quarter
 49,Volume & Revenue Output,20,WAC Price (carried forward),5D (reused),Direct Input (Slider/List),—,—,Carried Forward,Same value as selected in Step 5 ($575 centered),Same value as selected in Step 5 ($575 centered)

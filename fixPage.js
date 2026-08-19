@@ -10,7 +10,7 @@ const replacement = `// Forecast calculations
   const f = computeForecast(state);
   const baseF = computeForecast(defaultState);
   
-  // Rebase modeled revenue to Zilretta actuals
+  // Rebase modeled revenue to Product X actuals
   const rebasedRevenue = f.years.map((y, i) => {
     const baseModeled = baseF.revenue[i] || 1;
     const currentModeled = f.revenue[i] || 0;
@@ -24,7 +24,7 @@ const replacement = `// Forecast calculations
 
   const scenarioF = computeForecast(scenarioState);
   
-  // Rebase scenario modeled revenue to Zilretta actuals
+  // Rebase scenario modeled revenue to Product X actuals
   const rebasedScenarioRevenue = scenarioF.years.map((y, i) => {
     const baseModeled = baseF.revenue[i] || 1;
     const currentModeled = scenarioF.revenue[i] || 0;

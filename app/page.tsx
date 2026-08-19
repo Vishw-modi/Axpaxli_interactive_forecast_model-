@@ -8,7 +8,9 @@ import {
   fmtNum, 
   fmtM, 
   fmtPct, 
-  addressablePatients 
+  addressablePatients,
+  buildSequentialLabels,
+  buildInterpolatedSeries
 } from '../utils/forecast';
 import {
   Chart as ChartJS,
@@ -424,7 +426,7 @@ function ModelArchitecturePanel({ state }: { state: ForecastState }) {
   const accessAdjustedPeakShare = peakShare * state.pricingAdjFactorAccessImpact * papMultiplier;
   
   // STAGE 7
-  const reachFactor = (0.70 * state.pctORSReachedByYear3Plus) + (0.30 * state.pctPCPReachedByYear3Plus);
+  const reachFactor = (0.70 * 0.85) + (0.30 * 0.65);
   const rawX = Math.min((t + 1) / state.yearsToPeak, 1.0);
   const uptakeCurve = rawX * rawX * (3 - 2 * rawX);
   let monthlyShare = accessAdjustedPeakShare * uptakeCurve * reachFactor;
@@ -594,14 +596,7 @@ const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: Re
 );
 
 
-const CHART_LABELS_13 = ['Dec-17','Jun-18','Dec-18','Jun-19','Dec-19','Jun-20','Dec-20',
-          'Jun-21','Dec-21','Jun-22','Dec-22','Jun-23','Dec-23'];
- 
-const PATIENTS_BASE_13 = [562, 4208, 13835, 33960, 58345, 84981, 107172, 121203,
-                 128872, 131983, 133472, 135366, 138285];
- 
-const SHARE_BASE_13 = [0.001, 0.005, 0.016, 0.037, 0.060, 0.082, 0.099, 0.107,
-              0.108, 0.107, 0.104, 0.101, 0.100];
+const MONTH_LABELS_60 = buildSequentialLabels('Mon', 60);
 
 export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
@@ -727,24 +722,26 @@ type ResourceStage = {
 const resourcePreviewData: Record<number, { title: string; headers: string[]; rows: string[][] }> = {
   1: {
     title: 'Epidemiology / Population Base',
-    headers: ['Year', 'Population', 'OA Knee Prevalence', 'Eligible Patients'],
+    headers: ['Age Band', '2024', '2025', '2026', '2027'],
     rows: [
-      ['2025', '258,400,000', '14,920,000', '1,790,000'],
-      ['2026', '260,100,000', '15,070,000', '1,824,000'],
-      ['2027', '261,900,000', '15,260,000', '1,861,000']
+      ['0–24 years', '103.2M', '103.6M', '103.9M', '104.1M'],
+      ['25–44 years', '88.4M', '88.9M', '89.3M', '89.8M'],
+      ['45–64 years', '84.1M', '83.7M', '83.4M', '83.0M'],
+      ['65+ years', '61.5M', '63.2M', '64.8M', '66.3M']
     ]
   },
   2: {
     title: 'Diagnosed Patients (2016 IMS data)',
-    headers: ['Segment', '2016 Diagnosed', 'Diagnosis Rate', 'CAGR'],
+    headers: ['Age Band', 'Diagnosed - Insured', '% of Total Pop.', 'Diagnosed - Uninsured (Est.)'],
     rows: [
-      ['Orthopedics', '805,000', '88%', '2.4%'],
-      ['Rheumatology', '342,000', '82%', '1.7%'],
-      ['PCP / Other', '268,000', '74%', '1.2%']
+      ['0–24 years', '1.9M', '1.9%', '0.3M'],
+      ['25–44 years', '2.6M', '2.9%', '0.4M'],
+      ['45–64 years', '6.4M', '7.6%', '1.0M'],
+      ['65+ years', '4.7M', '7.6%', '0.7M']
     ]
   },
   3: {
-    title: 'Treated Patients',
+    title: 'Treated Patients (rate, growth & specialty split)',
     headers: ['Specialty', 'IAS Treated', 'HA Treated', 'Repeat Treatment'],
     rows: [
       ['Orthopedics', '612,000', '288,000', '42%'],
@@ -753,7 +750,7 @@ const resourcePreviewData: Record<number, { title: string; headers: string[]; ro
     ]
   },
   4: {
-    title: 'Preference Share Research',
+    title: 'Preference Share Research (incl. WAC Price)',
     headers: ['Specialty', 'Preference Share', 'WAC Price', 'Sample Size'],
     rows: [
       ['Orthopedics', '24%', '$760', '145'],
@@ -761,22 +758,16 @@ const resourcePreviewData: Record<number, { title: string; headers: string[]; ro
       ['PCP / Other', '11%', '$760', '96']
     ]
   },
-  5: {
-    title: 'Payer / Access Requirements',
-    headers: ['Plan Type', 'Prior Auth', 'Step Edit', 'Access Impact'],
-    rows: [
-      ['Commercial', 'Yes', '1 step', '92%'],
-      ['Medicare', 'Yes', '2 steps', '84%'],
-      ['Managed Medicaid', 'Yes', '2 steps', '79%']
-    ]
-  },
   6: {
-    title: 'Competitive Launch Tracker',
-    headers: ['Competitor', 'Expected Launch', 'Segment Impact', 'Share Retention'],
+    title: 'Other Adjustments Summary',
+    headers: ['Factor / Event', 'Timing', 'Ortho / Rheum Retained', 'PCP / Other Retained'],
     rows: [
-      ['Cingal', '2026 H2', 'HA switchers', '88%'],
-      ['Ampion', '2027 H1', 'IAS repeaters', '91%'],
-      ['Anti-NGF', '2028 H2', 'Pain specialists', '86%']
+      ['Payer access requirement', 'Ongoing', '96%', '94%'],
+      ['Patient assistance program', 'Ongoing', '100%', '100%'],
+      ['Reimbursement / coding transition', 'Auto-linked to launch', '60%', '60%'],
+      ['Regulatory / guideline change', 'Year 1', '95%', '95%'],
+      ['Competitive launch - Event 1', 'Year 2', '85%', '88%'],
+      ['Competitive launch - Event 2', 'Year 3', '90%', '92%']
     ]
   },
   7: {
@@ -801,7 +792,7 @@ const resourceStages: ResourceStage[] = [
     sheets: [
       { id: 1, title: 'Epidemiology / Population Base', subtitle: 'Pending upload' },
       { id: 2, title: 'Diagnosed Patients (2016 IMS data)', subtitle: 'Pending upload' },
-      { id: 3, title: 'Treated Patients (by specialty & segment)', subtitle: 'Pending upload' }
+      { id: 3, title: 'Treated Patients (rate, growth & specialty split)', subtitle: 'Pending upload' }
     ]
   },
   {
@@ -818,33 +809,21 @@ const resourceStages: ResourceStage[] = [
   },
   {
     id: 3,
-    title: 'Payer Access',
-    description: 'Prior-authorization / step-edit requirements and patient assistance data',
-    color: '#7fb9ae',
-    iconBg: '#e8f6f3',
-    icon: 'P',
-    lockedBy: 'Share & Pricing',
-    sheets: [
-      { id: 5, title: 'Payer / Access Requirements', subtitle: 'Pending upload' }
-    ]
-  },
-  {
-    id: 4,
-    title: 'Competitive Adjustments',
-    description: 'Competitor launch timing and expected share impact',
+    title: 'Other Adjustments (Market Events)',
+    description: 'One consolidated file capturing competitive/market factors relevant to the forecast',
     color: '#e7aa7f',
     iconBg: '#fff0e8',
     icon: 'C',
-    lockedBy: 'Payer Access',
+    lockedBy: 'Share & Pricing',
     sheets: [
-      { id: 6, title: 'Competitive Launch Tracker', subtitle: 'Pending upload' }
+      { id: 6, title: 'Other Adjustments Summary', subtitle: 'Pending upload' }
     ]
   }
 ];
 
 const newFlowScript = [
   { who: 'ai', text: "Hello! I'm your forecasting assistant. How can I help you today?", step: 1 },
-  { who: 'user', text: "I want to build a forecast for Zilretta.", step: 1 },
+  { who: 'user', text: "I want to build a forecast for Product X.", step: 1 },
   { who: 'ai', text: `Happy to help build this out. We'll work through three steps before you move into Assumptions to fine-tune the numbers:
 <div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; font-size: 13px;">
   <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">HOW THIS WILL GO</div>
@@ -898,7 +877,7 @@ const newFlowScript = [
   </div>
   <p style="margin-top: 0; margin-bottom: 12px;">Let's start with Setup. A few things to confirm:</p>
   <ul style="margin: 0 0 12px 0; padding-left: 20px; line-height: 1.6;">
-    <li style="margin-bottom: 4px;"><strong>Indication</strong> → Zilretta is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li>
+    <li style="margin-bottom: 4px;"><strong>Indication</strong> → Product X is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li>
     <li style="margin-bottom: 4px;"><strong>Geography</strong> → given the primary market is US, I'll scope this as <strong>US-only</strong> unless another market needs covering.</li>
     <li style="margin-bottom: 4px;"><strong>Launch Date</strong> → based on drug approval records, launch looks to be around <strong>October 2017</strong>, so I'll anchor to that.</li>
     <li style="margin-bottom: 4px;"><strong>Forecast Horizon</strong> → OA Knee is a mature, stable category, so a <strong>5-year horizon</strong> is typical.</li>
@@ -911,7 +890,7 @@ const newFlowScript = [
     <span>✦</span> AI RECOMMENDATION
   </div>
   <p style="margin-top: 0; margin-bottom: 12px;">Two ways to structure this: <strong>Patient-Based</strong> — a snapshot of the diagnosed/treated market by specialty — or <strong>Patient-Flow</strong> — tracking patients through treatment states over time. Patient-Flow fits conditions with complex journeys: lines of therapy, drug-class switching, remission cycles.</p>
-  <p style="margin: 0;">OA Knee is chronic, but Zilretta itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, <strong>Patient-Based</strong> is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.</p>
+  <p style="margin: 0;">OA Knee is chronic, but Product X itself is a periodic-injection therapy with no line-of-therapy progression or drug-class switching. For chronic conditions without that kind of complex treatment journey, <strong>Patient-Based</strong> is the better fit — simpler, faster to stand up, and won't sacrifice accuracy here. That's what I'd recommend.</p>
 </div>`, step: 2 },
   { who: 'user', text: "Agreed, let's go with Patient-Based.", step: 2 },
   { who: 'ai', text: "Good. Beyond the core inputs — epidemiology, treatment rates, and so on, which we'll cover in input alignment — accurate Patient-Based forecasts are usually built around one or two grains. Common ones are treatment type, specialty, patient age, or gender. Which of these do you want this built around?", step: 2 },
@@ -920,7 +899,7 @@ const newFlowScript = [
   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #9c8022; font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;">
     <span>✦</span> AI RECOMMENDATION
   </div>
-  Looking at OA Knee specifically — the primary specialties treating this are <strong>orthopedic surgeons and rheumatologists</strong>, with PCPs picking up a smaller share. And based on Zilretta's patient eligibility, the treatment side splits into <strong>intra-articular steroid (IAS)</strong>, which is where Zilretta sits, and <strong>hyaluronic acid (HA)</strong>, a different injectable class. Shall we track the model along those lines?
+  Looking at OA Knee specifically — the primary specialties treating this are <strong>orthopedic surgeons and rheumatologists</strong>, with PCPs picking up a smaller share. And based on Product X's patient eligibility, the treatment side splits into <strong>intra-articular steroid (IAS)</strong>, which is where Product X sits, and <strong>hyaluronic acid (HA)</strong>, a different injectable class. Shall we track the model along those lines?
 </div>`, step: 2 },
   { who: 'user', text: "Yes.", step: 2 },
   { who: 'ai', sectionHeader: '3 - INPUT ALIGNMENT', sectionSub: 'Must-have inputs and recommended data sources', sectionColor: '#1f7a6c', text: `With Patient-Based confirmed at the specialty × IAS/HA grain, here's the input framework I'll work through with you — what's must-have to get a credible forecast running, versus good-to-have refinement:
@@ -980,8 +959,8 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage0_a1',
     who: 'user',
-    text: "Zilretta — triamcinolone acetonide extended-release for osteoarthritis knee pain.",
-    getAssumptions: () => [{k:'Product', v:'Zilretta (triamcinolone acetonide ER)'}]
+    text: "Product X — masked brand name for osteoarthritis knee pain.",
+    getAssumptions: () => [{k:'Product', v:'Product X'}]
   },
   {
     id: 'stage0_q2',
@@ -1039,7 +1018,7 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage0_summary',
     who: 'ai',
-    text: "Perfect — Zilretta, OA Knee, US, 7-year post-launch horizon, launch date December 2017. That date anchors the J-code transition window and everything downstream. Let's move into building the patient funnel, starting with the population base."
+    text: "Perfect — Product X, OA Knee, US, 7-year post-launch horizon, launch date December 2017. That date anchors the J-code transition window and everything downstream. Let's move into building the patient funnel, starting with the population base."
   },
   {
     id: 'stage1_q1',
@@ -1368,30 +1347,6 @@ const chatScript: ChatStepDef[] = [
     getAssumptions: (s) => [{k:'Years to Peak', v: `${s.yearsToPeak} years`}]
   },
   {
-    id: 'stage7_q2',
-    who: 'ai',
-    text: "Per the launch plan, what % of Ortho/Rheum are reached by month 12, within 2 yrs, within 3+?",
-    controls: [
-      { type: 'slider', key: 'pctORSReachedByMonth12', label: 'Ortho/Rheum reached by month 12', stops: [0.60, 0.65, 0.70, 0.75, 0.80], unit: '%' },
-      { type: 'slider', key: 'pctORSReachedByYear2', label: 'Ortho/Rheum reached by year 2', stops: [0.70, 0.75, 0.80, 0.85, 0.90], unit: '%' },
-      { type: 'slider', key: 'pctORSReachedByYear3Plus', label: 'Ortho/Rheum reached by year 3+', stops: [0.75, 0.80, 0.85, 0.90, 0.95], unit: '%' }
-    ],
-    getUserReply: (s) => `Month 12: ${(s.pctORSReachedByMonth12*100).toFixed(0)}%, Year 2: ${(s.pctORSReachedByYear2*100).toFixed(0)}%, Year 3+: ${(s.pctORSReachedByYear3Plus*100).toFixed(0)}%.`,
-    getAssumptions: (s) => [{k:'Ortho/Rheum Reach', v: `${(s.pctORSReachedByMonth12*100).toFixed(0)}% / ${(s.pctORSReachedByYear2*100).toFixed(0)}% / ${(s.pctORSReachedByYear3Plus*100).toFixed(0)}%`}]
-  },
-  {
-    id: 'stage7_q3',
-    who: 'ai',
-    text: "Same reach question for PCP/Other prescribers.",
-    controls: [
-      { type: 'slider', key: 'pctPCPReachedByMonth12', label: 'PCP reached by month 12', stops: [0.30, 0.40, 0.50, 0.60, 0.70], unit: '%' },
-      { type: 'slider', key: 'pctPCPReachedByYear2', label: 'PCP reached by year 2', stops: [0.50, 0.60, 0.70, 0.80, 0.90], unit: '%' },
-      { type: 'slider', key: 'pctPCPReachedByYear3Plus', label: 'PCP reached by year 3+', stops: [0.60, 0.70, 0.80, 0.90, 1.00], unit: '%' }
-    ],
-    getUserReply: (s) => `Month 12: ${(s.pctPCPReachedByMonth12*100).toFixed(0)}%, Year 2: ${(s.pctPCPReachedByYear2*100).toFixed(0)}%, Year 3+: ${(s.pctPCPReachedByYear3Plus*100).toFixed(0)}%.`,
-    getAssumptions: (s) => [{k:'PCP Reach', v: `${(s.pctPCPReachedByMonth12*100).toFixed(0)}% / ${(s.pctPCPReachedByYear2*100).toFixed(0)}% / ${(s.pctPCPReachedByYear3Plus*100).toFixed(0)}%`}]
-  },
-  {
     id: 'stage8_q1',
     who: 'ai',
     text: "This is auto-derived from your launch date — no separate input needed."
@@ -1449,7 +1404,7 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage11_summary1',
     who: 'ai',
-    text: "Based on primary research and competitive intelligence, we'd typically flag three: Cingal (HA+steroid combo), Ampion (biologic), and the anti-NGF class (e.g., tanezumab-type agents)."
+    text: "Based on primary research and competitive intelligence, we'd typically flag three: Product Y, Product Z, and the Product W class."
   },
   {
     id: 'stage11_summary2',
@@ -1464,30 +1419,30 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage11_summary3',
     who: 'ai',
-    text: "Good — I'll model Cingal, Ampion, and the anti-NGF class. Starting with Cingal..."
+    text: "Good — I'll model Product Y, Product Z, and the Product W class. Starting with Product Y..."
   },
   {
     id: 'stage11_q1a',
     who: 'ai',
-    text: "When — if ever — does Cingal launch?",
+    text: "When — if ever — does Product Y launch?",
     controls: [
-      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Cingal Launch Date' }
+      { type: 'dateOrNever', key: 'cingalLaunchDate', label: 'Product Y Launch Date' }
     ],
     getUserReply: (s) => `${s.cingalLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.cingalLaunchDate}`,
     getAssumptions: (s) => [
-      {k:'Cingal Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate}
+      {k:'Product Y Launch', v: s.cingalLaunchDate === 'does_not_launch' ? 'Never' : s.cingalLaunchDate}
     ]
   },
   {
     id: 'stage11_q1b',
     who: 'ai',
-    text: "Once Cingal launches, what % of Ortho/Rheum share do we retain?",
+    text: "Once Product Y launches, what % of Ortho/Rheum share do we retain?",
     controls: [
       { type: 'slider', key: 'cingalRetentionOrtho', label: 'Retention Ortho', stops: [0.70, 0.72, 0.74, 0.78, 0.90], unit: '%' }
     ],
     getUserReply: (s) => `${(s.cingalRetentionOrtho*100).toFixed(0)}% retention.`,
     getAssumptions: (s) => [
-      {k:'Cingal Retention ORS', v: `${(s.cingalRetentionOrtho*100).toFixed(0)}%`}
+      {k:'Product Y Retention ORS', v: `${(s.cingalRetentionOrtho*100).toFixed(0)}%`}
     ]
   },
   {
@@ -1499,50 +1454,50 @@ const chatScript: ChatStepDef[] = [
     ],
     getUserReply: (s) => `${(s.cingalRetentionPCP*100).toFixed(0)}% retention.`,
     getAssumptions: (s) => [
-      {k:'Cingal Retention PCP', v: `${(s.cingalRetentionPCP*100).toFixed(0)}%`}
+      {k:'Product Y Retention PCP', v: `${(s.cingalRetentionPCP*100).toFixed(0)}%`}
     ]
   },
   {
     id: 'stage11_q2',
     who: 'ai',
-    text: "Next, Ampion (biologic) — base case is typically Does Not Launch.",
+    text: "Next, Product Z — base case is typically Does Not Launch.",
     controls: [
-      { type: 'dateOrNever', key: 'ampionLaunchDate', label: 'Ampion Launch Date' },
+      { type: 'dateOrNever', key: 'ampionLaunchDate', label: 'Product Z Launch Date' },
       { type: 'slider', key: 'ampionRetentionOrtho', label: 'Retention Ortho', stops: [0.75, 0.80, 0.865, 0.90, 0.95], unit: '%' },
       { type: 'slider', key: 'ampionRetentionPCP', label: 'Retention PCP', stops: [0.75, 0.80, 0.84, 0.90, 0.95], unit: '%' }
     ],
     getUserReply: (s) => `${s.ampionLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.ampionLaunchDate}`,
     getAssumptions: (s) => [
-      {k:'Ampion Launch', v: s.ampionLaunchDate === 'does_not_launch' ? 'Never' : s.ampionLaunchDate}
+      {k:'Product Z Launch', v: s.ampionLaunchDate === 'does_not_launch' ? 'Never' : s.ampionLaunchDate}
     ]
   },
   {
     id: 'stage13_intro',
     who: 'ai',
-    text: "Continuing the competitive landscape scoped in Step 11 — last one, the anti-NGF class."
+    text: "Continuing the competitive landscape scoped in Step 11 — last one, the Product W class."
   },
   {
     id: 'stage13_q1a',
     who: 'ai',
-    text: "When — if ever — does an anti-NGF competitor launch?",
+    text: "When — if ever — does Product W launch?",
     controls: [
-      { type: 'dateOrNever', key: 'antiNGFLaunchDate', label: 'Anti-NGF Launch Date' }
+      { type: 'dateOrNever', key: 'antiNGFLaunchDate', label: 'Product W Launch Date' }
     ],
     getUserReply: (s) => `${s.antiNGFLaunchDate === 'does_not_launch' ? 'Does Not Launch' : s.antiNGFLaunchDate}`,
     getAssumptions: (s) => [
-      {k:'Anti-NGF Launch', v: s.antiNGFLaunchDate === 'does_not_launch' ? 'Never' : s.antiNGFLaunchDate}
+      {k:'Product W Launch', v: s.antiNGFLaunchDate === 'does_not_launch' ? 'Never' : s.antiNGFLaunchDate}
     ]
   },
   {
     id: 'stage13_q1b',
     who: 'ai',
-    text: "What % share retained by Ortho/Rheum once the anti-NGF class is live?",
+    text: "What % share retained by Ortho/Rheum once the Product W class is live?",
     controls: [
       { type: 'slider', key: 'antiNGFRetentionOrtho', label: 'Retention Ortho', stops: [0.80, 0.85, 0.90, 0.95, 1.00], unit: '%' }
     ],
     getUserReply: (s) => `${(s.antiNGFRetentionOrtho*100).toFixed(0)}% retention.`,
     getAssumptions: (s) => [
-      {k:'Anti-NGF Retention ORS', v: `${(s.antiNGFRetentionOrtho*100).toFixed(0)}%`}
+      {k:'Product W Retention ORS', v: `${(s.antiNGFRetentionOrtho*100).toFixed(0)}%`}
     ]
   },
   {
@@ -1554,7 +1509,7 @@ const chatScript: ChatStepDef[] = [
     ],
     getUserReply: (s) => `${(s.antiNGFRetentionPCP*100).toFixed(0)}% retention.`,
     getAssumptions: (s) => [
-      {k:'Anti-NGF Retention PCP', v: `${(s.antiNGFRetentionPCP*100).toFixed(0)}%`}
+      {k:'Product W Retention PCP', v: `${(s.antiNGFRetentionPCP*100).toFixed(0)}%`}
     ]
   },
   {
@@ -1570,84 +1525,30 @@ const chatScript: ChatStepDef[] = [
     ]
   },
   {
-    id: 'stage15_q1a',
-    who: 'ai',
-    text: "What starting peak sampling intensity should we assume right after launch?",
-    controls: [
-      { type: 'slider', key: 'peakSamplingIntensity', label: 'Peak sampling intensity', stops: [0.05, 0.10, 0.15, 0.20, 0.25], unit: '%' }
-    ],
-    getUserReply: (s) => `${(s.peakSamplingIntensity*100).toFixed(0)}%.`,
-    getAssumptions: (s) => [
-      {k:'Peak Sampling Intensity', v: `${(s.peakSamplingIntensity*100).toFixed(0)}%`}
-    ]
-  },
-  {
-    id: 'stage15_q1b',
-    who: 'ai',
-    text: "What long-run steady-state sample rate should the curve settle to?",
-    controls: [
-      { type: 'slider', key: 'steadyStateSampleRate', label: 'Steady-state sample rate', stops: [0.01, 0.03, 0.05, 0.08, 0.10], unit: '%' }
-    ],
-    getUserReply: (s) => `${(s.steadyStateSampleRate*100).toFixed(0)}%.`,
-    getAssumptions: (s) => [
-      {k:'Steady-State Sample Rate', v: `${(s.steadyStateSampleRate*100).toFixed(0)}%`}
-    ]
-  },
-  {
     id: 'stage16_intro',
     who: 'ai',
-    text: "For seasonality, the default pattern is modeled on Synvisc's actual 2013-15 monthly volumes, since Zileria has no launch history of its own yet."
+    text: "For seasonality, the default pattern is modeled on Product V's actual 2013-15 monthly volumes, since Product X has no launch history of its own yet."
   },
   {
     id: 'stage16_q1',
     who: 'ai',
-    text: "Is there a more relevant analog product, or actual observed Zileria data, you'd like me to upload and use instead?",
+    text: "Is there a more relevant analog product, or actual observed Product X data, you'd like me to upload and use instead?",
     hasUpload: true
   },
   {
     id: 'stage16_a1',
     who: 'user',
-    text: "Use the Synvisc pattern for now."
+    text: "Use the Product V pattern for now."
   },
   {
     id: 'stage16_summary',
     who: 'ai',
-    text: "Good — applying the Synvisc-based seasonality index across all months."
+    text: "Good — applying the Product V-based seasonality index across all months."
   },
   {
     id: 'stage17_summary',
     who: 'ai',
     text: "This step corrects for the actual number of selling days in each specific month — it's a fixed calendar calculation, no input needed unless your business day assumptions change."
-  },
-  {
-    id: 'stage18_intro',
-    who: 'ai',
-    text: "Are there specific quarters — especially the first few post-launch — where you have actuals or updated guidance that should override the model's raw output?"
-  },
-  {
-    id: 'stage18_a1',
-    who: 'user',
-    text: "Yes, the first five quarters have actuals."
-  },
-  {
-    id: 'stage18_q1',
-    who: 'ai',
-    text: "Got it — what % adjustment should I apply to each of those quarters, and I'll reconcile the monthly detail underneath automatically.",
-    controls: [
-      { type: 'number', key: 'q4_2017_OverrideAdj', label: 'Q4-Year 2 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q1_2018_OverrideAdj', label: 'Q1-Year 3 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q2_2018_OverrideAdj', label: 'Q2-Year 3 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q3_2018_OverrideAdj', label: 'Q3-Year 3 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q4_2018_OverrideAdj', label: 'Q4-Year 3 Override Adjustment', unit: '%' }
-    ],
-    getUserReply: (s) => `Applied adjustments: Q4-17 (${(s.q4_2017_OverrideAdj*100).toFixed(0)}%), Q1-18 (${(s.q1_2018_OverrideAdj*100).toFixed(0)}%), Q2-18 (${(s.q2_2018_OverrideAdj*100).toFixed(0)}%), Q3-18 (${(s.q3_2018_OverrideAdj*100).toFixed(0)}%), Q4-18 (${(s.q4_2018_OverrideAdj*100).toFixed(0)}%)`,
-    getAssumptions: (s) => [
-      {k:'Q4-2017 Override', v: `${(s.q4_2017_OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q1-2018 Override', v: `${(s.q1_2018_OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q2-2018 Override', v: `${(s.q2_2018_OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q3-2018 Override', v: `${(s.q3_2018_OverrideAdj*100).toFixed(0)}%`},
-      {k:'Q4-2018 Override', v: `${(s.q4_2018_OverrideAdj*100).toFixed(0)}%`}
-    ]
   },
   {
     id: 'stage19_summary',
@@ -1872,48 +1773,6 @@ const chatScript: ChatStepDef[] = [
       5.0,
       4.0,
       3.0
-    ],
-    "pctORSReachedByMonth12": [
-      0.6,
-      0.65,
-      0.7,
-      0.75,
-      0.8
-    ],
-    "pctORSReachedByYear2": [
-      0.7,
-      0.75,
-      0.8,
-      0.85,
-      0.9
-    ],
-    "pctORSReachedByYear3Plus": [
-      0.75,
-      0.8,
-      0.85,
-      0.9,
-      0.95
-    ],
-    "pctPCPReachedByMonth12": [
-      0.4,
-      0.46,
-      0.524,
-      0.58,
-      0.64
-    ],
-    "pctPCPReachedByYear2": [
-      0.52,
-      0.56,
-      0.6,
-      0.64,
-      0.68
-    ],
-    "pctPCPReachedByYear3Plus": [
-      0.56,
-      0.6,
-      0.65,
-      0.7,
-      0.75
     ]
   },
   "6": {
@@ -2208,30 +2067,28 @@ const chatScript: ChatStepDef[] = [
 
   const f = getRebasedForecast(state);
   const scenarioF = getRebasedForecast(scenarioState);
-
-  // Dynamic rebasing for 13-point charts
-  const mapPointToYearIndex = (pointIndex: number) => {
-    if (pointIndex === 0) return 0; // Dec-17 -> Year 0
-    if (pointIndex <= 2) return 1;  // Jun-18, Dec-18 -> Year 1
-    if (pointIndex <= 4) return 2;  // Jun-19, Dec-19 -> Year 2
-    if (pointIndex <= 6) return 3;  // Jun-20, Dec-20 -> Year 3
-    if (pointIndex <= 8) return 4;  // Jun-21, Dec-21 -> Year 4
-    return 5;                       // Jun-22 to Dec-23 -> Year 5
+  const fAnnual = {
+    labels: buildSequentialLabels('Year ', Math.max(f.revenue.length - 1, 0)),
+    revenue: f.revenue.slice(1),
+    cumulativeRevenue: f.cumulativeRevenue.slice(1),
+    share: f.share.slice(1),
+    treatments: (f as any).zilrettaTreatments?.slice(1) ?? [],
+    actuals: (f as any).zilrettaActuals?.slice(1) ?? []
+  };
+  const scenarioAnnual = {
+    labels: buildSequentialLabels('Year ', Math.max(scenarioF.revenue.length - 1, 0)),
+    revenue: scenarioF.revenue.slice(1),
+    cumulativeRevenue: scenarioF.cumulativeRevenue.slice(1),
+    share: scenarioF.share.slice(1),
+    treatments: (scenarioF as any).zilrettaTreatments?.slice(1) ?? [],
+    actuals: (scenarioF as any).zilrettaActuals?.slice(1) ?? []
   };
 
-  const dynamicPatients = PATIENTS_BASE_13.map((baseVal, idx) => {
-    const i = mapPointToYearIndex(idx);
-    const ratio = baseF.patients[i] ? (f.patients[i] / baseF.patients[i]) : 1;
-    return Math.round(baseVal * ratio);
-  });
-
-  const dynamicShare = SHARE_BASE_13.map((baseVal, idx) => {
-    const i = mapPointToYearIndex(idx);
-    const ratio = baseF.share[i] ? (f.share[i] / baseF.share[i]) : 1;
-    // Convert fraction to percentage and clamp to 100%
-    const scaledPct = (baseVal * ratio) * 100;
-    return Math.min(scaledPct, 100); 
-  });
+  const monthlyTreatmentSeries = buildInterpolatedSeries(
+    fAnnual.treatments.map((v: number) => Number(v)),
+    MONTH_LABELS_60.length
+  ).map((v: number) => Math.round(v));
+  const monthlyShareSeries = buildInterpolatedSeries(fAnnual.share, MONTH_LABELS_60.length);
 
 
 
@@ -2253,7 +2110,7 @@ const chatScript: ChatStepDef[] = [
       <CollapsibleMainGroup title="1. Forecast setup" isOpen={openMainGroups.has('1. Forecast setup')} onToggle={() => toggleMainGroup('1. Forecast setup')}>
         <div style={{ padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border)', fontSize: '13.5px', color: 'var(--text)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px' }}>
-            <strong>Product:</strong> <span>Zilretta (triamcinolone acetonide ER)</span>
+            <strong>Product:</strong> <span>Product X</span>
             <strong>Indication:</strong> <span>OA Knee only</span>
             <strong>Geography:</strong> <span>US only</span>
           </div>
@@ -2369,12 +2226,6 @@ const chatScript: ChatStepDef[] = [
 
         <AccordionSection idx={5} title="4B. Market Uptake & Reach" color="#5b6abf" isOpen={openSections.has(5)} onQuickSet={(level) => handleQuickSet(5, level)} onToggle={() => toggleSection(5)}>
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Years to peak share")} fieldKey="yearsToPeak" stops={[7, 6, 5, 4, 3]} currentValue={s.yearsToPeak} unit=" yrs" onAskAI={() => openAiModal('yearsToPeak')} onChange={v => h('yearsToPeak', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Ortho/Rheum reached by month 12")} fieldKey="pctORSReachedByMonth12" stops={[0.60, 0.65, 0.70, 0.75, 0.80]} currentValue={s.pctORSReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctORSReachedByMonth12')} onChange={v => h('pctORSReachedByMonth12', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Ortho/Rheum reached by year 2")} fieldKey="pctORSReachedByYear2" stops={[0.70, 0.75, 0.80, 0.85, 0.90]} currentValue={s.pctORSReachedByYear2} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear2')} onChange={v => h('pctORSReachedByYear2', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Ortho/Rheum reached by year 3+")} fieldKey="pctORSReachedByYear3Plus" stops={[0.75, 0.80, 0.85, 0.90, 0.95]} currentValue={s.pctORSReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctORSReachedByYear3Plus')} onChange={v => h('pctORSReachedByYear3Plus', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("PCP/Other reached by month 12")} fieldKey="pctPCPReachedByMonth12" stops={[0.40, 0.46, 0.524, 0.58, 0.64]} currentValue={s.pctPCPReachedByMonth12} unit="%" onAskAI={() => openAiModal('pctPCPReachedByMonth12')} onChange={v => h('pctPCPReachedByMonth12', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("PCP/Other reached by year 2")} fieldKey="pctPCPReachedByYear2" stops={[0.52, 0.56, 0.60, 0.64, 0.68]} currentValue={s.pctPCPReachedByYear2} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear2')} onChange={v => h('pctPCPReachedByYear2', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("PCP/Other reached by year 3+")} fieldKey="pctPCPReachedByYear3Plus" stops={[0.56, 0.60, 0.65, 0.70, 0.75]} currentValue={s.pctPCPReachedByYear3Plus} unit="%" onAskAI={() => openAiModal('pctPCPReachedByYear3Plus')} onChange={v => h('pctPCPReachedByYear3Plus', v)} />
         </AccordionSection>
 
         <AccordionSection idx={6} title="4C. Access Friction" color="#d9534f" isOpen={openSections.has(6)} onQuickSet={(level) => handleQuickSet(6, level)} onToggle={() => toggleSection(6)}>
@@ -2387,14 +2238,14 @@ const chatScript: ChatStepDef[] = [
 
         <AccordionSection idx={7} title="4D. Competitive Events" color="#c0392b" isOpen={openSections.has(7)} onQuickSet={(level) => handleQuickSet(7, level)} onToggle={() => toggleSection(7)}>
           <div className="competitor-card">
-            <div className="competitor-card-title">Cingal (HA+steroid combo)</div>
+            <div className="competitor-card-title">Product Y</div>
             <DateOrNeverControl label={l("Launch Date")} fieldKey="cingalLaunchDate" value={s.cingalLaunchDate} onChange={v => h('cingalLaunchDate', v)} />
             <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention Ortho")} fieldKey="cingalRetentionOrtho" stops={[0.70, 0.72, 0.74, 0.78, 0.90]} currentValue={s.cingalRetentionOrtho} unit="%" onAskAI={() => openAiModal('cingalRetentionOrtho')} onChange={v => h('cingalRetentionOrtho', v)} />
             <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention PCP")} fieldKey="cingalRetentionPCP" stops={[0.80, 0.82, 0.85, 0.90, 1.00]} currentValue={s.cingalRetentionPCP} unit="%" onAskAI={() => openAiModal('cingalRetentionPCP')} onChange={v => h('cingalRetentionPCP', v)} />
           </div>
           
           <div className="competitor-card">
-            <div className="competitor-card-title">Ampion (biologic) — base case: Does Not Launch</div>
+            <div className="competitor-card-title">Product Z — base case: Does Not Launch</div>
             <DateOrNeverControl label={l("Launch Date")} fieldKey="ampionLaunchDate" value={s.ampionLaunchDate} onChange={v => h('ampionLaunchDate', v)} />
             <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention Ortho")} fieldKey="ampionRetentionOrtho" stops={[0.75, 0.80, 0.865, 0.90, 0.95]} currentValue={s.ampionRetentionOrtho} unit="%" onAskAI={() => openAiModal('ampionRetentionOrtho')} onChange={v => h('ampionRetentionOrtho', v)} />
             <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention PCP")} fieldKey="ampionRetentionPCP" stops={[0.75, 0.80, 0.84, 0.90, 0.95]} currentValue={s.ampionRetentionPCP} unit="%" onAskAI={() => openAiModal('ampionRetentionPCP')} onChange={v => h('ampionRetentionPCP', v)} />
@@ -2412,16 +2263,6 @@ const chatScript: ChatStepDef[] = [
       <CollapsibleMainGroup title="5. Volume & Revenue Output" isOpen={openMainGroups.has('5. Volume & Revenue Output')} onToggle={() => toggleMainGroup('5. Volume & Revenue Output')}>
         <AccordionSection idx={8} title="5A. Volume & Sampling" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Injection frequency (per patient/year)")} fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={s.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => h('frequencyOfInjectionsYearly', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Peak sampling intensity")} fieldKey="peakSamplingIntensity" stops={[0.05, 0.10, 0.15, 0.20, 0.25]} currentValue={s.peakSamplingIntensity} unit="%" onAskAI={() => openAiModal('peakSamplingIntensity')} onChange={v => h('peakSamplingIntensity', v)} />
-          <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Steady-state sample rate")} fieldKey="steadyStateSampleRate" stops={[0.01, 0.03, 0.05, 0.08, 0.10]} currentValue={s.steadyStateSampleRate} unit="%" onAskAI={() => openAiModal('steadyStateSampleRate')} onChange={v => h('steadyStateSampleRate', v)} />
-        </AccordionSection>
-
-        <AccordionSection idx={9} title={<>5B. Quarterly Overrides <span style={{ color: '#888' }}>(override is applied on the total zilretta treatments)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
-          <NumberControl asDropdown={asDropdown} label={l("Q4-Year 2 Override Adjustment")} fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q1-Year 3 Override Adjustment")} fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q2-Year 3 Override Adjustment")} fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q3-Year 3 Override Adjustment")} fieldKey="q3_2018_OverrideAdj" currentValue={s.q3_2018_OverrideAdj} unit="%" onChange={v => h('q3_2018_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q4-Year 3 Override Adjustment")} fieldKey="q4_2018_OverrideAdj" currentValue={s.q4_2018_OverrideAdj} unit="%" onChange={v => h('q4_2018_OverrideAdj', v)} />
         </AccordionSection>
       </CollapsibleMainGroup>
     </SliderContext.Provider>
@@ -2520,6 +2361,10 @@ const chatScript: ChatStepDef[] = [
   const exportScenariosHTML = () => {
     // BASE FORECAST DATA
     const basePeak = f.peakRevenue;
+    const baseAnnual = {
+      labels: buildSequentialLabels('Year ', Math.max(f.revenue.length - 1, 0)),
+      revenue: f.revenue.slice(1)
+    };
     const baseImpacts = [
       { name: 'Net price (direct)', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
       { name: 'Adherence boost', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
@@ -2531,17 +2376,18 @@ const chatScript: ChatStepDef[] = [
     // SCENARIOS COMPARISON DATA
     const tableRows = scenarios.map(sc => {
       const fc = getRebasedForecast(sc.s);
+      const fcAnnual = fc.revenue.slice(1);
       return `<tr>
         <td><strong>${sc.name}</strong></td>
         <td>${fmtPct(fc.adjustedPeakShare * 100)}</td>
         <td>${fmtM(sc.s.wacPrice)}</td>
         <td>${Math.ceil(sc.s.yearsToPeak)}</td>
         <td>${fmtM(fc.peakRevenue)}</td>
-        <td>${fmtM(fc.revenue[0])}</td>
-        <td>${fmtM(fc.revenue[1])}</td>
-        <td>${fmtM(fc.revenue[2])}</td>
-        <td>${fmtM(fc.revenue[3])}</td>
-        <td>${fmtM(fc.revenue[4])}</td>
+        <td>${fmtM(fcAnnual[0] ?? 0)}</td>
+        <td>${fmtM(fcAnnual[1] ?? 0)}</td>
+        <td>${fmtM(fcAnnual[2] ?? 0)}</td>
+        <td>${fmtM(fcAnnual[3] ?? 0)}</td>
+        <td>${fmtM(fcAnnual[4] ?? 0)}</td>
       </tr>`;
     }).join('');
 
@@ -2549,14 +2395,14 @@ const chatScript: ChatStepDef[] = [
       const fc = getRebasedForecast(sc.s);
       return {
         label: sc.name,
-        data: fc.revenue.slice(0, 5),
+        data: fc.revenue.slice(1, 6),
         backgroundColor: ['#e34948', '#898781', '#00b2a9', '#f25621', '#3b82f6'][i % 5] || '#94a3b8',
         borderRadius: 4
       };
     });
 
     const capturedAssumptions = [
-      { k: 'Product', v: 'Zilretta (triamcinolone acetonide ER)' },
+      { k: 'Product', v: 'Product X' },
       { k: 'Indication', v: 'OA Knee only' },
       { k: 'Geography', v: 'US only' },
       { k: 'Launch Date', v: 'Oct 2017' },
@@ -2571,23 +2417,68 @@ const chatScript: ChatStepDef[] = [
       { k: 'Other factors', v: 'None flagged' }
     ];
 
-    const baseAssumptionsRows = Object.entries(state).map(([key, val]) => {
-      const formattedKey = key
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, str => str.toUpperCase());
-      
+    // Keep the export schema explicit so removed/internal controls cannot leak
+    // into the downloadable HTML through Object.entries(state).
+    const exportAssumptions: Array<{ key: keyof ForecastState; name: string }> = [
+      { key: 'diagnosisRate', name: 'Diagnosis rate' },
+      { key: 'treatmentRate', name: 'Treatment rate' },
+      { key: 'addressableShare', name: 'Addressable share' },
+      { key: 'peakShare', name: 'Peak share' },
+      { key: 'yearsToPeak', name: 'Years to peak share' },
+      { key: 'netPrice', name: 'Net price' },
+      { key: 'injectionsPerYear', name: 'Injections per year' },
+      { key: 'compliance', name: 'Compliance' },
+      { key: 'launchDate', name: 'Launch date' },
+      { key: 'availabilityDate', name: 'Availability date' },
+      { key: 'forecastHorizonYears', name: 'Forecast horizon' },
+      { key: 'diagnosisAnnualGrowthRate', name: 'Diagnosis annual growth rate' },
+      { key: 'iasTreatedPctOfDiagnosed', name: 'IAS treated % of diagnosed' },
+      { key: 'iasTreatedGrowthRate', name: 'IAS treated annual growth' },
+      { key: 'haRatioToIAS', name: 'HA ratio to IAS' },
+      { key: 'haRatioGrowthRate', name: 'HA ratio annual growth' },
+      { key: 'iasAndHATreatedBoth', name: 'Treated with both (IAS + HA)' },
+      { key: 'initialAdditionalMarketGrowth', name: 'Additional market growth' },
+      { key: 'annualDecayRateOfAdditionalGrowth', name: 'Additional growth annual decay' },
+      { key: 'overstatementAdjFactor', name: 'Survey overstatement adjustment' },
+      { key: 'womacScoreAvailable', name: 'WOMAC score available' },
+      { key: 'diabetesGlycemicDataAvailable', name: 'Diabetes/glycemic data available' },
+      { key: 'wacPrice', name: 'WAC price' },
+      { key: 'newMarketResearchAdjOrtho', name: 'New market research adjustment (Ortho)' },
+      { key: 'newMarketResearchAdjRheum', name: 'New market research adjustment (Rheum/PCP)' },
+      { key: 'payerAccessRequirement', name: 'Payer access requirement' },
+      { key: 'pricingAdjFactorAccessImpact', name: 'Payer access price impact' },
+      { key: 'patientAssistanceProgramInPlace', name: 'Patient assistance program in place' },
+      { key: 'pricingAdjPatientAssistanceImpact', name: 'Patient assistance price impact' },
+      { key: 'jCodeWindowMonths', name: 'J-Code transition window (months)' },
+      { key: 'jCodeRetentionRate', name: 'J-Code retention rate' },
+      { key: 'refrigerationDurationMonths', name: 'Refrigeration duration (months)' },
+      { key: 'refrigerationRetentionORS', name: 'Refrigeration retention (Ortho/Rheum)' },
+      { key: 'refrigerationRetentionRheumOther', name: 'Refrigeration retention (PCP/Other)' },
+      { key: 'cingalLaunchDate', name: 'Product Y launch date' },
+      { key: 'cingalRetentionOrtho', name: 'Product Y retention (Ortho)' },
+      { key: 'cingalRetentionPCP', name: 'Product Y retention (PCP/Other)' },
+      { key: 'ampionLaunchDate', name: 'Product Z launch date' },
+      { key: 'ampionRetentionOrtho', name: 'Product Z retention (Ortho)' },
+      { key: 'ampionRetentionPCP', name: 'Product Z retention (PCP/Other)' },
+      { key: 'antiNGFLaunchDate', name: 'Product W launch date' },
+      { key: 'antiNGFRetentionOrtho', name: 'Product W retention (Ortho)' },
+      { key: 'antiNGFRetentionPCP', name: 'Product W retention (PCP/Other)' },
+      { key: 'frequencyOfInjectionsYearly', name: 'Frequency of injections (yearly)' }
+    ];
+
+    const baseAssumptionsRows = exportAssumptions.map(({ key, name }) => {
+      const val = state[key];
       let formattedVal = String(val);
       if (typeof val === 'number') {
-        const lower = formattedKey.toLowerCase();
-        if (lower.includes('price') || lower.includes('revenue')) {
+        if (name.toLowerCase().includes('price')) {
           formattedVal = '$' + val.toLocaleString();
-        } else if (val < 2 && val > -2 && val !== 0 && !lower.includes('year') && !lower.includes('month')) {
+        } else if (val < 2 && val > -2 && val !== 0 && !name.toLowerCase().includes('year') && !name.toLowerCase().includes('month')) {
           formattedVal = (Math.round(val * 1000) / 10).toString() + '%';
         } else {
           formattedVal = val.toLocaleString();
         }
       }
-      return { name: formattedKey, val: formattedVal };
+      return { name, val: formattedVal };
     });
 
     const htmlContent = `<!DOCTYPE html>
@@ -2644,9 +2535,9 @@ const chatScript: ChatStepDef[] = [
         <div class="metric"><div class="label">Net Rev - Peak</div><div class="value">${fmtM(f.peakRevenue)}</div></div>
         <div class="metric"><div class="label">Peak Share (Adj)</div><div class="value">${fmtPct((f as any).adjustedPeakShare * 100)}</div></div>
         <div class="metric"><div class="label">Peak Patients</div><div class="value">${fmtNum((f as any).adjustedPeakPatients)}</div></div>
-        <div class="metric"><div class="label">Year 1 Net Rev</div><div class="value">${fmtM(f.revenue[0])}</div></div>
-        <div class="metric"><div class="label">Year 2 Net Rev</div><div class="value">${fmtM(f.revenue[1])}</div></div>
-        <div class="metric"><div class="label">Year 3 Net Rev</div><div class="value">${fmtM(f.revenue[2])}</div></div>
+        <div class="metric"><div class="label">Year 1 Net Rev</div><div class="value">${fmtM(baseAnnual.revenue[0] ?? 0)}</div></div>
+        <div class="metric"><div class="label">Year 2 Net Rev</div><div class="value">${fmtM(baseAnnual.revenue[1] ?? 0)}</div></div>
+        <div class="metric"><div class="label">Year 3 Net Rev</div><div class="value">${fmtM(baseAnnual.revenue[2] ?? 0)}</div></div>
       </div>
       
       <div class="card">
@@ -2727,10 +2618,10 @@ const chatScript: ChatStepDef[] = [
     new Chart(document.getElementById('forecastLineChart'), {
       type: 'line',
       data: {
-        labels: ${JSON.stringify(f.years)},
+        labels: ${JSON.stringify(baseAnnual.labels)},
         datasets: [{
           label: 'Net Rev',
-          data: ${JSON.stringify(f.revenue)},
+          data: ${JSON.stringify(baseAnnual.revenue)},
           borderColor: '#2a78d6',
           backgroundColor: 'rgba(42,120,214,0.1)',
           fill: true,
@@ -2790,7 +2681,7 @@ const chatScript: ChatStepDef[] = [
     new Chart(document.getElementById('compareBarChart'), {
       type: 'bar',
       data: {
-        labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+        labels: ${JSON.stringify(baseAnnual.labels)},
         datasets: ${JSON.stringify(compareChartDatasets)}
       },
       options: {
@@ -3021,7 +2912,7 @@ const chatScript: ChatStepDef[] = [
                     const newAssumptions = [];
                     if (newFlowStep >= 3) {
                       newAssumptions.push(
-                        { k: 'Product', v: 'Zilretta (triamcinolone acetonide ER)' },
+                        { k: 'Product', v: 'Product X' },
                         { k: 'Indication', v: 'OA Knee only' },
                         { k: 'Geography', v: 'US only' },
                         { k: 'Launch Date', v: 'Oct 2017' },
@@ -3068,8 +2959,7 @@ const chatScript: ChatStepDef[] = [
               {resourceStages.map(stage => {
                 const isUnlocked = !stage.lockedBy
                   || (stage.id === 2 && [1, 2, 3].every(id => uploadedSheets[id]))
-                  || (stage.id === 3 && !!uploadedSheets[4])
-                  || (stage.id === 4 && !!uploadedSheets[5]);
+                  || (stage.id === 3 && !!uploadedSheets[4]);
 
                 return (
                   <div key={stage.id} style={{ background: '#fff', border: '1px solid #dde5ee', borderRadius: '14px', opacity: isUnlocked ? 1 : 0.48, overflow: 'hidden' }}>
@@ -3077,7 +2967,7 @@ const chatScript: ChatStepDef[] = [
                       <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: stage.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flex: '0 0 auto' }}>{stage.id}</div>
                       <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: stage.iconBg, color: stage.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flex: '0 0 auto' }}>{stage.icon}</div>
                       <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-                        <h2 style={{ margin: 0, color: '#13233a', fontSize: '16px', fontWeight: 800 }}>{stage.title}</h2>
+                        <h2 style={{ margin: 0, color: '#13233a', fontSize: '16px', fontWeight: 600 }}>{stage.title}</h2>
                         <p style={{ margin: '4px 0 0', color: '#7d8997', fontSize: '12px', lineHeight: 1.35 }}>{stage.description}</p>
                       </div>
                       {!isUnlocked && stage.lockedBy && (
@@ -3096,7 +2986,7 @@ const chatScript: ChatStepDef[] = [
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"></path><polyline points="14 2 14 7 19 7"></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg>
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <h3 style={{ margin: 0, color: '#16233a', fontSize: '13px', fontWeight: 800 }}>{sheet.title}</h3>
+                              <h3 style={{ margin: 0, color: '#16233a', fontSize: '13px', fontWeight: 600 }}>{sheet.title}</h3>
                               <p style={{ margin: '3px 0 0', color: isUploaded ? '#6fae9f' : '#9ca6b3', fontSize: '11px' }}>{isUploaded ? 'Data successfully processed' : sheet.subtitle}</p>
                             </div>
                           </div>
@@ -3107,7 +2997,21 @@ const chatScript: ChatStepDef[] = [
                                 e.target.value = '';
                               }
                             }} />
-                            <button type="button" onClick={() => setPreviewSheet(sheet.id)} disabled={!isUnlocked} style={{ background: '#fff', color: isUnlocked ? '#183968' : '#aeb6c2', border: '1px solid #b9c8dc', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: isUnlocked ? 'pointer' : 'not-allowed', opacity: isUnlocked ? 1 : 0.65 }}>View Sample</button>
+                            {isUploaded && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewSheet(sheet.id)}
+                                disabled={!isUnlocked}
+                                aria-label={`View uploaded data for ${sheet.title}`}
+                                title="View uploaded data"
+                                style={{ background: '#fff', color: isUnlocked ? '#183968' : '#aeb6c2', border: '1px solid #b9c8dc', borderRadius: '8px', width: '38px', height: '38px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: isUnlocked ? 'pointer' : 'not-allowed', opacity: isUnlocked ? 1 : 0.65 }}
+                              >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                                  <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                              </button>
+                            )}
                             <button type="button" onClick={() => {
                               if (!isUnlocked) return;
                               if (isUploaded) {
@@ -3198,15 +3102,15 @@ const chatScript: ChatStepDef[] = [
               </div>
               <div className="metric">
                 <div className="label">Year 1 Net Rev</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[0])}</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(fAnnual.revenue[0] ?? 0)}</div>
               </div>
               <div className="metric">
                 <div className="label">Year 2 Net Rev</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[1])}</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(fAnnual.revenue[1] ?? 0)}</div>
               </div>
               <div className="metric">
                 <div className="label">Year 3 Net Rev</div>
-                <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[2])}</div>
+                <div className="value" style={{ fontSize: '18px' }}>{fmtM(fAnnual.revenue[2] ?? 0)}</div>
               </div>
             </div>
 
@@ -3218,7 +3122,7 @@ const chatScript: ChatStepDef[] = [
             <div className="canvas-wrap">
               {activeTab === 5 && <Line 
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: f.years.map(y => `Year ${Number(y) - 2015}`), datasets: [{ label: 'Net Rev', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                data={{ labels: fAnnual.labels, datasets: [{ label: 'Net Rev', data: fAnnual.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
               />}
             </div>
           </div>
@@ -3231,7 +3135,7 @@ const chatScript: ChatStepDef[] = [
               <div className="canvas-wrap" style={{ height: '240px' }}>
                 {activeTab === 5 && <Line 
                   options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v: any) => fmtNum(Number(v)) } } } }}
-                  data={{ labels: CHART_LABELS_13, datasets: [{ label: 'Patients', data: dynamicPatients, borderColor: '#00b2a9', backgroundColor: 'rgba(0,178,169,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                  data={{ labels: MONTH_LABELS_60, datasets: [{ label: 'Patients', data: monthlyTreatmentSeries, borderColor: '#00b2a9', backgroundColor: 'rgba(0,178,169,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
                 />}
               </div>
             </div>
@@ -3240,7 +3144,7 @@ const chatScript: ChatStepDef[] = [
               <div className="canvas-wrap" style={{ height: '240px' }}>
                 {activeTab === 5 && <Line 
                   options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v: any) => `${Number(v).toFixed(1)}%` } } } }}
-                  data={{ labels: CHART_LABELS_13, datasets: [{ label: 'Share %', data: dynamicShare, borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                  data={{ labels: MONTH_LABELS_60, datasets: [{ label: 'Share %', data: monthlyShareSeries, borderColor: '#F25621', backgroundColor: 'rgba(242,86,33,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
                 />}
               </div>
             </div>
@@ -3253,18 +3157,12 @@ const chatScript: ChatStepDef[] = [
                 <tr><th>Year</th><th>Treatments</th><th>Net Rev</th></tr>
               </thead>
               <tbody>
-                {f.years.map((y, i) => {
-                  const actualRev = (f as any).zilrettaActuals?.[i];
-                  let actualDisplay = '-';
-                  if (actualRev !== null && actualRev !== undefined) {
-                    actualDisplay = fmtM(actualRev);
-                  }
-                  
+                {fAnnual.labels.map((label, i) => {
                   return (
                     <tr key={i}>
-                      <td>Year {Number(y) - 2015}</td>
-                      <td>{fmtNum((f as any).zilrettaTreatments[i])}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--teal)' }}>{fmtM(f.revenue[i])}</td>
+                      <td>{label}</td>
+                      <td>{fmtNum(fAnnual.treatments[i] ?? 0)}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--teal)' }}>{fmtM(fAnnual.revenue[i] ?? 0)}</td>
                     </tr>
                   );
                 })}
@@ -3454,9 +3352,9 @@ const chatScript: ChatStepDef[] = [
                   <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(scenarioF.peakRevenue)}</div></div>
                   <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum((scenarioF as any).adjustedPeakPatients)}</div></div>
                   <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct((scenarioF as any).adjustedPeakShare * 100)}</div></div>
-                  <div className="metric"><div className="label">Year 1 revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
-                  <div className="metric"><div className="label">Year 2 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
-                  <div className="metric"><div className="label">Year 3 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
+                  <div className="metric"><div className="label">Year 1 revenue</div><div className="value">{fmtM(scenarioAnnual.cumulativeRevenue[0] ?? 0)}</div></div>
+                  <div className="metric"><div className="label">Year 2 cumulative revenue</div><div className="value">{fmtM(scenarioAnnual.cumulativeRevenue[1] ?? 0)}</div></div>
+                  <div className="metric"><div className="label">Year 3 cumulative revenue</div><div className="value">{fmtM(scenarioAnnual.cumulativeRevenue[2] ?? 0)}</div></div>
                 </div>
               </div>
   
@@ -3466,9 +3364,9 @@ const chatScript: ChatStepDef[] = [
                   {activeTab === 6 && <Line 
                     options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
                     data={{
-                      labels: scenarioF.years.map(y => `Year ${Number(y) - 2015}`),
+                      labels: scenarioAnnual.labels,
                       datasets: [
-                        { label: 'Net Revenue', data: scenarioF.revenue, borderColor: '#0f7696', backgroundColor: 'rgba(15, 118, 150, 0.1)', tension: 0.3, fill: true, pointRadius: 4, pointHoverRadius: 6 }
+                        { label: 'Net Revenue', data: scenarioAnnual.revenue, borderColor: '#0f7696', backgroundColor: 'rgba(15, 118, 150, 0.1)', tension: 0.3, fill: true, pointRadius: 4, pointHoverRadius: 6 }
                       ]
                     }}
                   />}
@@ -3499,6 +3397,9 @@ const chatScript: ChatStepDef[] = [
               <tbody>
                 {scenarios.map((sc, i) => {
                   const fc = getRebasedForecast(sc.s);
+                  const fcAnnual = {
+                    revenue: fc.revenue.slice(1)
+                  };
                   return (
                     <tr key={i}>
                       <td><span className={`scenario-tag ${sc.tag}`}>{sc.name}</span></td>
@@ -3506,11 +3407,11 @@ const chatScript: ChatStepDef[] = [
                       <td>{fmtM(sc.s.wacPrice)}</td>
                       <td>{Math.ceil(sc.s.yearsToPeak)}</td>
                       <td>{fmtM(fc.peakRevenue)}</td>
-                      <td>{fmtM(fc.revenue[0])}</td>
-                      <td>{fmtM(fc.revenue[1])}</td>
-                      <td>{fmtM(fc.revenue[2])}</td>
-                      <td>{fmtM(fc.revenue[3])}</td>
-                      <td>{fmtM(fc.revenue[4])}</td>
+                      <td>{fmtM(fcAnnual.revenue[0] ?? 0)}</td>
+                      <td>{fmtM(fcAnnual.revenue[1] ?? 0)}</td>
+                      <td>{fmtM(fcAnnual.revenue[2] ?? 0)}</td>
+                      <td>{fmtM(fcAnnual.revenue[3] ?? 0)}</td>
+                      <td>{fmtM(fcAnnual.revenue[4] ?? 0)}</td>
                     </tr>
                   );
                 })}
@@ -3530,10 +3431,10 @@ const chatScript: ChatStepDef[] = [
                   scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } 
                 }}
                 data={{ 
-                  labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'], 
+                  labels: buildSequentialLabels('Year ', 5), 
                   datasets: scenarios.map((sc, i) => ({ 
                     label: sc.name, 
-                    data: getRebasedForecast(sc.s).revenue.slice(0, 5), 
+                    data: getRebasedForecast(sc.s).revenue.slice(1, 6), 
                     backgroundColor: ['#e34948', '#898781', '#00b2a9', '#f25621', '#3b82f6'][i % 5], 
                     borderRadius: 4 
                   })) 
@@ -3615,30 +3516,163 @@ const chatScript: ChatStepDef[] = [
           <div onClick={() => setPreviewSheet(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
             <div onClick={e => e.stopPropagation()} style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '800px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px' }}>{resourcePreviewData[previewSheet]?.title || `Sheet ${previewSheet}`} Sample</h2>
+                <h2 style={{ margin: 0, fontSize: '18px' }}>{resourcePreviewData[previewSheet]?.title || `Sheet ${previewSheet}`} Uploaded Data</h2>
                 <button onClick={() => setPreviewSheet(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sub)' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
               <div style={{ overflow: 'auto', flex: 1, border: '1px solid var(--line)', borderRadius: '8px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
-                    <tr>
-                      {(resourcePreviewData[previewSheet]?.headers || []).map((header, i) => (
-                        <th key={header} style={{ padding: '10px 12px', textAlign: i === 0 ? 'left' : 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>{header}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(resourcePreviewData[previewSheet]?.rows || []).map((row, rowIndex) => (
-                      <tr key={`${previewSheet}-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        {row.map((cell, cellIndex) => (
-                          <td key={`${previewSheet}-${rowIndex}-${cellIndex}`} style={{ padding: '10px 12px', textAlign: cellIndex === 0 ? 'left' : 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{cell}</td>
+                {previewSheet === 3 ? (
+                  <div style={{ padding: '12px' }}>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '14px' }}>
+                      <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Expected format - treatment rate & growth</div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ background: '#fff' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Metric</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['IAS Treated % of Diagnosed', '28.4%'],
+                            ['IAS Treated % - Annual Growth', '3.5%'],
+                            ['HA Ratio to IAS Treated', '30%'],
+                            ['HA Ratio - Annual Growth', '-1.0%'],
+                            ['Treated with Both (IAS + HA)', '15.0%'],
+                            ['Additional Market Growth - Promotion (Initial)', '5.5%'],
+                            ['Additional Market Growth - Annual Decay', '20.0%']
+                          ].map((row, rowIndex) => (
+                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '7px 12px', color: 'var(--ink)' }}>{row[0]}</td>
+                              <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{row[1]}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Specialty split (same research, by physician type)</div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ background: '#fff' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Specialty</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>IAS</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>HA</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Both</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['Orthopedic Surgeons', '32%', '41%', '27%'],
+                            ['Rheumatologists', '28%', '46%', '26%'],
+                            ['PCP / Other', '19%', '55%', '26%']
+                          ].map((row, rowIndex) => (
+                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '7px 12px', color: 'var(--ink)' }}>{row[0]}</td>
+                              <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[1]}</td>
+                              <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[2]}</td>
+                              <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[3]}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : previewSheet === 4 ? (
+                  <div style={{ padding: '12px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: '#f7f7fb', color: '#667085', fontSize: '11px', fontWeight: 700, marginBottom: '10px' }}>
+                      <span>Data Source:</span>
+                      <span style={{ color: '#475569' }}>Proprietary Market Research</span>
+                    </div>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ background: '#fff' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Price Point</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Ortho</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Rheum</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>PCP/Other</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['$400', '26.3%', '25.6%', '23.3%'],
+                            ['$575', '22.0%', '22.0%', '22.2%'],
+                            ['$800', '20.7%', '20.3%', '19.6%'],
+                            ['$1,000', '15.7%', '19.8%', '17.0%']
+                          ].map((row, rowIndex) => (
+                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              {row.map((cell, cellIndex) => (
+                                <td key={cellIndex} style={{ padding: '7px 12px', textAlign: cellIndex === 0 ? 'left' : 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{ padding: '8px 12px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', borderTop: '1px solid #e2e8f0' }}>
+                        Once uploaded, these values populate peak share and the price-based share curve in Assumptions.
+                      </div>
+                    </div>
+                  </div>
+                ) : previewSheet === 6 ? (
+                  <div style={{ padding: '12px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: '#f7f7fb', color: '#667085', fontSize: '11px', fontWeight: 700, marginBottom: '10px' }}>
+                      <span>Data Source:</span>
+                      <span style={{ color: '#475569' }}>Proprietary Market Research</span>
+                    </div>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ background: '#fff' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Factor / Event</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Timing</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Ortho/Rheum Retained</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>PCP/Other Retained</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['Payer access requirement', 'Ongoing', '96%', '94%'],
+                            ['Patient assistance program', 'Ongoing', '100%', '100%'],
+                            ['Reimbursement / coding transition', 'Auto-linked to launch', '60%', '60%'],
+                            ['Regulatory / guideline change', 'Year 1', '95%', '95%'],
+                            ['Competitive launch — Event 1', 'Year 2', '85%', '88%'],
+                            ['Competitive launch — Event 2', 'Year 3', '90%', '92%']
+                          ].map((row, rowIndex) => (
+                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              {row.map((cell, cellIndex) => (
+                                <td key={cellIndex} style={{ padding: '7px 12px', textAlign: cellIndex >= 2 ? 'right' : 'left', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{ padding: '8px 12px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', borderTop: '1px solid #e2e8f0' }}>
+                        This is the standard shape a PMR summary takes for share-impact questions - one factor per row, retention split by physician channel.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
+                      <tr>
+                        {(resourcePreviewData[previewSheet]?.headers || []).map((header, i) => (
+                          <th key={header} style={{ padding: '10px 12px', textAlign: i === 0 ? 'left' : 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>{header}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {(resourcePreviewData[previewSheet]?.rows || []).map((row, rowIndex) => (
+                        <tr key={`${previewSheet}-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          {row.map((cell, cellIndex) => (
+                            <td key={`${previewSheet}-${rowIndex}-${cellIndex}`} style={{ padding: '10px 12px', textAlign: cellIndex === 0 ? 'left' : 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>
@@ -3730,3 +3764,5 @@ const chatScript: ChatStepDef[] = [
     </>
   );
 }
+
+
