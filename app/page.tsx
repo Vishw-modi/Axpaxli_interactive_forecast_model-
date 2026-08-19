@@ -3076,15 +3076,76 @@ const exportScenariosHTML = async () => {
             const never = value === 'does_not_launch';
             return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label><div class="val">' + esc(never ? 'Never' : value) + '</div></div><div class="inline-row"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><input type="checkbox" ' + (never ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked ? \\'does_not_launch\\' : \\'2025-01\\')">Does not launch</label><input class="grow" type="month" value="' + (never ? '' : value) + '" ' + (never ? 'disabled' : '') + ' onchange="setField(\\'' + control.key + '\\', this.value)"></div></div>';
           }
-          // range
-          let display;
-          if (control.unit === '$') display = '$' + Number(value).toLocaleString('en-US');
-          else if (control.unit === ' mo') display = Number(value) + ' mo';
-          else if (control.unit === ' yrs') display = Number(value) + ' yrs';
-          else if (control.unit === ' /yr') display = Number(value).toFixed(1) + ' /yr';
-          else if (control.unit === '') display = Number(value).toLocaleString('en-US');
-          else display = formatPercent(Number(value) * 100);
-          return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label><div class="val">' + esc(display) + '</div></div><input type="range" min="' + control.min + '" max="' + control.max + '" step="' + control.step + '" value="' + value + '" oninput="setField(\\'' + control.key + '\\', this.value)"></div>';
+          // range -> dropdown
+          let optionsHtml = '';
+          const cMin = Number(control.min);
+          const cMax = Number(control.max);
+          const cValue = Number(value);
+          
+          const exactStopsMap = {
+            diagnosisRate: [0.048, 0.049, 0.051, 0.052, 0.053],
+            diagnosisAnnualGrowthRate: [0.019, 0.025, 0.032, 0.045, 0.055],
+            iasTreatedPctOfDiagnosed: [0.244, 0.264, 0.284, 0.304, 0.324],
+            iasTreatedGrowthRate: [0.01, 0.02, 0.03, 0.035, 0.04],
+            haRatioToIAS: [0.30, 0.40, 0.45, 0.50, 0.55],
+            haRatioGrowthRate: [-0.02, -0.015, -0.01, -0.005, 0.0],
+            iasAndHATreatedBoth: [0.10, 0.125, 0.15, 0.175, 0.20],
+            initialAdditionalMarketGrowth: [0.025, 0.035, 0.045, 0.055, 0.065],
+            annualDecayRateOfAdditionalGrowth: [0.15, 0.175, 0.20, 0.225, 0.25],
+            overstatementAdjFactor: [0.10, 0.16, 0.22, 0.25, 0.30],
+            wacPrice: [400, 500, 575, 800, 1000],
+            newMarketResearchAdjOrtho: [0.95, 1.10, 1.25, 1.40, 1.55],
+            newMarketResearchAdjRheum: [0.90, 0.95, 1.00, 1.05, 1.10],
+            pricingAdjFactorAccessImpact: [0.90, 0.92, 0.96, 0.97, 0.98],
+            pricingAdjPatientAssistanceImpact: [1.00, 1.05, 1.10, 1.15, 1.20],
+            yearsToPeak: [7, 6, 5, 4, 3],
+            jCodeWindowMonths: [6, 9, 12, 15, 18],
+            jCodeRetentionRate: [0.80, 0.84, 0.88, 0.91, 0.94],
+            refrigerationDurationMonths: [12, 15, 18, 24, 120],
+            refrigerationRetentionORS: [0.70, 0.80, 0.88, 0.92, 0.95],
+            refrigerationRetentionRheumOther: [0.70, 0.80, 0.88, 0.92, 0.95],
+            cingalRetentionOrtho: [0.70, 0.72, 0.74, 0.78, 0.90],
+            cingalRetentionPCP: [0.80, 0.82, 0.85, 0.90, 1.00],
+            ampionRetentionOrtho: [0.75, 0.80, 0.865, 0.90, 0.95],
+            ampionRetentionPCP: [0.75, 0.80, 0.84, 0.90, 0.95],
+            antiNGFRetentionOrtho: [0.80, 0.85, 0.90, 0.95, 1.00],
+            antiNGFRetentionPCP: [0.90, 0.92, 0.95, 0.97, 1.00],
+            frequencyOfInjectionsYearly: [1.0, 1.3, 1.5, 1.7, 2.0]
+          };
+          
+          const stops = exactStopsMap[control.key] || [
+            cMin,
+            cMin + (cMax - cMin) * 0.25,
+            cMin + (cMax - cMin) * 0.50,
+            cMin + (cMax - cMin) * 0.75,
+            cMax
+          ];
+          const labels = ['Conservative', 'Semi-Cons.', 'Centered', 'Semi-Agg.', 'Aggressive'];
+
+          let closestIdx = 0;
+          let minDiff = Infinity;
+          for (let i = 0; i < 5; i++) {
+             let diff = Math.abs(stops[i] - cValue);
+             if (diff < minDiff) {
+                 minDiff = diff;
+                 closestIdx = i;
+             }
+          }
+
+          for (let i = 0; i < 5; i++) {
+             let v = stops[i];
+             let safeV = parseFloat(v.toFixed(6));
+             let optDisplay;
+             if (control.unit === '$') optDisplay = '$' + safeV.toLocaleString('en-US');
+             else if (control.unit === ' mo') optDisplay = safeV + ' mo';
+             else if (control.unit === ' yrs') optDisplay = safeV + ' yrs';
+             else if (control.unit === ' /yr') optDisplay = safeV.toFixed(1) + ' /yr';
+             else if (control.unit === '') optDisplay = safeV.toLocaleString('en-US');
+             else optDisplay = formatPercent(safeV * 100);
+             let isSelected = (i === closestIdx) ? 'selected' : '';
+             optionsHtml += '<option value="' + safeV + '" ' + isSelected + '>' + labels[i] + ' (' + esc(optDisplay) + ')</option>';
+          }
+          return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + optionsHtml + '</select></div>';
         }).join('');
       }).join('');
       return '<div class="card"><div class="card-title">Model assumptions</div><div class="card-sub">Tweak the drivers below. Every change updates the forecast live.</div>' + html + '</div>';
