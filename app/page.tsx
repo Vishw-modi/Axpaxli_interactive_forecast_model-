@@ -707,6 +707,141 @@ type ChatStepDef = {
 
 const formatStop = (v: number, unit: string) => unit === '$' ? `$${v.toLocaleString()}` : `${(v * (unit === '%' ? 100 : 1)).toLocaleString()}${unit === '$' ? '' : unit}`;
 
+type ResourceSheet = {
+  id: number;
+  title: string;
+  subtitle: string;
+};
+
+type ResourceStage = {
+  id: number;
+  title: string;
+  description: string;
+  color: string;
+  iconBg: string;
+  icon: React.ReactNode;
+  lockedBy?: string;
+  sheets: ResourceSheet[];
+};
+
+const resourcePreviewData: Record<number, { title: string; headers: string[]; rows: string[][] }> = {
+  1: {
+    title: 'Epidemiology / Population Base',
+    headers: ['Year', 'Population', 'OA Knee Prevalence', 'Eligible Patients'],
+    rows: [
+      ['2025', '258,400,000', '14,920,000', '1,790,000'],
+      ['2026', '260,100,000', '15,070,000', '1,824,000'],
+      ['2027', '261,900,000', '15,260,000', '1,861,000']
+    ]
+  },
+  2: {
+    title: 'Diagnosed Patients (2016 IMS data)',
+    headers: ['Segment', '2016 Diagnosed', 'Diagnosis Rate', 'CAGR'],
+    rows: [
+      ['Orthopedics', '805,000', '88%', '2.4%'],
+      ['Rheumatology', '342,000', '82%', '1.7%'],
+      ['PCP / Other', '268,000', '74%', '1.2%']
+    ]
+  },
+  3: {
+    title: 'Treated Patients',
+    headers: ['Specialty', 'IAS Treated', 'HA Treated', 'Repeat Treatment'],
+    rows: [
+      ['Orthopedics', '612,000', '288,000', '42%'],
+      ['Rheumatology', '206,000', '94,000', '37%'],
+      ['PCP / Other', '138,000', '41,000', '28%']
+    ]
+  },
+  4: {
+    title: 'Preference Share Research',
+    headers: ['Specialty', 'Preference Share', 'WAC Price', 'Sample Size'],
+    rows: [
+      ['Orthopedics', '24%', '$760', '145'],
+      ['Rheumatology', '19%', '$760', '82'],
+      ['PCP / Other', '11%', '$760', '96']
+    ]
+  },
+  5: {
+    title: 'Payer / Access Requirements',
+    headers: ['Plan Type', 'Prior Auth', 'Step Edit', 'Access Impact'],
+    rows: [
+      ['Commercial', 'Yes', '1 step', '92%'],
+      ['Medicare', 'Yes', '2 steps', '84%'],
+      ['Managed Medicaid', 'Yes', '2 steps', '79%']
+    ]
+  },
+  6: {
+    title: 'Competitive Launch Tracker',
+    headers: ['Competitor', 'Expected Launch', 'Segment Impact', 'Share Retention'],
+    rows: [
+      ['Cingal', '2026 H2', 'HA switchers', '88%'],
+      ['Ampion', '2027 H1', 'IAS repeaters', '91%'],
+      ['Anti-NGF', '2028 H2', 'Pain specialists', '86%']
+    ]
+  },
+  7: {
+    title: 'Existing Forecast Model',
+    headers: ['Metric', 'Base Case', 'Low Case', 'High Case'],
+    rows: [
+      ['Peak Share', '21%', '16%', '26%'],
+      ['Years to Peak', '5', '6', '4'],
+      ['Peak Revenue', '$238M', '$174M', '$312M']
+    ]
+  }
+};
+
+const resourceStages: ResourceStage[] = [
+  {
+    id: 1,
+    title: 'Demand',
+    description: 'Population base and diagnosed/treated-patient counts',
+    color: '#2f78bd',
+    iconBg: '#e4f1fb',
+    icon: 'D',
+    sheets: [
+      { id: 1, title: 'Epidemiology / Population Base', subtitle: 'Pending upload' },
+      { id: 2, title: 'Diagnosed Patients (2016 IMS data)', subtitle: 'Pending upload' },
+      { id: 3, title: 'Treated Patients (by specialty & segment)', subtitle: 'Pending upload' }
+    ]
+  },
+  {
+    id: 2,
+    title: 'Share & Pricing',
+    description: 'Preference share research - WAC price is captured in the same dataset, not separately',
+    color: '#b187d7',
+    iconBg: '#f1e9fb',
+    icon: 'S',
+    lockedBy: 'Demand',
+    sheets: [
+      { id: 4, title: 'Preference Share Research (incl. WAC Price)', subtitle: 'Pending upload' }
+    ]
+  },
+  {
+    id: 3,
+    title: 'Payer Access',
+    description: 'Prior-authorization / step-edit requirements and patient assistance data',
+    color: '#7fb9ae',
+    iconBg: '#e8f6f3',
+    icon: 'P',
+    lockedBy: 'Share & Pricing',
+    sheets: [
+      { id: 5, title: 'Payer / Access Requirements', subtitle: 'Pending upload' }
+    ]
+  },
+  {
+    id: 4,
+    title: 'Competitive Adjustments',
+    description: 'Competitor launch timing and expected share impact',
+    color: '#e7aa7f',
+    iconBg: '#fff0e8',
+    icon: 'C',
+    lockedBy: 'Payer Access',
+    sheets: [
+      { id: 6, title: 'Competitive Launch Tracker', subtitle: 'Pending upload' }
+    ]
+  }
+];
+
 const newFlowScript = [
   { who: 'ai', text: "Hello! I'm your forecasting assistant. How can I help you today?", step: 1 },
   { who: 'user', text: "I want to build a forecast for Zilretta.", step: 1 },
@@ -829,8 +964,8 @@ const newFlowScript = [
 <br><br>
 For epi and diagnosis, a few options: Census, DRG claims, IMS/IQVIA, or Kantar.<br/>
 For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims. Do you have access to any of these directly?`, step: 3 },
-  { who: 'user', text: "We have 2016 IMS data on diagnosed OA Knee patients, and proprietary market research for treated-patient splits.", step: 3 },
-  { who: 'ai', text: "Good — <strong>Census</strong> for the population base, your <strong>2016 IMS data</strong> for diagnosis (both by age band, since patterns shift quite a bit across age groups here), and your <strong>proprietary research</strong> for treated-patient splits. I'd use that same research for <strong>Share</strong> — Peak Share and Time to Peak — supplemented with <strong>brand planning</strong>, and for <strong>Finance</strong>, WAC price from brand planning too.", step: 3 },
+  { who: 'user', text: "We have Year 1 IMS Data on diagnosed OA Knee patients, and proprietary market research for treated-patient splits.", step: 3 },
+  { who: 'ai', text: "Good — <strong>Census</strong> for the population base, your <strong>Year 1 IMS Data</strong> for diagnosis (both by age band, since patterns shift quite a bit across age groups here), and your <strong>proprietary research</strong> for treated-patient splits. I'd use that same research for <strong>Share</strong> — Peak Share and Time to Peak — supplemented with <strong>brand planning</strong>, and for <strong>Finance</strong>, WAC price from brand planning too.", step: 3 },
   { who: 'ai', text: "Last category — <strong>Other Adjustments</strong>. Usual factors for a forecast like this: payer access/reimbursement friction, competitive launches, and broader market events. Anything relevant, and would that be research-driven too?", step: 3 },
   { who: 'user', text: "Yes — access and competitive launches, same proprietary research.", step: 3 },
   { who: 'ai', text: "That covers everything. Let's move to uploading the inputs from Census, IMS diagnosed, and market research data sources before finalizing the parameters and assumptions.", step: 4 }
@@ -941,7 +1076,7 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage2_q1',
     who: 'ai',
-    text: "Before we set a diagnosis rate, let's validate the underlying data. Here's the 2016 IMS PharMetrics count of insured OA Knee diagnosed patients by age bracket, plus our uninsured estimate.",
+    text: "Before we set a diagnosis rate, let's validate the underlying data. Here's the Year 1 IMS PharMetrics count of insured OA Knee diagnosed patients by age bracket, plus our uninsured estimate.",
     dataSnippet: {
       headers: ['IMS 2016 Data', 'OAK patients insured', 'OAK patients w/o insured'],
       rows: [
@@ -968,7 +1103,7 @@ const chatScript: ChatStepDef[] = [
     id: 'stage2_a1',
     who: 'user',
     text: "Not right now — use what's on file.",
-    getAssumptions: () => [{k:'Diagnosis Data Source', v:'2016 IMS PharMetrics (Default)'}]
+    getAssumptions: () => [{k:'Diagnosis Data Source', v:'Year 1 IMS PharMetrics (Default)'}]
   },
   {
     id: 'stage2_q4',
@@ -1499,11 +1634,11 @@ const chatScript: ChatStepDef[] = [
     who: 'ai',
     text: "Got it — what % adjustment should I apply to each of those quarters, and I'll reconcile the monthly detail underneath automatically.",
     controls: [
-      { type: 'number', key: 'q4_2017_OverrideAdj', label: 'Q4-2017 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q1_2018_OverrideAdj', label: 'Q1-2018 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q2_2018_OverrideAdj', label: 'Q2-2018 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q3_2018_OverrideAdj', label: 'Q3-2018 Override Adjustment', unit: '%' },
-      { type: 'number', key: 'q4_2018_OverrideAdj', label: 'Q4-2018 Override Adjustment', unit: '%' }
+      { type: 'number', key: 'q4_2017_OverrideAdj', label: 'Q4-Year 2 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q1_2018_OverrideAdj', label: 'Q1-Year 3 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q2_2018_OverrideAdj', label: 'Q2-Year 3 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q3_2018_OverrideAdj', label: 'Q3-Year 3 Override Adjustment', unit: '%' },
+      { type: 'number', key: 'q4_2018_OverrideAdj', label: 'Q4-Year 3 Override Adjustment', unit: '%' }
     ],
     getUserReply: (s) => `Applied adjustments: Q4-17 (${(s.q4_2017_OverrideAdj*100).toFixed(0)}%), Q1-18 (${(s.q1_2018_OverrideAdj*100).toFixed(0)}%), Q2-18 (${(s.q2_2018_OverrideAdj*100).toFixed(0)}%), Q3-18 (${(s.q3_2018_OverrideAdj*100).toFixed(0)}%), Q4-18 (${(s.q4_2018_OverrideAdj*100).toFixed(0)}%)`,
     getAssumptions: (s) => [
@@ -2152,7 +2287,7 @@ const chatScript: ChatStepDef[] = [
         <AccordionSection idx={1} title="2B. Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
           <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
             <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-              2016 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age) <InfoTooltip text="Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range" />
+              Year 1 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age) <InfoTooltip text="Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range" />
             </div>
             {!asDropdown && (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -2282,11 +2417,11 @@ const chatScript: ChatStepDef[] = [
         </AccordionSection>
 
         <AccordionSection idx={9} title={<>5B. Quarterly Overrides <span style={{ color: '#888' }}>(override is applied on the total zilretta treatments)</span></>} color="#e07b2a" isOpen={openSections.has(9)} onQuickSet={(level) => handleQuickSet(9, level)} onToggle={() => toggleSection(9)}>
-          <NumberControl asDropdown={asDropdown} label={l("Q4-2017 Override Adjustment")} fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q1-2018 Override Adjustment")} fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q2-2018 Override Adjustment")} fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q3-2018 Override Adjustment")} fieldKey="q3_2018_OverrideAdj" currentValue={s.q3_2018_OverrideAdj} unit="%" onChange={v => h('q3_2018_OverrideAdj', v)} />
-          <NumberControl asDropdown={asDropdown} label={l("Q4-2018 Override Adjustment")} fieldKey="q4_2018_OverrideAdj" currentValue={s.q4_2018_OverrideAdj} unit="%" onChange={v => h('q4_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q4-Year 2 Override Adjustment")} fieldKey="q4_2017_OverrideAdj" currentValue={s.q4_2017_OverrideAdj} unit="%" onChange={v => h('q4_2017_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q1-Year 3 Override Adjustment")} fieldKey="q1_2018_OverrideAdj" currentValue={s.q1_2018_OverrideAdj} unit="%" onChange={v => h('q1_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q2-Year 3 Override Adjustment")} fieldKey="q2_2018_OverrideAdj" currentValue={s.q2_2018_OverrideAdj} unit="%" onChange={v => h('q2_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q3-Year 3 Override Adjustment")} fieldKey="q3_2018_OverrideAdj" currentValue={s.q3_2018_OverrideAdj} unit="%" onChange={v => h('q3_2018_OverrideAdj', v)} />
+          <NumberControl asDropdown={asDropdown} label={l("Q4-Year 3 Override Adjustment")} fieldKey="q4_2018_OverrideAdj" currentValue={s.q4_2018_OverrideAdj} unit="%" onChange={v => h('q4_2018_OverrideAdj', v)} />
         </AccordionSection>
       </CollapsibleMainGroup>
     </SliderContext.Provider>
@@ -2509,9 +2644,9 @@ const chatScript: ChatStepDef[] = [
         <div class="metric"><div class="label">Net Rev - Peak</div><div class="value">${fmtM(f.peakRevenue)}</div></div>
         <div class="metric"><div class="label">Peak Share (Adj)</div><div class="value">${fmtPct((f as any).adjustedPeakShare * 100)}</div></div>
         <div class="metric"><div class="label">Peak Patients</div><div class="value">${fmtNum((f as any).adjustedPeakPatients)}</div></div>
-        <div class="metric"><div class="label">2016 Net Rev</div><div class="value">${fmtM(f.revenue[0])}</div></div>
-        <div class="metric"><div class="label">2017 Net Rev</div><div class="value">${fmtM(f.revenue[1])}</div></div>
-        <div class="metric"><div class="label">2018 Net Rev</div><div class="value">${fmtM(f.revenue[2])}</div></div>
+        <div class="metric"><div class="label">Year 1 Net Rev</div><div class="value">${fmtM(f.revenue[0])}</div></div>
+        <div class="metric"><div class="label">Year 2 Net Rev</div><div class="value">${fmtM(f.revenue[1])}</div></div>
+        <div class="metric"><div class="label">Year 3 Net Rev</div><div class="value">${fmtM(f.revenue[2])}</div></div>
       </div>
       
       <div class="card">
@@ -2534,7 +2669,7 @@ const chatScript: ChatStepDef[] = [
         <h3>Summary</h3>
         <table>
           <thead>
-            <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>2016 net</th><th>2017 net</th><th>2018 net</th><th>2019 net</th><th>2020 net</th></tr>
+            <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1 net</th><th>Year 2 net</th><th>Year 3 net</th><th>Year 4 net</th><th>Year 5 net</th></tr>
           </thead>
           <tbody>
             ${tableRows}
@@ -2655,7 +2790,7 @@ const chatScript: ChatStepDef[] = [
     new Chart(document.getElementById('compareBarChart'), {
       type: 'bar',
       data: {
-        labels: ['2016', '2017', '2018', '2019', '2020'],
+        labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
         datasets: ${JSON.stringify(compareChartDatasets)}
       },
       options: {
@@ -2719,7 +2854,7 @@ const chatScript: ChatStepDef[] = [
         })}
       </nav>
 
-      <main className={`main-content ${[2, 5, 6].includes(activeTab) ? 'wide' : ''}`}>
+      <main className="main-content" style={{ maxWidth: [2, 5, 6].includes(activeTab) ? "100%" : "1080px", margin: "0 auto", padding: [2, 5, 6].includes(activeTab) ? "28px" : "28px 24px 80px", width: "100%" }}>
         {/* PAGE 1 : WELCOME */}
         <section className={`page ${activeTab === 1 ? 'active' : ''}`} id="page-1">
           <h1>Forecast through conversation, not spreadsheets</h1>
@@ -2833,7 +2968,7 @@ const chatScript: ChatStepDef[] = [
                               <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#616b77', lineHeight: 1.5 }}>A quick sequential upload — census, IMS, and your market research — before Assumptions opens with those values already in place, editable via sliders, categorical options, and AI-calculated Conservative → Aggressive ranges.</p>
                               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📄 Census population data</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📊 2016 IMS diagnosed-patient data</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📊 Year 1 IMS diagnosed-patient data</span>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>✏️ Proprietary market research</span>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>⬆️ Existing forecast model (optional)</span>
                               </div>
@@ -2928,72 +3063,101 @@ const chatScript: ChatStepDef[] = [
 
         {/* PAGE 3 : RESOURCE GATHERING */}
         <section className={`page ${activeTab === 3 ? 'active' : ''}`} id="page-3">
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', textAlign: 'center' }}>
-              <div>
-                <h1 style={{ marginBottom: '8px' }}>Resource Gathering</h1>
-                <p className="lead" style={{ margin: 0 }}>Please upload the required data sheets so the forecast model can populate accurately.</p>
-              </div>
-            </div>
-            <div className="grid3" style={{ gridTemplateColumns: '1fr', gap: '16px' }}>
-              {[
-                { id: 1, name: 'Census population data' },
-                { id: 2, name: '2016 IMS diagnosed-patient data' },
-                { id: 3, name: 'Proprietary market research' },
-                { id: 4, name: 'Existing forecast model (optional)' }
-              ].map(sheet => {
-                const sheetNum = sheet.id;
-                const isUploaded = uploadedSheets[sheetNum];
+          <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {resourceStages.map(stage => {
+                const isUnlocked = !stage.lockedBy
+                  || (stage.id === 2 && [1, 2, 3].every(id => uploadedSheets[id]))
+                  || (stage.id === 3 && !!uploadedSheets[4])
+                  || (stage.id === 4 && !!uploadedSheets[5]);
+
                 return (
-                  <div key={sheetNum} className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: isUploaded ? '#e6f7f6' : '#f1f5f9', color: isUploaded ? '#00b2a9' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                  <div key={stage.id} style={{ background: '#fff', border: '1px solid #dde5ee', borderRadius: '14px', opacity: isUnlocked ? 1 : 0.48, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minHeight: '68px', padding: '16px 22px', background: '#fbfcfe', borderBottom: '1px solid #e7edf4' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: stage.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flex: '0 0 auto' }}>{stage.id}</div>
+                      <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: stage.iconBg, color: stage.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, flex: '0 0 auto' }}>{stage.icon}</div>
+                      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                        <h2 style={{ margin: 0, color: '#13233a', fontSize: '16px', fontWeight: 800 }}>{stage.title}</h2>
+                        <p style={{ margin: '4px 0 0', color: '#7d8997', fontSize: '12px', lineHeight: 1.35 }}>{stage.description}</p>
                       </div>
-                      <div>
-                        <h3 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{sheet.name}</h3>
-                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--sub)' }}>{isUploaded ? 'Data successfully processed' : 'Pending upload'}</p>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <input 
-                        type="file" 
-                        id={`file-upload-${sheetNum}`} 
-                        style={{ display: 'none' }} 
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
-                            setUploadedSheets(prev => ({ ...prev, [sheetNum]: true }));
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                      {isUploaded && (
-                        <button className="btn" onClick={() => setPreviewSheet(sheetNum)} style={{ padding: '6px 12px', fontSize: '13px' }}>Preview data</button>
+                      {!isUnlocked && stage.lockedBy && (
+                        <div style={{ borderRadius: '999px', background: '#f7f9fb', color: '#98a2ae', padding: '7px 12px', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          <span style={{ color: '#f0a54a', marginRight: '5px' }}>lock</span> Unlocks after {stage.lockedBy}
+                        </div>
                       )}
-                      <button 
-                        className={`btn ${isUploaded ? '' : 'primary'}`} 
-                        onClick={() => {
-                          if (isUploaded) {
-                            setUploadedSheets(prev => ({ ...prev, [sheetNum]: false }));
-                          } else {
-                            document.getElementById(`file-upload-${sheetNum}`)?.click();
-                          }
-                        }} 
-                        style={{ padding: '6px 12px', fontSize: '13px', background: isUploaded ? 'transparent' : undefined, color: isUploaded ? 'var(--sub)' : undefined, border: isUploaded ? '1px solid var(--line)' : undefined }}
-                      >
-                        {isUploaded ? 'Remove' : 'Upload File'}
-                      </button>
                     </div>
+
+                    {stage.sheets.map(sheet => {
+                      const isUploaded = !!uploadedSheets[sheet.id];
+                      return (
+                        <div key={sheet.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '18px', minHeight: '62px', padding: '14px 22px', borderTop: '1px solid #edf1f5' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                            <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: isUploaded ? '#eaf8f5' : '#f7f8fb', color: isUploaded ? '#6fae9f' : '#d7dce5', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"></path><polyline points="14 2 14 7 19 7"></polyline><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="15" y2="17"></line></svg>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <h3 style={{ margin: 0, color: '#16233a', fontSize: '13px', fontWeight: 800 }}>{sheet.title}</h3>
+                              <p style={{ margin: '3px 0 0', color: isUploaded ? '#6fae9f' : '#9ca6b3', fontSize: '11px' }}>{isUploaded ? 'Data successfully processed' : sheet.subtitle}</p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: '0 0 auto' }}>
+                            <input type="file" id={`file-upload-${sheet.id}`} accept=".csv,.xlsx,.xls" style={{ display: 'none' }} disabled={!isUnlocked} onChange={(e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                setUploadedSheets(prev => ({ ...prev, [sheet.id]: true }));
+                                e.target.value = '';
+                              }
+                            }} />
+                            <button type="button" onClick={() => setPreviewSheet(sheet.id)} disabled={!isUnlocked} style={{ background: '#fff', color: isUnlocked ? '#183968' : '#aeb6c2', border: '1px solid #b9c8dc', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: isUnlocked ? 'pointer' : 'not-allowed', opacity: isUnlocked ? 1 : 0.65 }}>View Sample</button>
+                            <button type="button" onClick={() => {
+                              if (!isUnlocked) return;
+                              if (isUploaded) {
+                                setUploadedSheets(prev => ({ ...prev, [sheet.id]: false }));
+                              } else {
+                                document.getElementById(`file-upload-${sheet.id}`)?.click();
+                              }
+                            }} disabled={!isUnlocked} style={{ background: isUploaded ? '#fff' : '#1f3d70', color: isUploaded ? '#677487' : '#fff', border: isUploaded ? '1px solid #d2dae5' : '1px solid #1f3d70', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: isUnlocked ? 'pointer' : 'not-allowed', opacity: isUnlocked ? 1 : 0.65 }}>
+                              {isUploaded ? 'Remove' : 'Upload File'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '18px', minHeight: '72px', background: '#fff', border: '1px dashed #aab8cc', borderRadius: '14px', padding: '14px 22px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#f6f8fb', color: '#243a61', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 800 }}>UP</div>
+                  <div style={{ minWidth: 0 }}>
+                    <h3 style={{ margin: 0, color: '#13233a', fontSize: '14px', fontWeight: 800 }}>Existing Forecast Model <span style={{ fontWeight: 600 }}>(optional)</span></h3>
+                    <p style={{ margin: '5px 0 0', color: '#1d355c', fontSize: '12px', lineHeight: 1.35 }}>Have a prior model already? Upload it and the AI cross-checks its own recommendations against it before finalizing Assumptions.</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', flex: '0 0 auto' }}>
+                  <input type="file" id="file-upload-7" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setUploadedSheets(prev => ({ ...prev, 7: true }));
+                      e.target.value = '';
+                    }
+                  }} />
+                  <button type="button" onClick={() => {
+                    if (uploadedSheets[7]) {
+                      setUploadedSheets(prev => ({ ...prev, 7: false }));
+                    } else {
+                      document.getElementById('file-upload-7')?.click();
+                    }
+                  }} style={{ background: uploadedSheets[7] ? '#fff' : '#6b7788', color: uploadedSheets[7] ? '#677487' : '#fff', border: uploadedSheets[7] ? '1px solid #d2dae5' : '1px solid #6b7788', borderRadius: '8px', padding: '8px 16px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                    {uploadedSheets[7] ? 'Remove' : 'Upload File'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-start' }}>
-               <button className="btn primary" onClick={() => goPage(4)} style={{ padding: '10px 20px' }}>Continue to Assumptions →</button>
+            <div style={{ marginTop: '22px', display: 'flex', justifyContent: 'center' }}>
+               <button className="btn primary" onClick={() => goPage(4)} style={{ padding: '14px 28px', background: '#1f3d70', borderRadius: '9px', fontSize: '15px' }}>Continue to Assumptions -&gt;</button>
             </div>
           </div>
         </section>
-
         {/* PAGE 4 : ASSUMPTIONS REVIEW */}
         <section className={`page ${activeTab === 4 ? 'active' : ''}`} id="page-4">
           <h1>Assumptions review</h1>
@@ -3033,15 +3197,15 @@ const chatScript: ChatStepDef[] = [
                 <div className="value" style={{ fontSize: '18px' }}>{fmtNum((f as any).adjustedPeakPatients)}</div>
               </div>
               <div className="metric">
-                <div className="label">2016 Net Rev</div>
+                <div className="label">Year 1 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[0])}</div>
               </div>
               <div className="metric">
-                <div className="label">2017 Net Rev</div>
+                <div className="label">Year 2 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[1])}</div>
               </div>
               <div className="metric">
-                <div className="label">2018 Net Rev</div>
+                <div className="label">Year 3 Net Rev</div>
                 <div className="value" style={{ fontSize: '18px' }}>{fmtM(f.revenue[2])}</div>
               </div>
             </div>
@@ -3054,7 +3218,7 @@ const chatScript: ChatStepDef[] = [
             <div className="canvas-wrap">
               {activeTab === 5 && <Line 
                 options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
-                data={{ labels: f.years, datasets: [{ label: 'Net Rev', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
+                data={{ labels: f.years.map(y => `Year ${Number(y) - 2015}`), datasets: [{ label: 'Net Rev', data: f.revenue, borderColor: '#2a78d6', backgroundColor: 'rgba(42,120,214,0.1)', fill: true, tension: 0.3, pointRadius: 3 }] }} 
               />}
             </div>
           </div>
@@ -3098,7 +3262,7 @@ const chatScript: ChatStepDef[] = [
                   
                   return (
                     <tr key={i}>
-                      <td>{y}</td>
+                      <td>Year {Number(y) - 2015}</td>
                       <td>{fmtNum((f as any).zilrettaTreatments[i])}</td>
                       <td style={{ fontWeight: 600, color: 'var(--teal)' }}>{fmtM(f.revenue[i])}</td>
                     </tr>
@@ -3290,9 +3454,9 @@ const chatScript: ChatStepDef[] = [
                   <div className="metric"><div className="label">Peak-year revenue</div><div className="value">{fmtM(scenarioF.peakRevenue)}</div></div>
                   <div className="metric"><div className="label">Peak patients</div><div className="value">{fmtNum((scenarioF as any).adjustedPeakPatients)}</div></div>
                   <div className="metric"><div className="label">Peak market share</div><div className="value">{fmtPct((scenarioF as any).adjustedPeakShare * 100)}</div></div>
-                  <div className="metric"><div className="label">2016 revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
-                  <div className="metric"><div className="label">2017 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
-                  <div className="metric"><div className="label">2018 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
+                  <div className="metric"><div className="label">Year 1 revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[0])}</div></div>
+                  <div className="metric"><div className="label">Year 2 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[1])}</div></div>
+                  <div className="metric"><div className="label">Year 3 cumulative revenue</div><div className="value">{fmtM(scenarioF.cumulativeRevenue[2])}</div></div>
                 </div>
               </div>
   
@@ -3302,7 +3466,7 @@ const chatScript: ChatStepDef[] = [
                   {activeTab === 6 && <Line 
                     options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } }}
                     data={{
-                      labels: scenarioF.years,
+                      labels: scenarioF.years.map(y => `Year ${Number(y) - 2015}`),
                       datasets: [
                         { label: 'Net Revenue', data: scenarioF.revenue, borderColor: '#0f7696', backgroundColor: 'rgba(15, 118, 150, 0.1)', tension: 0.3, fill: true, pointRadius: 4, pointHoverRadius: 6 }
                       ]
@@ -3330,7 +3494,7 @@ const chatScript: ChatStepDef[] = [
             <div style={{ overflowX: 'auto' }}>
               <table id="compareTable" style={{ whiteSpace: 'nowrap', width: '100%' }}>
                 <thead>
-                  <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>2016 net</th><th>2017 net</th><th>2018 net</th><th>2019 net</th><th>2020 net</th></tr>
+                  <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1 net</th><th>Year 2 net</th><th>Year 3 net</th><th>Year 4 net</th><th>Year 5 net</th></tr>
                 </thead>
               <tbody>
                 {scenarios.map((sc, i) => {
@@ -3366,7 +3530,7 @@ const chatScript: ChatStepDef[] = [
                   scales: { y: { ticks: { callback: v => fmtM(Number(v)) } } } 
                 }}
                 data={{ 
-                  labels: ['2016', '2017', '2018', '2019', '2020'], 
+                  labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'], 
                   datasets: scenarios.map((sc, i) => ({ 
                     label: sc.name, 
                     data: getRebasedForecast(sc.s).revenue.slice(0, 5), 
@@ -3451,7 +3615,7 @@ const chatScript: ChatStepDef[] = [
           <div onClick={() => setPreviewSheet(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
             <div onClick={e => e.stopPropagation()} style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '800px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px' }}>Sheet {previewSheet} Preview</h2>
+                <h2 style={{ margin: 0, fontSize: '18px' }}>{resourcePreviewData[previewSheet]?.title || `Sheet ${previewSheet}`} Sample</h2>
                 <button onClick={() => setPreviewSheet(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sub)' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -3460,21 +3624,17 @@ const chatScript: ChatStepDef[] = [
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
                     <tr>
-                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>ID</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>Metric</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>2016</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>2017</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>2018</th>
+                      {(resourcePreviewData[previewSheet]?.headers || []).map((header, i) => (
+                        <th key={header} style={{ padding: '10px 12px', textAlign: i === 0 ? 'left' : 'right', borderBottom: '1px solid var(--line)', color: 'var(--sub)' }}>{header}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {[1,2,3,4,5,6,7,8,9,10].map(row => (
-                      <tr key={row} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 12px', color: 'var(--ink)' }}>{row}00{previewSheet}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--ink)' }}>Sample Metric {row}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ink)' }}>{(Math.random() * 100).toFixed(1)}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ink)' }}>{(Math.random() * 100).toFixed(1)}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ink)' }}>{(Math.random() * 100).toFixed(1)}</td>
+                    {(resourcePreviewData[previewSheet]?.rows || []).map((row, rowIndex) => (
+                      <tr key={`${previewSheet}-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        {row.map((cell, cellIndex) => (
+                          <td key={`${previewSheet}-${rowIndex}-${cellIndex}`} style={{ padding: '10px 12px', textAlign: cellIndex === 0 ? 'left' : 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{cell}</td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
