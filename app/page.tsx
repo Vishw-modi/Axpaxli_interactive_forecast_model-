@@ -742,11 +742,15 @@ const resourcePreviewData: Record<number, { title: string; headers: string[]; ro
   },
   3: {
     title: 'Treated Patients (rate, growth & specialty split)',
-    headers: ['Specialty', 'IAS Treated', 'HA Treated', 'Repeat Treatment'],
+    headers: ['Metric', 'Value'],
     rows: [
-      ['Orthopedics', '612,000', '288,000', '42%'],
-      ['Rheumatology', '206,000', '94,000', '37%'],
-      ['PCP / Other', '138,000', '41,000', '28%']
+      ['IAS Treated % of Diagnosed', '28.4%'],
+      ['IAS Treated % - Annual Growth', '3.5%'],
+      ['HA Ratio to IAS Treated', '30%'],
+      ['HA Ratio - Annual Growth', '-1.0%'],
+      ['Treated with Both (IAS + HA)', '15.0%'],
+      ['Additional Market Growth - Promotion (Initial)', '5.5%'],
+      ['Additional Market Growth - Annual Decay', '20.0%']
     ]
   },
   4: {
@@ -791,26 +795,26 @@ const resourceStages: ResourceStage[] = [
     icon: 'D',
     sheets: [
       { id: 1, title: 'Epidemiology / Population Base', subtitle: 'Pending upload' },
-      { id: 2, title: 'Diagnosed Patients (2016 IMS data)', subtitle: 'Pending upload' },
+      { id: 2, title: 'Diagnosed Patients (IMS Data)', subtitle: 'Pending upload' },
       { id: 3, title: 'Treated Patients (rate, growth & specialty split)', subtitle: 'Pending upload' }
     ]
   },
   {
     id: 2,
     title: 'Share & Pricing',
-    description: 'Preference share research - WAC price is captured in the same dataset, not separately',
+    description: 'Preference share research',
     color: '#b187d7',
     iconBg: '#f1e9fb',
     icon: 'S',
     lockedBy: 'Demand',
     sheets: [
-      { id: 4, title: 'Preference Share Research (incl. WAC Price)', subtitle: 'Pending upload' }
+      { id: 4, title: 'Preference Share Research', subtitle: 'Pending upload' }
     ]
   },
   {
     id: 3,
-    title: 'Other Adjustments (Market Events)',
-    description: 'One consolidated file capturing competitive/market factors relevant to the forecast',
+    title: 'Other Adjustments',
+    description: 'One consolidated file capturing payers/competitive/market factors relevant to the forecast',
     color: '#e7aa7f',
     iconBg: '#fff0e8',
     icon: 'C',
@@ -2849,24 +2853,6 @@ const chatScript: ChatStepDef[] = [
                           )}
                         </div>
                         
-                        {msg.step === 4 && i === arr.length - 1 && (
-                          <div style={{ marginLeft: '35px', marginTop: '12px' }}>
-                            <button onClick={() => goPage(3)} style={{ background: '#1F7A6C', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Go to Data Upload →</button>
-                            
-                            <div style={{ marginTop: '24px', background: '#fffcf0', border: '1px solid #d4af37', borderRadius: '8px', padding: '20px', width: '100%', boxSizing: 'border-box' }}>
-                              <div style={{ fontSize: '11px', fontWeight: 700, color: '#b48600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>NEXT STEPS — OUTSIDE THE CHAT</div>
-                              <h4 style={{ margin: '0 0 8px 0', color: '#20242b', fontSize: '16px' }}>Data Upload → Assumptions</h4>
-                              <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#616b77', lineHeight: 1.5 }}>A quick sequential upload — census, IMS, and your market research — before Assumptions opens with those values already in place, editable via sliders, categorical options, and AI-calculated Conservative → Aggressive ranges.</p>
-                              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📄 Census population data</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>📊 Year 1 IMS diagnosed-patient data</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>✏️ Proprietary market research</span>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'white', border: '1px solid #e4e8ee', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#334155' }}>⬆️ Existing forecast model (optional)</span>
-                              </div>
-                              <button onClick={() => goPage(3)} style={{ background: '#1e3a8a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Go to Data Upload →</button>
-                            </div>
-                          </div>
-                        )}
                     </React.Fragment>
                   );
                 })}
@@ -2901,6 +2887,13 @@ const chatScript: ChatStepDef[] = [
                       onClick={advanceNewFlow}
                       disabled={newFlowInput.trim() === ''}
                     >Send</button>
+                  </div>
+                )}
+                {newFlowStep >= newFlowScript.length - 1 && (
+                  <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="btn" onClick={() => goPage(3)} style={{ whiteSpace: 'nowrap' }}>
+                      Go to Resource Gathering →
+                    </button>
                   </div>
                 )}
               </div>
@@ -3524,26 +3517,22 @@ const chatScript: ChatStepDef[] = [
               <div style={{ overflow: 'auto', flex: 1, border: '1px solid var(--line)', borderRadius: '8px' }}>
                 {previewSheet === 3 ? (
                   <div style={{ padding: '12px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: '#f7f7fb', color: '#667085', fontSize: '11px', fontWeight: 700, marginBottom: '10px' }}>
+                      <span>Data Source:</span>
+                      <span style={{ color: '#475569' }}>Proprietary Market Research</span>
+                    </div>
+
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '14px' }}>
-                      <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Expected format - treatment rate & growth</div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ background: '#fff' }}>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Metric</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Value</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>METRIC</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>VALUE</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {[
-                            ['IAS Treated % of Diagnosed', '28.4%'],
-                            ['IAS Treated % - Annual Growth', '3.5%'],
-                            ['HA Ratio to IAS Treated', '30%'],
-                            ['HA Ratio - Annual Growth', '-1.0%'],
-                            ['Treated with Both (IAS + HA)', '15.0%'],
-                            ['Additional Market Growth - Promotion (Initial)', '5.5%'],
-                            ['Additional Market Growth - Annual Decay', '20.0%']
-                          ].map((row, rowIndex) => (
-                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          {(resourcePreviewData[3]?.rows || []).map((row, rowIndex) => (
+                            <tr key={`treated-metric-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '7px 12px', color: 'var(--ink)' }}>{row[0]}</td>
                               <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{row[1]}</td>
                             </tr>
@@ -3551,15 +3540,16 @@ const chatScript: ChatStepDef[] = [
                         </tbody>
                       </table>
                     </div>
+
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
                       <div style={{ background: '#f8fafc', padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Specialty split (same research, by physician type)</div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
                           <tr style={{ background: '#fff' }}>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Specialty</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>SPECIALTY</th>
                             <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>IAS</th>
                             <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>HA</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Both</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>BOTH</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3568,7 +3558,7 @@ const chatScript: ChatStepDef[] = [
                             ['Rheumatologists', '28%', '46%', '26%'],
                             ['PCP / Other', '19%', '55%', '26%']
                           ].map((row, rowIndex) => (
-                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <tr key={`treated-specialty-${rowIndex}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '7px 12px', color: 'var(--ink)' }}>{row[0]}</td>
                               <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[1]}</td>
                               <td style={{ padding: '7px 12px', textAlign: 'right', color: 'var(--ink)' }}>{row[2]}</td>
@@ -3577,6 +3567,9 @@ const chatScript: ChatStepDef[] = [
                           ))}
                         </tbody>
                       </table>
+                      <div style={{ padding: '8px 12px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', borderTop: '1px solid #e2e8f0' }}>
+                        Once uploaded, these values populate treatment rates and specialty splits in Assumptions.
+                      </div>
                     </div>
                   </div>
                 ) : previewSheet === 4 ? (
