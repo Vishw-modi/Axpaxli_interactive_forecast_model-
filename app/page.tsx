@@ -2658,6 +2658,105 @@ const exportScenariosHTML = async () => {
       font-weight: 600;
     }
 
+    /* ---------- Accordions (Custom) ---------- */
+    details.main-group {
+      margin-bottom: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    details.main-group > summary {
+      padding: 16px 20px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      background: #ffffff;
+      color: var(--navy);
+      list-style: none;
+      border-bottom: 1px solid var(--border);
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      position: relative;
+    }
+    details.main-group > summary::-webkit-details-marker { display: none; }
+    details.main-group > summary::after {
+      content: '▼';
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    details.main-group[open] > summary::after { content: '▲'; }
+    .main-group-inner { padding: 16px; }
+
+    details.sub-group {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    details.sub-group:last-child { margin-bottom: 0; }
+    details.sub-group > summary {
+      padding: 14px 16px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      background: #ffffff;
+      color: var(--navy);
+      list-style: none;
+      border-left: 4px solid var(--teal);
+      border-bottom: 1px solid #f1f5f9;
+      position: relative;
+    }
+    details.sub-group > summary::-webkit-details-marker { display: none; }
+    details.sub-group > summary::after {
+      content: '▼';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    details.sub-group[open] > summary::after { content: '▲'; }
+    .sub-group-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Control Layout within Sub-Groups */
+    .control .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .control label {
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--navy);
+    }
+    .control select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      font-size: 14px;
+      color: var(--navy);
+      outline: none;
+    }
+    .control select:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 2px var(--teal-light);
+    }
+
     /* ---------- Layout ---------- */
     .main-content { max-width: 1400px; margin: 0 auto; padding: 24px; }
     .page-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -3076,9 +3175,14 @@ const exportScenariosHTML = async () => {
       });
 
       const html = order.map(function(mainGroup) {
-        let mainHtml = '<details class="main-group" open><summary>' + esc(mainGroup) + '</summary>';
+        let mainHtml = '<details class="main-group" open><summary>' + esc(mainGroup) + '</summary><div class="main-group-inner">';
         groups[mainGroup].order.forEach(function(subGroup) {
-          mainHtml += '<details class="sub-group" open><summary>' + esc(subGroup) + '</summary><div class="sub-group-content">';
+          // Provide some slight variation in the left border color based on the subGroup name if desired
+          let borderColor = 'var(--teal)';
+          if (subGroup.includes('2C') || subGroup.includes('3A') || subGroup.includes('4C')) borderColor = 'var(--accent)';
+          if (subGroup.includes('4A') || subGroup.includes('4B')) borderColor = 'var(--blue)';
+          
+          mainHtml += '<details class="sub-group" open><summary style="border-left-color: ' + borderColor + '">' + esc(subGroup) + '</summary><div class="sub-group-content">';
           mainHtml += groups[mainGroup].subGroups[subGroup].map(function(control) {
             const value = state[control.key];
             if (control.type === 'toggle') {
@@ -3164,10 +3268,10 @@ const exportScenariosHTML = async () => {
           }).join('');
           mainHtml += '</div></details>';
         });
-        mainHtml += '</details>';
+        mainHtml += '</div></details>';
         return mainHtml;
       }).join('');
-      return '<div class="card"><div class="card-title">Model assumptions</div><div class="card-sub">Tweak the drivers below. Every change updates the forecast live.</div>' + html + '</div>';
+      return '<div class="card" style="padding:0; background:transparent; border:none;"><div class="card-title" style="padding: 0 0 16px 0;">Model assumptions</div>' + html + '</div>';
     }
 
     function renderMetrics(forecast) {
