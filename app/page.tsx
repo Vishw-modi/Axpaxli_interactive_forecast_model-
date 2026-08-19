@@ -2093,6 +2093,35 @@ const chatScript: ChatStepDef[] = [
     MONTH_LABELS_60.length
   ).map((v: number) => Math.round(v));
   const monthlyShareSeries = buildInterpolatedSeries(fAnnual.share, MONTH_LABELS_60.length);
+  const peakYearIndex = f.revenue.reduce((bestIdx, value, idx, arr) => (
+    value > arr[bestIdx] ? idx : bestIdx
+  ), 0);
+  const launchYear = state.launchDate === 'does_not_launch' ? null : Number(state.launchDate.slice(0, 4));
+  const peakCalendarYear = launchYear !== null && !Number.isNaN(launchYear)
+    ? launchYear + Math.ceil(state.yearsToPeak)
+    : null;
+  const peakTreatedPatients = f.patients[peakYearIndex] ?? f.adjustedPeakPatients ?? 0;
+  const peakAnnualInjections = peakTreatedPatients * state.injectionsPerYear;
+  const peakGrossRevenue = peakAnnualInjections * state.wacPrice;
+  const payerAccessLabels: Record<ForecastState['payerAccessRequirement'], string> = {
+    none: 'no formal access hurdle',
+    prior_auth_only: 'prior auth only',
+    pre_cert: 'pre-cert',
+    pre_cert_step_edit: 'pre-cert + step edit',
+    prior_auth_plus_step_edit: 'prior auth + step edit'
+  };
+  const modeledCompetitorLaunches = [
+    { name: 'Product Y', launchDate: state.cingalLaunchDate, orthoRetention: state.cingalRetentionOrtho, pcpRetention: state.cingalRetentionPCP },
+    { name: 'Product Z', launchDate: state.ampionLaunchDate, orthoRetention: state.ampionRetentionOrtho, pcpRetention: state.ampionRetentionPCP },
+    { name: 'Product W', launchDate: state.antiNGFLaunchDate, orthoRetention: state.antiNGFRetentionOrtho, pcpRetention: state.antiNGFRetentionPCP }
+  ].reduce<Array<{ name: string; launchDate: string; launchYear: number; orthoRetention: number; pcpRetention: number }>>((acc, item) => {
+    if (item.launchDate === 'does_not_launch') return acc;
+    const launchYearValue = Number(item.launchDate.slice(0, 4));
+    if (Number.isNaN(launchYearValue)) return acc;
+    acc.push({ ...item, launchDate: item.launchDate, launchYear: launchYearValue });
+    return acc;
+  }, []).sort((a, b) => a.launchYear - b.launchYear);
+  const earliestCompetitorLaunch = modeledCompetitorLaunches[0] ?? null;
 
 
 
@@ -3232,13 +3261,19 @@ const chatScript: ChatStepDef[] = [
                   <div className="card" style={{ marginBottom: '16px' }}>
                     <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x25B6)} What{String.fromCharCode(39)}s driving this forecast</h3>
                     {[
-                      `Peak share of <b>${fmtPct(state.peakShare * 100)}</b> is reached around year <b>${Math.ceil(state.yearsToPeak)}</b>, driven primarily by the durability differentiator versus the current standard of care.`,
-                      `The addressable pool is <b>${fmtNum(f.addressable)}</b> patients \u2014 <b>${fmtPct(state.addressableShare * 100)}</b> of treated patients \u2014 reflecting naive starts plus switch-eligible patients on shorter dosing intervals.`,
-                      `At <b>${fmtM(state.netPrice)}</b> net per injection and <b>${state.injectionsPerYear}</b> injections per year, peak-year net revenue reaches <b>${fmtM(f.peakRevenue)}</b>.`
+                      <>
+                        Peak share of <strong>{fmtPct(f.adjustedPeakShare * 100)}</strong> is reached around <strong>{`Year ${Math.ceil(state.yearsToPeak)}${peakCalendarYear ? ` (${peakCalendarYear})` : ''}`}</strong>, driven by the current uptake curve and access-retention assumptions.
+                      </>,
+                      <>
+                        Peak-year volume reaches approximately <strong>{fmtNum(peakTreatedPatients)}</strong> patients treated - about <strong>{fmtNum(peakAnnualInjections)}</strong> annual injections at <strong>{state.injectionsPerYear}</strong> injections per patient per year.
+                      </>,
+                      <>
+                        At <strong>{fmtM(state.wacPrice)}</strong> WAC, peak-year revenue reaches <strong>{fmtM(peakGrossRevenue)}</strong> gross - <strong>{fmtM(f.peakRevenue)}</strong> net after sample demand.
+                      </>
                     ].map((d, i) => (
                       <div key={i} className="insight-item">
                         <div className="insight-dot"></div>
-                        <div className="body" style={{ fontSize: '13.5px', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: d }} />
+                        <div className="body" style={{ fontSize: '13.5px', lineHeight: '1.6' }}>{d}</div>
                       </div>
                     ))}
                   </div>
@@ -3247,15 +3282,33 @@ const chatScript: ChatStepDef[] = [
                     <div className="card" style={{ marginBottom: 0 }}>
                       <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x26A0)} Risks to watch</h3>
                       {[
-                        { title: 'Biosimilar price pressure', text: 'Biosimilar entrants are compressing net pricing across the class \u2014 a 15% further price erosion would cut peak revenue meaningfully.' },
-                        { title: 'Competitive response', text: 'Competitors could extend their own dosing intervals in response, narrowing your durability advantage.' },
-                        { title: 'Diagnosis funnel slippage', text: 'If diagnosis or treatment-initiation rates come in below plan, the addressable pool shrinks and every downstream number moves with it.' }
+                        earliestCompetitorLaunch
+                          ? {
+                              title: 'Competitive launch timing',
+                              text: (
+                                <>
+                                  The earliest modeled competitor launch is <strong>{earliestCompetitorLaunch.name}</strong> in <strong>{earliestCompetitorLaunch.launchYear}</strong>, with specialty retention ranging from <strong>{fmtPct(Math.min(earliestCompetitorLaunch.orthoRetention, earliestCompetitorLaunch.pcpRetention) * 100)}</strong> to <strong>{fmtPct(Math.max(earliestCompetitorLaunch.orthoRetention, earliestCompetitorLaunch.pcpRetention) * 100)}</strong>. An earlier launch would pull share pressure forward.
+                                </>
+                              )
+                            }
+                          : {
+                              title: 'Competitive launch timing',
+                              text: <>No competitive launch is currently modeled, so timing pressure stays muted in the forecast.</>
+                            },
+                        {
+                          title: 'Payer access friction',
+                          text: (
+                            <>
+                              Payer access is modeled as <strong>{payerAccessLabels[state.payerAccessRequirement]}</strong> with <strong>{fmtPct(state.pricingAdjFactorAccessImpact * 100)}</strong> retention. Broader payer restriction than assumed could meaningfully delay time-to-peak.
+                            </>
+                          )
+                        }
                       ].map((r, i) => (
                         <div key={i} className="insight-item">
                           <div className="insight-dot risk"></div>
                           <div className="body">
                             <span className="risk-badge">Risk</span><br />
-                            <b>{r.title}</b>
+                            <strong>{r.title}</strong>
                             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
                           </div>
                         </div>
@@ -3264,15 +3317,28 @@ const chatScript: ChatStepDef[] = [
                     <div className="card" style={{ marginBottom: 0 }}>
                       <h3 style={{ fontSize: '15px', marginBottom: '12px' }}>{String.fromCharCode(0x2B06)} Upside levers</h3>
                       {[
-                        { title: 'Faster payer access', text: 'Favorable formulary placement could pull the uptake curve forward by a year, front-loading revenue.' },
-                        { title: 'Broader label or indication', text: 'Expansion beyond initial targets would grow the addressable pool independent of share gains.' },
-                        { title: 'Switch-driven share gains', text: 'A stronger-than-modeled switch rate from shorter-interval therapies could push peak share above the current assumption.' }
+                        {
+                          title: 'Refrigeration-free reformulation',
+                          text: (
+                            <>
+                              The model still carries <strong>{state.refrigerationDurationMonths}</strong> months of refrigeration friction, with <strong>{fmtPct(state.refrigerationRetentionORS * 100)}</strong> Ortho/Surgical retention and <strong>{fmtPct(state.refrigerationRetentionRheumOther * 100)}</strong> Rheum/Other retention. Removing that cold-chain requirement could lift retention across both channels.
+                            </>
+                          )
+                        },
+                        {
+                          title: 'Broader treatment-type capture',
+                          text: (
+                            <>
+                              Gains in the <strong>Both IAS + HA</strong> segment beyond the modeled <strong>{fmtPct(state.iasAndHATreatedBoth * 100)}</strong> would expand the addressable pool independently of core share gains.
+                            </>
+                          )
+                        }
                       ].map((r, i) => (
                         <div key={i} className="insight-item">
                           <div className="insight-dot"></div>
                           <div className="body">
                             <span className="opp-badge">Upside</span><br />
-                            <b>{r.title}</b>
+                            <strong>{r.title}</strong>
                             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>{r.text}</div>
                           </div>
                         </div>
@@ -3280,12 +3346,6 @@ const chatScript: ChatStepDef[] = [
                     </div>
                   </div>
 
-                  <div className="card" style={{ marginBottom: 0 }}>
-                    <h3 style={{ fontSize: '15px', marginBottom: '8px' }}>How this compares to recent analogues</h3>
-                    <p style={{ fontSize: '13.5px', lineHeight: '1.6', color: 'var(--text-muted)', margin: 0 }}>
-                      Recent analogues reached blockbuster status (&gt;$1B) within roughly two years of launch, aided by a differentiated story. Your asset{String.fromCharCode(39)}s {fmtPct(state.peakShare * 100)} peak share assumption over {Math.ceil(state.yearsToPeak)} years is {state.yearsToPeak <= 3 ? 'more aggressive' : (state.yearsToPeak >= 5 ? 'more conservative' : 'broadly comparable')} relative to that trajectory \u2014 worth stress-testing against a faster or slower competitive response on the scenarios page.
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
