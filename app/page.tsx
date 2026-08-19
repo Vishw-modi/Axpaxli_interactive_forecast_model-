@@ -2391,50 +2391,170 @@ const chatScript: ChatStepDef[] = [
     );
   };
 
-  const exportScenariosHTML = () => {
-    // BASE FORECAST DATA
-    const basePeak = f.peakRevenue;
-    const baseAnnual = {
-      labels: buildSequentialLabels('Year ', Math.max(f.revenue.length - 1, 0)),
-      revenue: f.revenue.slice(1)
-    };
-    const baseImpacts = [
-      { name: 'Net price (direct)', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
-      { name: 'Adherence boost', low: -(sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak, high: (sensitivityLevel === 5 ? 0.05 : 0.10) * basePeak },
-      { name: 'Peak share', low: -(sensitivityLevel === 5 ? 0.042 : 0.09) * basePeak, high: (sensitivityLevel === 5 ? 0.042 : 0.09) * basePeak },
-      { name: 'Addressable share', low: -(sensitivityLevel === 5 ? 0.04 : 0.085) * basePeak, high: (sensitivityLevel === 5 ? 0.04 : 0.085) * basePeak },
-      { name: 'Diagnosis rate', low: -(sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak, high: (sensitivityLevel === 5 ? 0.037 : 0.08) * basePeak }
-    ];
+// =============================================================================
+// DROP-IN REPLACEMENT for `exportScenariosHTML`
+// -----------------------------------------------------------------------------
+// Replace the ENTIRE existing function (find markers below in your page.tsx).
+// The button in the Export tab already calls onClick={exportScenariosHTML}
+// so no button change is needed. The function is async but onClick handles that fine.
+// =============================================================================
 
-    // SCENARIOS COMPARISON DATA
-    const tableRows = scenarios.map(sc => {
-      const fc = getRebasedForecast(sc.s);
-      const fcAnnual = fc.revenue.slice(1);
-      return `<tr>
-        <td><strong>${sc.name}</strong></td>
-        <td>${fmtPct(fc.adjustedPeakShare * 100)}</td>
-        <td>${fmtM(sc.s.wacPrice)}</td>
-        <td>${Math.ceil(sc.s.yearsToPeak)}</td>
-        <td>${fmtM(fc.peakRevenue)}</td>
-        <td>${fmtM(fcAnnual[0] ?? 0)}</td>
-        <td>${fmtM(fcAnnual[1] ?? 0)}</td>
-        <td>${fmtM(fcAnnual[2] ?? 0)}</td>
-        <td>${fmtM(fcAnnual[3] ?? 0)}</td>
-        <td>${fmtM(fcAnnual[4] ?? 0)}</td>
-      </tr>`;
-    }).join('');
+const exportScenariosHTML = async () => {
+  // ----- Control schema (drives the live sidebar in the exported HTML) -----
+  const exportControlSchema = [
+    // { section: 'Demand', type: 'range', key: 'prevalence', label: 'Population base', min: 1000000, max: 3000000, step: 25000, unit: '' },
+    { section: 'Demand', type: 'range', key: 'diagnosisRate', label: 'Diagnosis rate', min: 0.03, max: 0.08, step: 0.001, unit: '%' },
+    { section: 'Demand', type: 'range', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth', min: 0.01, max: 0.06, step: 0.001, unit: '%' },
+    { section: 'Demand', type: 'range', key: 'treatmentRate', label: 'Treatment rate', min: 0.80, max: 0.98, step: 0.005, unit: '%' },
+    { section: 'Demand', type: 'range', key: 'addressableShare', label: 'Addressable share', min: 0.40, max: 0.80, step: 0.01, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'peakShare', label: 'Peak share', min: 0.10, max: 0.40, step: 0.005, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'yearsToPeak', label: 'Years to peak', min: 3, max: 7, step: 1, unit: ' yrs' },
+    { section: 'Core forecast', type: 'range', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed', min: 0.20, max: 0.40, step: 0.005, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth', min: 0.00, max: 0.05, step: 0.005, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'haRatioToIAS', label: 'HA ratio to IAS', min: 0.25, max: 0.60, step: 0.01, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'haRatioGrowthRate', label: 'HA ratio annual growth', min: -0.02, max: 0.02, step: 0.005, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'iasAndHATreatedBoth', label: 'Both IAS + HA', min: 0.05, max: 0.25, step: 0.005, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'initialAdditionalMarketGrowth', label: 'Promotion lift', min: 0.00, max: 0.10, step: 0.005, unit: '%' },
+    { section: 'Core forecast', type: 'range', key: 'annualDecayRateOfAdditionalGrowth', label: 'Promotion decay', min: 0.10, max: 0.30, step: 0.005, unit: '%' },
+    { section: 'Preference', type: 'range', key: 'overstatementAdjFactor', label: 'Overstatement discount', min: 0.05, max: 0.40, step: 0.01, unit: '%' },
+    { section: 'Preference', type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC score data available' },
+    { section: 'Preference', type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available' },
+    { section: 'Preference', type: 'range', key: 'wacPrice', label: 'WAC price', min: 400, max: 1000, step: 25, unit: '$' },
+    { section: 'Preference', type: 'range', key: 'newMarketResearchAdjOrtho', label: 'Ortho research shift', min: -0.05, max: 0.15, step: 0.01, unit: '%' },
+    { section: 'Preference', type: 'range', key: 'newMarketResearchAdjRheum', label: 'Rheum/PCP research shift', min: -0.05, max: 0.15, step: 0.01, unit: '%' },
+    { section: 'Access', type: 'select', key: 'payerAccessRequirement', label: 'Payer access requirement', options: [
+      { value: 'none', label: 'None' },
+      { value: 'prior_auth_only', label: 'Prior Auth' },
+      { value: 'pre_cert', label: 'Pre-Cert' },
+      { value: 'pre_cert_step_edit', label: 'Pre-Cert + Step Edit' },
+      { value: 'prior_auth_plus_step_edit', label: 'PA + Step Edit' }
+    ] },
+    { section: 'Access', type: 'range', key: 'pricingAdjFactorAccessImpact', label: 'Access survival rate', min: 0.90, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Access', type: 'toggle', key: 'patientAssistanceProgramInPlace', label: 'Patient assistance program' },
+    { section: 'Access', type: 'range', key: 'pricingAdjPatientAssistanceImpact', label: 'Patient assistance lift', min: 0.00, max: 0.20, step: 0.01, unit: '%' },
+    { section: 'Friction', type: 'range', key: 'jCodeWindowMonths', label: 'J-code transition window', min: 0, max: 24, step: 1, unit: ' mo' },
+    { section: 'Friction', type: 'range', key: 'jCodeRetentionRate', label: 'J-code retention rate', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Friction', type: 'range', key: 'refrigerationDurationMonths', label: 'Refrigeration duration', min: 0, max: 36, step: 3, unit: ' mo' },
+    { section: 'Friction', type: 'range', key: 'refrigerationRetentionORS', label: 'Refrigeration retention - Ortho', min: 0.70, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Friction', type: 'range', key: 'refrigerationRetentionRheumOther', label: 'Refrigeration retention - Rheum/Other', min: 0.70, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Competition', type: 'monthOrNever', key: 'cingalLaunchDate', label: 'Product Y launch date' },
+    { section: 'Competition', type: 'range', key: 'cingalRetentionOrtho', label: 'Product Y retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Competition', type: 'range', key: 'cingalRetentionPCP', label: 'Product Y retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Competition', type: 'monthOrNever', key: 'ampionLaunchDate', label: 'Product Z launch date' },
+    { section: 'Competition', type: 'range', key: 'ampionRetentionOrtho', label: 'Product Z retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Competition', type: 'range', key: 'ampionRetentionPCP', label: 'Product Z retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Competition', type: 'monthOrNever', key: 'antiNGFLaunchDate', label: 'Product W launch date' },
+    { section: 'Competition', type: 'range', key: 'antiNGFRetentionOrtho', label: 'Product W retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Competition', type: 'range', key: 'antiNGFRetentionPCP', label: 'Product W retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
+    { section: 'Volume', type: 'range', key: 'frequencyOfInjectionsYearly', label: 'Frequency of injections', min: 1.0, max: 3.0, step: 0.1, unit: ' /yr' }
+  ];
 
-    const compareChartDatasets = scenarios.map((sc, i) => {
-      const fc = getRebasedForecast(sc.s);
-      return {
-        label: sc.name,
-        data: fc.revenue.slice(1, 6),
-        backgroundColor: ['#e34948', '#898781', '#00b2a9', '#f25621', '#3b82f6'][i % 5] || '#94a3b8',
-        borderRadius: 4
-      };
+  const exportAssumptions: Array<{ key: keyof ForecastState; name: string }> = [
+    { key: 'diagnosisRate', name: 'Diagnosis rate' },
+    { key: 'treatmentRate', name: 'Treatment rate' },
+    { key: 'addressableShare', name: 'Addressable share' },
+    { key: 'peakShare', name: 'Peak share' },
+    { key: 'yearsToPeak', name: 'Years to peak share' },
+    { key: 'netPrice', name: 'Net price' },
+    { key: 'injectionsPerYear', name: 'Injections per year' },
+    { key: 'compliance', name: 'Compliance' },
+    { key: 'launchDate', name: 'Launch date' },
+    { key: 'availabilityDate', name: 'Availability date' },
+    { key: 'forecastHorizonYears', name: 'Forecast horizon' },
+    { key: 'diagnosisAnnualGrowthRate', name: 'Diagnosis annual growth rate' },
+    { key: 'iasTreatedPctOfDiagnosed', name: 'IAS treated % of diagnosed' },
+    { key: 'iasTreatedGrowthRate', name: 'IAS treated annual growth' },
+    { key: 'haRatioToIAS', name: 'HA ratio to IAS' },
+    { key: 'haRatioGrowthRate', name: 'HA ratio annual growth' },
+    { key: 'iasAndHATreatedBoth', name: 'Treated with both (IAS + HA)' },
+    { key: 'initialAdditionalMarketGrowth', name: 'Additional market growth' },
+    { key: 'annualDecayRateOfAdditionalGrowth', name: 'Additional growth annual decay' },
+    { key: 'overstatementAdjFactor', name: 'Survey overstatement adjustment' },
+    { key: 'womacScoreAvailable', name: 'WOMAC score available' },
+    { key: 'diabetesGlycemicDataAvailable', name: 'Diabetes/glycemic data available' },
+    { key: 'wacPrice', name: 'WAC price' },
+    { key: 'newMarketResearchAdjOrtho', name: 'New market research adjustment (Ortho)' },
+    { key: 'newMarketResearchAdjRheum', name: 'New market research adjustment (Rheum/PCP)' },
+    { key: 'payerAccessRequirement', name: 'Payer access requirement' },
+    { key: 'pricingAdjFactorAccessImpact', name: 'Payer access price impact' },
+    { key: 'patientAssistanceProgramInPlace', name: 'Patient assistance program in place' },
+    { key: 'pricingAdjPatientAssistanceImpact', name: 'Patient assistance price impact' },
+    { key: 'jCodeWindowMonths', name: 'J-Code transition window (months)' },
+    { key: 'jCodeRetentionRate', name: 'J-Code retention rate' },
+    { key: 'refrigerationDurationMonths', name: 'Refrigeration duration (months)' },
+    { key: 'refrigerationRetentionORS', name: 'Refrigeration retention (Ortho/Rheum)' },
+    { key: 'refrigerationRetentionRheumOther', name: 'Refrigeration retention (PCP/Other)' },
+    { key: 'cingalLaunchDate', name: 'Product Y launch date' },
+    { key: 'cingalRetentionOrtho', name: 'Product Y retention (Ortho)' },
+    { key: 'cingalRetentionPCP', name: 'Product Y retention (PCP/Other)' },
+    { key: 'ampionLaunchDate', name: 'Product Z launch date' },
+    { key: 'ampionRetentionOrtho', name: 'Product Z retention (Ortho)' },
+    { key: 'ampionRetentionPCP', name: 'Product Z retention (PCP/Other)' },
+    { key: 'antiNGFLaunchDate', name: 'Product W launch date' },
+    { key: 'antiNGFRetentionOrtho', name: 'Product W retention (Ortho)' },
+    { key: 'antiNGFRetentionPCP', name: 'Product W retention (PCP/Other)' },
+    { key: 'frequencyOfInjectionsYearly', name: 'Frequency of injections (yearly)' }
+  ];
+
+  const baseAssumptionsRows = exportAssumptions.map(({ key, name }) => {
+    const val = state[key];
+    let formattedVal = String(val);
+    if (typeof val === 'number') {
+      if (name.toLowerCase().includes('price')) {
+        formattedVal = '$' + val.toLocaleString();
+      } else if (val < 2 && val > -2 && val !== 0 && !name.toLowerCase().includes('year') && !name.toLowerCase().includes('month')) {
+        formattedVal = (Math.round(val * 1000) / 10).toString() + '%';
+      } else {
+        formattedVal = val.toLocaleString();
+      }
+    }
+    return { name, val: formattedVal };
+  });
+
+  // ----- Fetch the Tredence/KMK logo and embed as base64 so the download is self-contained -----
+  let logoDataUrl = '';
+  try {
+    const resp = await fetch('/Tredence_KMK_Logo-removebg-preview.png');
+    const blob = await resp.blob();
+    logoDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.readAsDataURL(blob);
     });
+  } catch (err) {
+    logoDataUrl = '';
+  }
 
-    const capturedAssumptions = [
+  // ----- Assistant knowledge base (simple keyword lookup used inside the exported HTML) -----
+  const assistantKB = [
+    { keys: ['peak share'], answer: 'Peak share is the maximum modeled share the product reaches after applying access, retention, and competitive adjustments. It represents the top of the uptake curve.' },
+    { keys: ['wac', 'price', 'net price'], answer: 'WAC (Wholesale Acquisition Cost) is the manufacturer\'s list price per injection before rebates and discounts. Net price is WAC minus rebates.' },
+    { keys: ['access', 'access survival', 'payer'], answer: 'Access survival rate is the share of prescriptions that make it through payer friction (prior auth, step edits, etc.). Lower rates mean more prescriptions are lost at the pharmacy.' },
+    { keys: ['j-code', 'j code', 'jcode'], answer: 'J-code retention models how much share is preserved during the temporary J-code window before the product gets a permanent HCPCS code. Reimbursement uncertainty typically depresses uptake here.' },
+    { keys: ['refrigeration', 'cold chain'], answer: 'Refrigeration retention captures friction from cold-chain handling requirements. Products needing refrigeration face lower adoption in offices without cold storage.' },
+    { keys: ['diagnosis rate'], answer: 'Diagnosis rate is the % of the population base formally diagnosed with the condition each year. It drives the top of the patient funnel.' },
+    { keys: ['treatment rate'], answer: 'Treatment rate is the % of diagnosed patients who receive any therapy. Not all diagnosed patients are treated.' },
+    { keys: ['addressable share'], answer: 'Addressable share is the % of treated patients whose profile fits the product\'s label and clinical use case.' },
+    { keys: ['years to peak'], answer: 'Years to peak is how many years after launch the product reaches its peak modeled share. Uses a smoothstep curve for the uptake trajectory.' },
+    { keys: ['compliance', 'adherence'], answer: 'Compliance / adherence is the % of prescribed doses actually taken by the patient. Applied as a multiplier on revenue.' },
+    { keys: ['womac'], answer: 'The WOMAC score is a validated OA knee outcome measure. Availability of WOMAC data gives a small (~2pp) lift to peak share.' },
+    { keys: ['ias'], answer: 'IAS = Intra-Articular Steroid injection. It\'s the primary comparator class for OA knee injectables.' },
+    { keys: ['ha ratio', 'hyaluronic'], answer: 'HA (Hyaluronic Acid) ratio to IAS models the mix of patients getting HA relative to IAS injections. HA is a viscosupplement class.' },
+    { keys: ['promotion lift', 'promo'], answer: 'Promotion lift is the initial boost from sales and marketing activity. It decays annually at the specified decay rate.' },
+    { keys: ['tornado', 'sensitivity'], answer: 'The tornado chart shows peak-revenue sensitivity to +/- 10% changes in each key driver. Longer bars = more leverage on the forecast.' },
+    { keys: ['competitor', 'competition', 'product y', 'product z', 'product w'], answer: 'Competitor entries reduce share via retention factors when their launch date is on or before the modeled year. Set launch to "Does not launch" to remove.' },
+    { keys: ['scenario'], answer: 'A scenario is a snapshot of all current assumptions. Save named scenarios in the Scenario tab and compare them side-by-side in the Compare tab.' },
+    { keys: ['forecast horizon', 'horizon'], answer: 'The forecast horizon is 5 years post-launch in this model.' }
+  ];
+
+  const exportPayload = {
+    currentState: state,
+    defaultState: defaultState,
+    savedScenarios: scenarios.map(sc => ({ name: sc.name, tag: sc.tag, s: sc.s })),
+    actuals: (f as any).zilrettaActuals,
+    treatments: (f as any).zilrettaTreatments,
+    baseAssumptionsRows,
+    capturedAssumptions: [
       { k: 'Product', v: 'Product X' },
       { k: 'Indication', v: 'OA Knee only' },
       { k: 'Geography', v: 'US only' },
@@ -2448,295 +2568,730 @@ const chatScript: ChatStepDef[] = [
       { k: 'Share source', v: 'Mkt research + brand plan' },
       { k: 'Finance source', v: 'WAC, brand plan' },
       { k: 'Other factors', v: 'None flagged' }
-    ];
+    ],
+    sensitivityLevel,
+    controlSchema: exportControlSchema,
+    assistantKB,
+    logoDataUrl
+  };
 
-    // Keep the export schema explicit so removed/internal controls cannot leak
-    // into the downloadable HTML through Object.entries(state).
-    const exportAssumptions: Array<{ key: keyof ForecastState; name: string }> = [
-      { key: 'diagnosisRate', name: 'Diagnosis rate' },
-      { key: 'treatmentRate', name: 'Treatment rate' },
-      { key: 'addressableShare', name: 'Addressable share' },
-      { key: 'peakShare', name: 'Peak share' },
-      { key: 'yearsToPeak', name: 'Years to peak share' },
-      { key: 'netPrice', name: 'Net price' },
-      { key: 'injectionsPerYear', name: 'Injections per year' },
-      { key: 'compliance', name: 'Compliance' },
-      { key: 'launchDate', name: 'Launch date' },
-      { key: 'availabilityDate', name: 'Availability date' },
-      { key: 'forecastHorizonYears', name: 'Forecast horizon' },
-      { key: 'diagnosisAnnualGrowthRate', name: 'Diagnosis annual growth rate' },
-      { key: 'iasTreatedPctOfDiagnosed', name: 'IAS treated % of diagnosed' },
-      { key: 'iasTreatedGrowthRate', name: 'IAS treated annual growth' },
-      { key: 'haRatioToIAS', name: 'HA ratio to IAS' },
-      { key: 'haRatioGrowthRate', name: 'HA ratio annual growth' },
-      { key: 'iasAndHATreatedBoth', name: 'Treated with both (IAS + HA)' },
-      { key: 'initialAdditionalMarketGrowth', name: 'Additional market growth' },
-      { key: 'annualDecayRateOfAdditionalGrowth', name: 'Additional growth annual decay' },
-      { key: 'overstatementAdjFactor', name: 'Survey overstatement adjustment' },
-      { key: 'womacScoreAvailable', name: 'WOMAC score available' },
-      { key: 'diabetesGlycemicDataAvailable', name: 'Diabetes/glycemic data available' },
-      { key: 'wacPrice', name: 'WAC price' },
-      { key: 'newMarketResearchAdjOrtho', name: 'New market research adjustment (Ortho)' },
-      { key: 'newMarketResearchAdjRheum', name: 'New market research adjustment (Rheum/PCP)' },
-      { key: 'payerAccessRequirement', name: 'Payer access requirement' },
-      { key: 'pricingAdjFactorAccessImpact', name: 'Payer access price impact' },
-      { key: 'patientAssistanceProgramInPlace', name: 'Patient assistance program in place' },
-      { key: 'pricingAdjPatientAssistanceImpact', name: 'Patient assistance price impact' },
-      { key: 'jCodeWindowMonths', name: 'J-Code transition window (months)' },
-      { key: 'jCodeRetentionRate', name: 'J-Code retention rate' },
-      { key: 'refrigerationDurationMonths', name: 'Refrigeration duration (months)' },
-      { key: 'refrigerationRetentionORS', name: 'Refrigeration retention (Ortho/Rheum)' },
-      { key: 'refrigerationRetentionRheumOther', name: 'Refrigeration retention (PCP/Other)' },
-      { key: 'cingalLaunchDate', name: 'Product Y launch date' },
-      { key: 'cingalRetentionOrtho', name: 'Product Y retention (Ortho)' },
-      { key: 'cingalRetentionPCP', name: 'Product Y retention (PCP/Other)' },
-      { key: 'ampionLaunchDate', name: 'Product Z launch date' },
-      { key: 'ampionRetentionOrtho', name: 'Product Z retention (Ortho)' },
-      { key: 'ampionRetentionPCP', name: 'Product Z retention (PCP/Other)' },
-      { key: 'antiNGFLaunchDate', name: 'Product W launch date' },
-      { key: 'antiNGFRetentionOrtho', name: 'Product W retention (Ortho)' },
-      { key: 'antiNGFRetentionPCP', name: 'Product W retention (PCP/Other)' },
-      { key: 'frequencyOfInjectionsYearly', name: 'Frequency of injections (yearly)' }
-    ];
+  const payloadJson = JSON.stringify(exportPayload).replace(/</g, '\\u003c');
 
-    const baseAssumptionsRows = exportAssumptions.map(({ key, name }) => {
-      const val = state[key];
-      let formattedVal = String(val);
-      if (typeof val === 'number') {
-        if (name.toLowerCase().includes('price')) {
-          formattedVal = '$' + val.toLocaleString();
-        } else if (val < 2 && val > -2 && val !== 0 && !name.toLowerCase().includes('year') && !name.toLowerCase().includes('month')) {
-          formattedVal = (Math.round(val * 1000) / 10).toString() + '%';
-        } else {
-          formattedVal = val.toLocaleString();
-        }
-      }
-      return { name, val: formattedVal };
-    });
-
-    const htmlContent = `<!DOCTYPE html>
+  const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Forecast & Comparison Export</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forecast.ai — Interactive Forecasting Model</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8f9fa; padding: 40px; color: #334155; margin: 0; }
-    .container { max-width: 1000px; margin: 0 auto; }
-    h1 { color: #0f172a; font-size: 28px; margin-top: 40px; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
-    h1:first-child { margin-top: 0; }
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    h3 { margin-top: 0; font-size: 16px; color: #334155; margin-bottom: 16px; font-weight: 600; }
-    .canvas-wrap { height: 300px; width: 100%; position: relative; }
-    
-    .grid6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
-    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
-    .metric { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
-    .metric .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
-    .metric .value { font-size: 18px; font-weight: 600; color: #0f172a; }
+    :root {
+      /* Match the actual demo palette (globals.css) */
+      --navy: #333333;
+      --navy-dark: #222222;
+      --teal: #00b2a9;
+      --teal-light: #e5f7f6;
+      --accent: #F25621;
+      --accent-dark: #d9491a;
+      --blue: #3b82f6;
+      --bg: #f4f6f7;
+      --card: #ffffff;
+      --border: #e1e4e8;
+      --text: #1a2733;
+      --text-muted: #5f6b76;
+      --danger: #c0392b;
+      --danger-bg: #fbeceb;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
 
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-    th, td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
-    th { background: #f8fafc; font-weight: 600; color: #475569; }
-    tbody tr:hover { background: #f1f5f9; }
+    /* ---------- Header ---------- */
+    header.topbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 6px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand .name { font-weight: 700; font-size: 22px; letter-spacing: -0.02em; color: var(--navy); line-height: 1.1; }
+    .brand .tag { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .brand-logo { height: 72px; object-fit: contain; margin: -12px 0; }
 
-    .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px; gap: 16px; }
-    .tab-btn { background: none; border: none; font-size: 16px; font-weight: 600; color: #64748b; padding: 12px 16px; cursor: pointer; border-bottom: 3px solid transparent; }
-    .tab-btn:hover { color: #0f172a; }
-    .tab-btn.active { color: #0f7696; border-bottom-color: #0f7696; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    /* ---------- Tabs bar ---------- */
+    nav.tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--blue);
+      padding: 0 16px;
+      overflow-x: auto;
+      position: sticky;
+      top: 56px;
+      z-index: 49;
+    }
+    nav.tabs button {
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.75);
+      padding: 12px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    nav.tabs button:hover { color: #fff; }
+    nav.tabs button.active {
+      color: #fff;
+      border-bottom: 2px solid var(--accent);
+      font-weight: 600;
+    }
+
+    /* ---------- Layout ---------- */
+    .main-content { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .page-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+    .left-stack, .right-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    @media (max-width: 1100px) { .page-grid { grid-template-columns: 1fr; } }
+
+    /* ---------- Cards ---------- */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 0;
+    }
+    .card + .card { margin-top: 0; }
+    .card-title { font-size: 15px; font-weight: 600; color: var(--navy); margin: 0 0 4px; }
+    .card-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 14px; line-height: 1.45; }
+
+    /* ---------- Metrics ---------- */
+    .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+    @media (max-width: 900px) { .metric-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .metric {
+      background: #f7f9fa;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+    }
+    .metric .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+    .metric .value { font-size: 20px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
+
+    /* ---------- Pill / badge ---------- */
+    .pill {
+      display: inline-block;
+      background: var(--teal-light);
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .scenario-tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 5px; }
+    .tag-down { background: #fbeceb; color: var(--danger); }
+    .tag-base { background: #eef1f2; color: var(--navy); }
+    .tag-up { background: var(--teal-light); color: var(--teal); }
+
+    /* ---------- Sidebar controls ---------- */
+    .sidebar-section { margin-bottom: 6px; }
+    .section-header { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin: 12px 0 8px; }
+    .control { padding: 10px 0; border-bottom: 1px dashed #eef1f3; }
+    .control:last-child { border-bottom: none; }
+    .control .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .control label { font-size: 12.5px; color: var(--text); font-weight: 500; line-height: 1.35; }
+    .control .val { font-size: 12px; font-weight: 700; color: var(--navy); background: #eef2ff; padding: 2px 8px; border-radius: 12px; white-space: nowrap; }
+    .control input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .control select, .control input[type="month"], .control input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .inline-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .inline-row .grow { flex: 1; }
+
+    /* toggle */
+    .toggle { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .toggle .switch { position: relative; width: 40px; height: 22px; flex: 0 0 auto; }
+    .toggle .switch input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider {
+      position: absolute; inset: 0; border-radius: 999px; background: #ccc; transition: .2s; cursor: pointer;
+    }
+    .toggle .slider:before {
+      content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px;
+      border-radius: 50%; background: #fff; transition: .2s;
+    }
+    .toggle .switch input:checked + .slider { background: var(--accent); }
+    .toggle .switch input:checked + .slider:before { transform: translateX(18px); }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn:hover { background: var(--accent-dark); }
+    .btn.secondary { background: transparent; color: var(--navy); border: 1px solid var(--border); font-weight: 500; }
+    .btn.secondary:hover { background: #f0f2f3; }
+    .btn.ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn.ghost:hover { background: #f0f2f3; color: var(--navy); }
+    .btn.small { padding: 6px 10px; font-size: 12px; }
+
+    /* ---------- Chart wrappers ---------- */
+    .chart-wrap { position: relative; width: 100%; height: 300px; }
+    .chart-wrap.tall { height: 340px; }
+    .chart-note { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+
+    /* ---------- Tables ---------- */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; background: #f7f9fa; }
+    td strong { color: var(--navy); }
+    .scenario-table-wrap { overflow-x: auto; }
+
+    /* ---------- Scenario list ---------- */
+    .scenario-list { display: grid; gap: 8px; margin-top: 12px; }
+    .scenario-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+    .scenario-item .name { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .scenario-item .meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ---------- Assistant chat ---------- */
+    .assistant-shell { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; }
+    @media (max-width: 900px) { .assistant-shell { grid-template-columns: 1fr; } }
+    .chat-log { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+    .bubble {
+      max-width: 85%;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .bubble.ai {
+      background: var(--teal-light);
+      color: var(--teal);
+      border-top-left-radius: 2px;
+      align-self: flex-start;
+    }
+    .bubble.user {
+      background: var(--blue);
+      color: #fff;
+      border-top-right-radius: 2px;
+      align-self: flex-end;
+    }
+    .bubble .who { font-size: 11px; font-weight: 700; opacity: .7; margin-bottom: 3px; display: block; }
+    .assistant-input { display: flex; gap: 8px; margin-top: 12px; }
+    .assistant-input input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .suggested { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+    .captured-list { display: grid; gap: 6px; }
+    .captured-item {
+      display: flex; justify-content: space-between; gap: 10px;
+      padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff;
+    }
+    .captured-item .k { font-size: 12px; color: var(--text-muted); }
+    .captured-item .v { font-size: 12.5px; font-weight: 700; color: var(--navy); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .empty-note { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
   </style>
 </head>
 <body>
-  <div class="container">
-    
-    <div style="margin-bottom: 32px;">
-      <h1 style="font-size: 32px; color: #0f172a; margin: 0; border: none; padding: 0;">Interactive Forecast Export</h1>
-      <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Exported forecast, assumptions, and scenario analysis.</p>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('forecast', this)">Forecast</button>
-      <button class="tab-btn" onclick="switchTab('compare', this)">Compare</button>
-      <button class="tab-btn" onclick="switchTab('assumptions', this)">Assumptions</button>
-    </div>
-
-    <!-- FORECAST TAB -->
-    <div id="forecast" class="tab-content active">
-      <div class="grid6">
-        <div class="metric"><div class="label">Net Rev - Peak</div><div class="value">${fmtM(f.peakRevenue)}</div></div>
-        <div class="metric"><div class="label">Peak Share (Adj)</div><div class="value">${fmtPct((f as any).adjustedPeakShare * 100)}</div></div>
-        <div class="metric"><div class="label">Peak Patients</div><div class="value">${fmtNum((f as any).adjustedPeakPatients)}</div></div>
-        <div class="metric"><div class="label">Year 1 Net Rev</div><div class="value">${fmtM(baseAnnual.revenue[0] ?? 0)}</div></div>
-        <div class="metric"><div class="label">Year 2 Net Rev</div><div class="value">${fmtM(baseAnnual.revenue[1] ?? 0)}</div></div>
-        <div class="metric"><div class="label">Year 3 Net Rev</div><div class="value">${fmtM(baseAnnual.revenue[2] ?? 0)}</div></div>
-      </div>
-      
-      <div class="card">
-        <h3>Net year revenue forecast, US ($)</h3>
-        <div class="canvas-wrap"><canvas id="forecastLineChart"></canvas></div>
-      </div>
-      
-      <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="margin:0;">Scenario impacts on peak revenue</h3>
-          <span style="font-size:13px; border:1px solid #ccc; padding:4px 8px; border-radius:4px;">±${sensitivityLevel}% Sensitivity</span>
-        </div>
-        <div class="canvas-wrap"><canvas id="forecastTornadoChart"></canvas></div>
+  <header class="topbar">
+    <div class="brand">
+      <div>
+        <div class="name">Forecast.ai</div>
+        <div class="tag">Forecasting demo — standalone workspace</div>
       </div>
     </div>
+    ${logoDataUrl ? `<img class="brand-logo" src="${logoDataUrl}" alt="Tredence KMK">` : `<div style="font-weight:700;color:var(--navy);">Tredence &nbsp;|&nbsp; KMK</div>`}
+  </header>
 
-    <!-- COMPARE TAB -->
-    <div id="compare" class="tab-content">
-      <div class="card" style="overflow-x: auto;">
-        <h3>Summary</h3>
-        <table>
-          <thead>
-            <tr><th>Scenario</th><th>Peak share</th><th>WAC price</th><th>Years to peak</th><th>Peak revenue</th><th>Year 1 net</th><th>Year 2 net</th><th>Year 3 net</th><th>Year 4 net</th><th>Year 5 net</th></tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
-      </div>
-      
-      <div class="card">
-        <h3>Year-by-year net revenue comparison</h3>
-        <div class="canvas-wrap"><canvas id="compareBarChart"></canvas></div>
-      </div>
-    </div>
+  <nav class="tabs" id="tabnav">
+    <button class="tab-btn active" data-tab="forecast">Forecast</button>
+    <button class="tab-btn" data-tab="scenario">Scenario</button>
+    <button class="tab-btn" data-tab="compare">Compare</button>
+    <button class="tab-btn" data-tab="assistant">Assistant</button>
+  </nav>
 
-    <!-- ASSUMPTIONS TAB -->
-    <div id="assumptions" class="tab-content">
-      <div class="grid2">
-        <div class="card">
-          <h3>Base Case Inputs (All State Variables)</h3>
-          <table>
-            <thead>
-              <tr><th style="width: 40px;">#</th><th>Assumption</th><th>Value</th></tr>
-            </thead>
-            <tbody>
-              ${baseAssumptionsRows.map((r, i) => `<tr><td style="color: #94a3b8;">${i + 1}</td><td>${r.name}</td><td><strong>${r.val}</strong></td></tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="card">
-          <h3>Captured Assumptions (Assistant)</h3>
-          <table>
-            <thead>
-              <tr><th style="width: 40px;">#</th><th>Property</th><th>Value</th></tr>
-            </thead>
-            <tbody>
-              ${capturedAssumptions.map((r, i) => `<tr><td style="color: #94a3b8;">${i + 1}</td><td>${r.k}</td><td><strong>${r.v}</strong></td></tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  <div class="main-content" id="appRoot"></div>
 
-  </div>
-  
   <script>
-    function switchTab(tabId, element) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      
-      document.getElementById(tabId).classList.add('active');
-      element.classList.add('active');
+    const DATA = ${payloadJson};
+    const state = JSON.parse(JSON.stringify(DATA.currentState));
+    let activeTab = 'forecast';
+    let savedScenarios = loadSavedScenarios();
+    let scenarioName = 'Scenario ' + (savedScenarios.length + 1);
+    let assistantMessages = [
+      { role: 'ai', text: 'Hi! I can explain assumptions in this model. Ask about peak share, WAC, access survival, J-code retention, refrigeration, competitors, or any specific driver.' }
+    ];
+    let forecastChart = null;
+    let tornadoChart = null;
+    let compareChart = null;
+    let scenarioChart = null;
+
+    function esc(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function formatNumber(v) { return Math.round(Number(v) || 0).toLocaleString('en-US'); }
+    function formatCurrency(v) {
+      const n = Number(v) || 0;
+      if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+      if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(0) + 'M';
+      return '$' + formatNumber(n);
+    }
+    function formatPercent(v) { return (Math.round((Number(v) || 0) * 10) / 10).toFixed(1) + '%'; }
+    function smoothstep(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+
+    function computeForecast(s) {
+      const LAUNCH_YEAR = 2025;
+      const ORS_WEIGHT = 0.70;
+      const PCP_WEIGHT = 0.30;
+      const years = [], patients = [], revenue = [], share = [];
+      let basePeakShare = s.peakShare * (1 - s.overstatementAdjFactor);
+      if (s.womacScoreAvailable) basePeakShare += 0.02;
+      if (s.diabetesGlycemicDataAvailable) basePeakShare += 0.02;
+      const papMultiplier = s.patientAssistanceProgramInPlace ? s.pricingAdjPatientAssistanceImpact : 1.0;
+      const adjustedPeakShare = basePeakShare * s.pricingAdjFactorAccessImpact * papMultiplier;
+      for (let i = 0; i < 6; i++) {
+        const year = LAUNCH_YEAR + i;
+        const t = i;
+        const patientUniverse = s.prevalence;
+        const diagnosed = patientUniverse * s.diagnosisRate * Math.pow(1 + s.diagnosisAnnualGrowthRate, year - 2016);
+        const iasTreated = diagnosed * s.iasTreatedPctOfDiagnosed * Math.pow(1 + s.iasTreatedGrowthRate, t);
+        const promoLift = s.initialAdditionalMarketGrowth * Math.pow(1 - s.annualDecayRateOfAdditionalGrowth, t);
+        const treatedWithPromo = iasTreated * (1 + promoLift);
+        const orthoReachedAdj = t === 0 ? 0.70 : (t === 1 ? 0.80 : 0.85);
+        const pcpReachedAdj = t === 0 ? 0.524 : (t === 1 ? 0.60 : 0.65);
+        const finalOrthoReached = orthoReachedAdj * s.newMarketResearchAdjOrtho;
+        const finalPcpReached = pcpReachedAdj * s.newMarketResearchAdjRheum;
+        const reachFactor = (ORS_WEIGHT * finalOrthoReached) + (PCP_WEIGHT * finalPcpReached);
+        const rawX = Math.min((t + 1) / s.yearsToPeak, 1.0);
+        const uptakeCurve = smoothstep(rawX);
+        let monthlyShare = adjustedPeakShare * uptakeCurve * reachFactor;
+        if (t < s.jCodeWindowMonths / 12) monthlyShare *= s.jCodeRetentionRate;
+        if (t <= s.refrigerationDurationMonths / 12) monthlyShare *= s.refrigerationRetentionORS;
+        if (s.cingalLaunchDate !== 'does_not_launch') {
+          const launch = parseInt(s.cingalLaunchDate.split('-')[0], 10);
+          if (year >= launch) monthlyShare *= s.cingalRetentionOrtho;
+        }
+        if (s.ampionLaunchDate !== 'does_not_launch') {
+          const launch = parseInt(s.ampionLaunchDate.split('-')[0], 10);
+          if (year >= launch) monthlyShare *= s.ampionRetentionOrtho;
+        }
+        if (s.antiNGFLaunchDate !== 'does_not_launch') {
+          const launch = parseInt(s.antiNGFLaunchDate.split('-')[0], 10);
+          if (year >= launch) monthlyShare *= s.antiNGFRetentionOrtho;
+        }
+        const patientsOnTherapy = treatedWithPromo * monthlyShare;
+        const samplingDecayRate = 0.5;
+        const peakSamplingIntensity = 0.15;
+        const steadyStateSampleRate = 0.05;
+        const currentSampleRate = steadyStateSampleRate + (peakSamplingIntensity - steadyStateSampleRate) * Math.pow(1 - samplingDecayRate, t);
+        let rev = (patientsOnTherapy * s.frequencyOfInjectionsYearly * s.wacPrice) * (1 - currentSampleRate);
+        if (t === 0) {
+          const y1AvgOverride = (s.q4_2017_OverrideAdj + s.q1_2018_OverrideAdj + s.q2_2018_OverrideAdj + s.q3_2018_OverrideAdj) / 4;
+          rev *= (1 + y1AvgOverride);
+        } else if (t === 1) {
+          rev *= (1 + s.q4_2018_OverrideAdj);
+        }
+        years.push((2016 + i).toString());
+        patients.push(patientsOnTherapy);
+        revenue.push(rev);
+        share.push(monthlyShare * 100);
+      }
+      const cumulativeRevenue = revenue.reduce(function(acc, val) {
+        acc.push((acc.length > 0 ? acc[acc.length - 1] : 0) + val);
+        return acc;
+      }, []);
+      const cumulative = revenue.reduce(function(a, b) { return a + b; }, 0);
+      const addressable = s.prevalence * s.diagnosisRate * s.treatmentRate * s.addressableShare;
+      const peakRevenue = Math.max.apply(null, revenue);
+      const adjustedPeakPatients = addressable * adjustedPeakShare;
+      return { years, patients, revenue, cumulativeRevenue, share, addressable, peakRevenue, cumulative, adjustedPeakShare, adjustedPeakPatients };
     }
 
-    // 1. Forecast Line Chart
-    new Chart(document.getElementById('forecastLineChart'), {
-      type: 'line',
-      data: {
-        labels: ${JSON.stringify(baseAnnual.labels)},
-        datasets: [{
-          label: 'Net Rev',
-          data: ${JSON.stringify(baseAnnual.revenue)},
-          borderColor: '#2a78d6',
-          backgroundColor: 'rgba(42,120,214,0.1)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { ticks: { callback: function(v) { return '$' + (v/1000000).toFixed(1) + 'M'; } } } }
+    const baseModel = computeForecast(DATA.defaultState);
+
+    function getRebasedForecast(s) {
+      const raw = computeForecast(s);
+      const rebasedRevenue = raw.revenue.map(function(value, idx) {
+        const baseModeled = baseModel.revenue[idx] || 1;
+        const currentModeled = raw.revenue[idx] || 0;
+        const actual = (DATA.actuals || [])[idx] || 0;
+        return actual * (currentModeled / baseModeled);
+      });
+      // If actuals are missing/zero, fall back to modeled revenue so charts still populate
+      const hasActuals = (DATA.actuals || []).some(function(v) { return v && v > 0; });
+      raw.revenue = hasActuals ? rebasedRevenue : raw.revenue;
+      raw.peakRevenue = Math.max.apply(null, raw.revenue);
+      let cum = 0;
+      raw.cumulativeRevenue = raw.revenue.map(function(val) { cum += val; return cum; });
+      return raw;
+    }
+
+    function loadSavedScenarios() {
+      try {
+        const raw = localStorage.getItem('forecast_ai_scenarios_v1');
+        if (!raw) return (DATA.savedScenarios || []).map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: clone(sc.s) }; });
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: sc.s }; }) : [];
+      } catch (err) {
+        return (DATA.savedScenarios || []).map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: clone(sc.s) }; });
       }
+    }
+    function persistScenarios() { try { localStorage.setItem('forecast_ai_scenarios_v1', JSON.stringify(savedScenarios)); } catch (err) {} }
+
+    function setField(key, raw) {
+      const control = DATA.controlSchema.find(function(item) { return item.key === key; });
+      if (!control) return;
+      if (control.type === 'toggle') state[key] = !!raw;
+      else if (control.type === 'select' || control.type === 'monthOrNever') state[key] = raw;
+      else state[key] = Number(raw);
+      render();
+    }
+
+    function saveScenario() {
+      const input = document.getElementById('scenarioName');
+      const name = String((input && input.value) || scenarioName).trim();
+      if (!name) return;
+      const tag = ['tag-base', 'tag-up', 'tag-down'][savedScenarios.length % 3];
+      savedScenarios.push({ name: name, tag: tag, s: clone(state) });
+      scenarioName = 'Scenario ' + (savedScenarios.length + 1);
+      persistScenarios();
+      render();
+    }
+    function loadScenarioIntoState(index) {
+      const sc = index === -1 ? { s: DATA.defaultState } : savedScenarios[index];
+      if (!sc) return;
+      Object.keys(state).forEach(function(key) { delete state[key]; });
+      Object.assign(state, clone(sc.s));
+      render();
+    }
+    function deleteScenario(index) {
+      savedScenarios.splice(index, 1);
+      persistScenarios();
+      render();
+    }
+    function switchTab(tab) { activeTab = tab; render(); }
+
+    function answerAssistant(question) {
+      const q = String(question || '').toLowerCase();
+      const forecast = getRebasedForecast(state);
+      for (var i = 0; i < DATA.assistantKB.length; i++) {
+        const entry = DATA.assistantKB[i];
+        for (var j = 0; j < entry.keys.length; j++) {
+          if (q.indexOf(entry.keys[j]) !== -1) {
+            let ctx = '';
+            if (entry.keys[0] === 'peak share') ctx = ' Current adjusted peak share is ' + formatPercent(forecast.adjustedPeakShare * 100) + '.';
+            else if (entry.keys[0] === 'wac' || entry.keys[0] === 'wac') ctx = ' Current WAC is ' + formatCurrency(state.wacPrice) + '.';
+            else if (entry.keys[0] === 'access') ctx = ' Current access survival is ' + formatPercent(state.pricingAdjFactorAccessImpact * 100) + '.';
+            else if (entry.keys[0] === 'j-code') ctx = ' Current J-code retention is ' + formatPercent(state.jCodeRetentionRate * 100) + '.';
+            else if (entry.keys[0] === 'refrigeration') ctx = ' Current refrigeration duration is ' + state.refrigerationDurationMonths + ' months.';
+            return entry.answer + ctx;
+          }
+        }
+      }
+      return "I can explain any of the model drivers — try asking about peak share, WAC, access survival, J-code retention, refrigeration, or a specific competitor. You can also ask what a scenario is or how the tornado chart works.";
+    }
+
+    function submitAssistant() {
+      const input = document.getElementById('assistantInput');
+      if (!input) return;
+      const question = String(input.value || '').trim();
+      if (!question) return;
+      assistantMessages.push({ role: 'user', text: question });
+      assistantMessages.push({ role: 'ai', text: answerAssistant(question) });
+      input.value = '';
+      render();
+      // scroll chat to bottom after re-render
+      setTimeout(function() {
+        const log = document.getElementById('chatLog');
+        if (log) log.scrollTop = log.scrollHeight;
+      }, 20);
+    }
+    function useAssistantPrompt(prompt) {
+      const input = document.getElementById('assistantInput');
+      if (!input) return;
+      input.value = prompt;
+      submitAssistant();
+    }
+
+    // ---------- Renderers ----------
+
+    function renderControls() {
+      const groups = DATA.controlSchema.reduce(function(acc, c) { (acc[c.section] = acc[c.section] || []).push(c); return acc; }, {});
+      const order = ['Demand', 'Core forecast', 'Preference', 'Access', 'Friction', 'Competition', 'Volume'];
+      const html = order.filter(function(sec) { return groups[sec]; }).map(function(sec) {
+        return '<div class="section-header">' + esc(sec) + '</div>' + groups[sec].map(function(control) {
+          const value = state[control.key];
+          if (control.type === 'toggle') {
+            return '<div class="control"><div class="toggle"><label>' + esc(control.label) + '</label><label class="switch"><input type="checkbox" ' + (value ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked)"><span class="slider"></span></label></div></div>';
+          }
+          if (control.type === 'select') {
+            return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + control.options.map(function(opt) { return '<option value="' + esc(opt.value) + '" ' + (String(opt.value) === String(value) ? 'selected' : '') + '>' + esc(opt.label) + '</option>'; }).join('') + '</select></div>';
+          }
+          if (control.type === 'monthOrNever') {
+            const never = value === 'does_not_launch';
+            return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label><div class="val">' + esc(never ? 'Never' : value) + '</div></div><div class="inline-row"><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><input type="checkbox" ' + (never ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked ? \\'does_not_launch\\' : \\'2025-01\\')">Does not launch</label><input class="grow" type="month" value="' + (never ? '' : value) + '" ' + (never ? 'disabled' : '') + ' onchange="setField(\\'' + control.key + '\\', this.value)"></div></div>';
+          }
+          // range
+          let display;
+          if (control.unit === '$') display = '$' + Number(value).toLocaleString('en-US');
+          else if (control.unit === ' mo') display = Number(value) + ' mo';
+          else if (control.unit === ' yrs') display = Number(value) + ' yrs';
+          else if (control.unit === ' /yr') display = Number(value).toFixed(1) + ' /yr';
+          else if (control.unit === '') display = Number(value).toLocaleString('en-US');
+          else display = formatPercent(Number(value) * 100);
+          return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label><div class="val">' + esc(display) + '</div></div><input type="range" min="' + control.min + '" max="' + control.max + '" step="' + control.step + '" value="' + value + '" oninput="setField(\\'' + control.key + '\\', this.value)"></div>';
+        }).join('');
+      }).join('');
+      return '<div class="card"><div class="card-title">Model assumptions</div><div class="card-sub">Tweak the drivers below. Every change updates the forecast live.</div>' + html + '</div>';
+    }
+
+    function renderMetrics(forecast) {
+      const metrics = [
+        { label: 'Peak revenue', value: formatCurrency(forecast.peakRevenue) },
+        { label: 'Adjusted peak share', value: formatPercent(forecast.adjustedPeakShare * 100) },
+        { label: 'Peak patients', value: formatNumber(forecast.adjustedPeakPatients) },
+        { label: 'Year 1 net', value: formatCurrency(forecast.revenue[1] || 0) },
+        { label: 'Year 3 net', value: formatCurrency(forecast.revenue[3] || 0) },
+        { label: 'Year 5 net', value: formatCurrency(forecast.revenue[5] || 0) }
+      ];
+      return '<div class="metric-grid">' + metrics.map(function(m) {
+        return '<div class="metric"><div class="label">' + esc(m.label) + '</div><div class="value">' + esc(m.value) + '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    function renderYearTable(forecast) {
+      const rows = forecast.revenue.slice(1).map(function(val, idx) {
+        return '<tr><td><strong>Year ' + (idx + 1) + '</strong></td><td>' + formatNumber(forecast.patients[idx + 1] || 0) + '</td><td style="color:var(--teal);font-weight:700;">' + formatCurrency(val) + '</td></tr>';
+      }).join('');
+      return '<div class="card"><div class="card-title">Year-by-year detail</div><div class="scenario-table-wrap"><table><thead><tr><th>Year</th><th>Treatments</th><th>Net revenue</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+    }
+
+    // ----- Tab renderers -----
+    function renderForecastTab(forecast) {
+      const right = [
+        renderMetrics(forecast),
+        '<div class="card"><div class="card-title">Net year revenue forecast, US ($)</div><div class="chart-note">Forecast updates whenever any sidebar assumption changes.</div><div class="chart-wrap"><canvas id="forecastLineChart"></canvas></div></div>',
+        '<div class="card"><div class="card-title">Sensitivity analysis</div><div class="chart-note">Peak-revenue sensitivity to +/- 10% moves in each driver.</div><div class="chart-wrap tall"><canvas id="forecastTornadoChart"></canvas></div></div>',
+        renderYearTable(forecast)
+      ].join('');
+      return '<div class="page-grid"><div class="left-stack">' + renderControls() + '</div><div class="right-stack">' + right + '</div></div>';
+    }
+
+    function renderScenarioSidebar() {
+      const list = savedScenarios.length ? savedScenarios.map(function(sc, idx) {
+        return '<div class="scenario-item"><div><div class="name">' + esc(sc.name) + '</div><div class="meta"><span class="scenario-tag ' + esc(sc.tag) + '">' + esc((sc.tag || 'tag-base').replace('tag-', '')) + '</span></div></div><div style="display:flex;gap:6px;"><button class="btn secondary small" onclick="loadScenarioIntoState(' + idx + ')">Load</button><button class="btn ghost small" onclick="deleteScenario(' + idx + ')">Delete</button></div></div>';
+      }).join('') : '<div class="empty-note">No saved scenarios yet. Save your first one to start comparing.</div>';
+      return '<div class="card"><div class="card-title">Scenario builder</div><div class="card-sub">Save the current assumption set. Compare saved scenarios in the Compare tab.</div><div class="inline-row"><input id="scenarioName" type="text" class="grow" value="' + esc(scenarioName) + '" placeholder="Scenario name" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;"><button class="btn small" onclick="saveScenario()">Save scenario</button></div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn secondary small" onclick="loadScenarioIntoState(-1)">Reset to base</button></div><div class="scenario-list">' + list + '</div></div>';
+    }
+
+    function renderScenarioTab(forecast) {
+      const right = [
+        renderScenarioSidebar(),
+        renderMetrics(forecast),
+        '<div class="card"><div class="card-title">Current scenario — revenue trajectory</div><div class="chart-wrap"><canvas id="scenarioLineChart"></canvas></div></div>',
+        renderYearTable(forecast)
+      ].join('');
+      return '<div class="page-grid"><div class="left-stack">' + renderControls() + '</div><div class="right-stack">' + right + '</div></div>';
+    }
+
+    function renderCompareTab() {
+      const all = [{ name: 'Base (current)', tag: 'tag-base', s: state }].concat(savedScenarios);
+      const rows = all.map(function(sc) {
+        const fc = getRebasedForecast(sc.s);
+        return '<tr><td><strong>' + esc(sc.name) + '</strong> <span class="scenario-tag ' + esc(sc.tag || 'tag-base') + '" style="margin-left:6px;">' + esc((sc.tag || 'tag-base').replace('tag-', '')) + '</span></td><td>' + esc(formatPercent(fc.adjustedPeakShare * 100)) + '</td><td>' + esc(formatCurrency(sc.s.wacPrice)) + '</td><td>' + esc(Math.ceil(sc.s.yearsToPeak)) + '</td><td>' + esc(formatCurrency(fc.peakRevenue)) + '</td><td>' + esc(formatCurrency(fc.revenue[1] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[2] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[3] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[4] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[5] || 0)) + '</td></tr>';
+      }).join('');
+      const emptyNote = savedScenarios.length === 0 ? '<div class="empty-note" style="margin-bottom:12px;">Only the base scenario is shown. Save scenarios in the <b>Scenario</b> tab to compare them here.</div>' : '';
+      return '<div style="display:flex;flex-direction:column;gap:16px;">' + emptyNote + '<div class="card"><div class="card-title">Scenario comparison</div><div class="scenario-table-wrap"><table><thead><tr><th>Scenario</th><th>Peak share</th><th>WAC</th><th>Yrs to peak</th><th>Peak rev</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead><tbody>' + rows + '</tbody></table></div></div><div class="card"><div class="card-title">Year-by-year comparison</div><div class="chart-wrap tall"><canvas id="compareBarChart"></canvas></div></div></div>';
+    }
+
+    function renderAssistantTab() {
+      const bubbles = assistantMessages.map(function(m) {
+        return '<div class="bubble ' + (m.role === 'user' ? 'user' : 'ai') + '"><span class="who">' + (m.role === 'user' ? 'You' : 'Assistant') + '</span>' + esc(m.text) + '</div>';
+      }).join('');
+      const suggested = ['What is peak share?', 'Explain WAC', 'What does access survival mean?', 'What is J-code retention?', 'How does refrigeration affect share?', 'What is a scenario?']
+        .map(function(p) { return '<button class="btn secondary small" onclick="useAssistantPrompt(\\'' + p.replace(/'/g, "\\\\'") + '\\')">' + esc(p) + '</button>'; }).join('');
+      const captured = DATA.capturedAssumptions.map(function(row) {
+        return '<div class="captured-item"><span class="k">' + esc(row.k) + '</span><span class="v">' + esc(row.v) + '</span></div>';
+      }).join('');
+      return '<div class="assistant-shell"><div class="card"><div class="card-title">Model assistant</div><div class="card-sub">Ask about any assumption, driver, or model concept. Answers use current state values where relevant.</div><div class="chat-log" id="chatLog">' + bubbles + '</div><div class="assistant-input"><input id="assistantInput" type="text" placeholder="e.g. What is peak share?" onkeydown="if(event.key===\\'Enter\\')submitAssistant()"><button class="btn" onclick="submitAssistant()">Ask</button></div><div class="suggested">' + suggested + '</div></div><div class="card"><div class="card-title">Captured assumptions</div><div class="card-sub">Structured notes captured from this model at export time.</div><div class="captured-list">' + captured + '</div></div></div>';
+    }
+
+    // ---------- Charts ----------
+    function destroyCharts() {
+      [forecastChart, tornadoChart, compareChart, scenarioChart].forEach(function(c) { if (c) c.destroy(); });
+      forecastChart = tornadoChart = compareChart = scenarioChart = null;
+    }
+
+    function renderCharts(forecast) {
+      destroyCharts();
+      if (activeTab === 'forecast') {
+        const line = document.getElementById('forecastLineChart');
+        if (line) {
+          forecastChart = new Chart(line, {
+            type: 'line',
+            data: {
+              labels: forecast.years.slice(1).map(function(_, i) { return 'Year ' + (i + 1); }),
+              datasets: [{
+                label: 'Net Revenue',
+                data: forecast.revenue.slice(1),
+                borderColor: '#F25621',
+                backgroundColor: 'rgba(242, 86, 33, 0.12)',
+                fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2
+              }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v) { return formatCurrency(v); } } } } }
+          });
+        }
+        const tor = document.getElementById('forecastTornadoChart');
+        if (tor) {
+          const peak = forecast.peakRevenue || 1;
+          const labels = ['Net price', 'Adherence', 'Peak share', 'Addressable share', 'Diagnosis rate'];
+          const lows = [-0.10, -0.10, -0.09, -0.085, -0.08].map(function(p) { return p * peak; });
+          const highs = [0.10, 0.10, 0.09, 0.085, 0.08].map(function(p) { return p * peak; });
+          tornadoChart = new Chart(tor, {
+            type: 'bar',
+            data: { labels: labels, datasets: [
+              { label: 'Low', data: lows, backgroundColor: '#f87171', borderRadius: 4 },
+              { label: 'High', data: highs, backgroundColor: '#00b2a9', borderRadius: 4 }
+            ] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: { ticks: { callback: function(v) { return formatCurrency(v); } } } } }
+          });
+        }
+      } else if (activeTab === 'scenario') {
+        const line = document.getElementById('scenarioLineChart');
+        if (line) {
+          scenarioChart = new Chart(line, {
+            type: 'line',
+            data: {
+              labels: forecast.years.slice(1).map(function(_, i) { return 'Year ' + (i + 1); }),
+              datasets: [{
+                label: 'Current scenario',
+                data: forecast.revenue.slice(1),
+                borderColor: '#F25621',
+                backgroundColor: 'rgba(242, 86, 33, 0.12)',
+                fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2
+              }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(v) { return formatCurrency(v); } } } } }
+          });
+        }
+      } else if (activeTab === 'compare') {
+        const cmp = document.getElementById('compareBarChart');
+        if (cmp) {
+          const labels = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
+          const palette = ['#F25621', '#00b2a9', '#3b82f6', '#7c3aed', '#f59e0b', '#ec4899', '#10b981', '#8b5cf6'];
+          const datasets = [{ name: 'Base (current)', s: state }].concat(savedScenarios).map(function(sc, idx) {
+            return {
+              label: sc.name,
+              data: getRebasedForecast(sc.s).revenue.slice(1, 6),
+              backgroundColor: palette[idx % palette.length],
+              borderRadius: 4
+            };
+          });
+          compareChart = new Chart(cmp, {
+            type: 'bar',
+            data: { labels: labels, datasets: datasets },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: function(v) { return formatCurrency(v); } } } } }
+          });
+        }
+      }
+    }
+
+    function render() {
+      const forecast = getRebasedForecast(state);
+      let panel = '';
+      if (activeTab === 'forecast') panel = renderForecastTab(forecast);
+      else if (activeTab === 'scenario') panel = renderScenarioTab(forecast);
+      else if (activeTab === 'compare') panel = renderCompareTab();
+      else if (activeTab === 'assistant') panel = renderAssistantTab();
+      document.getElementById('appRoot').innerHTML = panel;
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === activeTab);
+      });
+      renderCharts(forecast);
+      if (activeTab === 'assistant') {
+        const log = document.getElementById('chatLog');
+        if (log) log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    // Expose to inline handlers
+    window.setField = setField;
+    window.saveScenario = saveScenario;
+    window.loadScenarioIntoState = loadScenarioIntoState;
+    window.deleteScenario = deleteScenario;
+    window.switchTab = switchTab;
+    window.submitAssistant = submitAssistant;
+    window.useAssistantPrompt = useAssistantPrompt;
+    window.render = render;
+
+    document.addEventListener('click', function(event) {
+      const btn = event.target && event.target.closest ? event.target.closest('.tab-btn') : null;
+      if (!btn) return;
+      const tab = btn.getAttribute('data-tab');
+      if (tab) switchTab(tab);
     });
 
-    // 2. Forecast Tornado Chart
-    new Chart(document.getElementById('forecastTornadoChart'), {
-      type: 'bar',
-      data: {
-        labels: ${JSON.stringify(baseImpacts.map(i => i.name))},
-        datasets: [
-          {
-            label: 'Low Case',
-            data: ${JSON.stringify(baseImpacts.map(i => i.low))},
-            backgroundColor: '#f87171',
-            borderRadius: 4
-          },
-          {
-            label: 'High Case',
-            data: ${JSON.stringify(baseImpacts.map(i => i.high))},
-            backgroundColor: '#34d399',
-            borderRadius: 4
-          }
-        ]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(ctx) {
-                var val = ctx.raw;
-                var sign = val > 0 ? '+' : '';
-                return 'Impact: ' + sign + '$' + (val/1000000).toFixed(1) + 'M';
-              }
-            }
-          }
-        },
-        scales: { x: { ticks: { callback: function(v) { return '$' + (v/1000000).toFixed(1) + 'M'; } } } }
-      }
-    });
-
-    // 3. Compare Bar Chart
-    new Chart(document.getElementById('compareBarChart'), {
-      type: 'bar',
-      data: {
-        labels: ${JSON.stringify(baseAnnual.labels)},
-        datasets: ${JSON.stringify(compareChartDatasets)}
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { y: { ticks: { callback: function(v) { return '$' + (v/1000000).toFixed(1) + 'M'; } } } }
-      }
-    });
+    render();
   </script>
 </body>
 </html>`;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Axpaxli_Forecast_And_Compare.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Forecast_AI_Interactive_Workspace.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 
   return (
     <>
