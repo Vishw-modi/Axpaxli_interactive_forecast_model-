@@ -806,15 +806,28 @@ const resourcePreviewData: Record<number, { title: string; headers: string[]; ro
     ]
   },
   6: {
-    title: 'Other Adjustments Summary',
-    headers: ['Factor / Event', 'Timing', 'Ortho / Rheum Retained', 'PCP / Other Retained'],
+    title: 'Payer, Access & Competitive Adjustments',
+    headers: ['PARAMETER', 'SEGMENT', 'VALUE'],
     rows: [
-      ['Payer access requirement', 'Ongoing', '96%', '94%'],
-      ['Patient assistance program', 'Ongoing', '100%', '100%'],
-      ['Reimbursement / coding transition', 'Auto-linked to launch', '60%', '60%'],
-      ['Regulatory / guideline change', 'Year 1', '95%', '95%'],
-      ['Competitive launch - Event 1', 'Year 2', '85%', '88%'],
-      ['Competitive launch - Event 2', 'Year 3', '90%', '92%']
+      ['Access requirement', 'All', 'Pre-cert + step edit'],
+      ['Access requirement — retention', 'All', '96%'],
+      ['Patient assistance program', 'All', 'Not in place'],
+      ['J-Code transition — retention', 'Ortho / Rheum', '60%'],
+      ['J-Code transition — retention', 'PCP / Other', '60%'],
+      ['Refrigeration requirement — retention', 'Ortho / Rheum', '95%'],
+      ['Refrigeration requirement — retention', 'PCP / Other', '95%'],
+      ['Office / payer rejection trend', 'All', '-1.0%/yr (not currently active)'],
+      ['Injection frequency', 'All', '1.5 / year'],
+      ['Competitor A launch — timing', 'All', '2019'],
+      ['Competitor A launch — retention', 'Ortho / Rheum', '74%'],
+      ['Competitor A launch — retention', 'PCP / Other', '85%'],
+      ['Competitor B launch — timing', 'All', 'Does not launch'],
+      ['Competitor B launch — retention', 'Ortho / Rheum', '86.5%'],
+      ['Competitor B launch — retention', 'PCP / Other', '84%'],
+      ['Competitor C launch — timing', 'All', '2020'],
+      ['Competitor C launch — retention', 'Ortho / Rheum', '90%'],
+      ['Competitor C launch — retention', 'PCP / Other', '95%'],
+      ['Other market or payer event (placeholder)', '—', '—']
     ]
   },
   7: {
@@ -856,14 +869,14 @@ const resourceStages: ResourceStage[] = [
   },
   {
     id: 3,
-    title: 'Other Adjustments',
-    description: 'One consolidated file capturing payers/competitive/market factors relevant to the forecast',
-    color: '#e7aa7f',
-    iconBg: '#fff0e8',
-    icon: 'C',
+    title: 'Other Adjustments (Payer, Market Events)',
+    description: 'Access requirements, operational friction, competitive launches, and any other relevant event',
+    color: '#059669',
+    iconBg: '#d1fae5',
+    icon: '3',
     lockedBy: 'Share & Pricing',
     sheets: [
-      { id: 6, title: 'Other Adjustments Summary', subtitle: 'Pending upload' }
+      { id: 6, title: 'Payer, Access & Competitive Adjustments', subtitle: 'Pending upload' }
     ]
   }
 ];
@@ -3844,6 +3857,13 @@ const exportScenariosHTML = async () => {
                       )}
                     </div>
 
+                    {stage.id === 3 && (
+                      <div style={{ background: '#faf5ff', border: '1px solid #f3e8ff', borderRadius: '12px', padding: '14px 18px', margin: '14px 22px 0 22px', fontSize: '13px', color: '#7e22ce', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '15px' }}>💡</span>
+                        <span><strong>AI suggestion:</strong> one row per data point — Parameter, Segment, Value — reads more reliably than a wide table with merged cells.</span>
+                      </div>
+                    )}
+
                     {stage.sheets.map(sheet => {
                       const isUploaded = !!uploadedSheets[sheet.id];
                       return (
@@ -4522,32 +4542,127 @@ const exportScenariosHTML = async () => {
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
-                          <tr style={{ background: '#fff' }}>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Factor / Event</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Timing</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>Ortho/Rheum Retained</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px' }}>PCP/Other Retained</th>
+                          <tr style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontSize: '11px', fontWeight: 700 }}>PARAMETER</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontSize: '11px', fontWeight: 700 }}>SEGMENT</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontSize: '11px', fontWeight: 700 }}>VALUE</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {[
-                            ['Payer access requirement', 'Ongoing', '96%', '94%'],
-                            ['Patient assistance program', 'Ongoing', '100%', '100%'],
-                            ['Reimbursement / coding transition', 'Auto-linked to launch', '60%', '60%'],
-                            ['Regulatory / guideline change', 'Year 1', '95%', '95%'],
-                            ['Competitive launch — Event 1', 'Year 2', '85%', '88%'],
-                            ['Competitive launch — Event 2', 'Year 3', '90%', '92%']
-                          ].map((row, rowIndex) => (
-                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              {row.map((cell, cellIndex) => (
-                                <td key={cellIndex} style={{ padding: '7px 12px', textAlign: cellIndex >= 2 ? 'right' : 'left', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{cell}</td>
-                              ))}
-                            </tr>
-                          ))}
+                          <tr style={{ background: '#f8fafc' }}>
+                            <td colSpan={3} style={{ padding: '6px 12px', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>PAYER</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Access requirement</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>Pre-cert + step edit</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Access requirement — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>96%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Patient assistance program</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>Not in place</td>
+                          </tr>
+
+                          <tr style={{ background: '#f8fafc' }}>
+                            <td colSpan={3} style={{ padding: '6px 12px', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>OPERATIONAL FRICTION</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>J-Code transition — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>Ortho / Rheum</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>60%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>J-Code transition — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>PCP / Other</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>60%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Refrigeration requirement — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>Ortho / Rheum</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>95%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Refrigeration requirement — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>PCP / Other</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>95%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Office / payer rejection trend</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>-1.0%/yr (not currently active)</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Injection frequency</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>1.5 / year</td>
+                          </tr>
+
+                          <tr style={{ background: '#f8fafc' }}>
+                            <td colSpan={3} style={{ padding: '6px 12px', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>COMPETITIVE EVENTS (NAMES MASKED)</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor A launch — timing</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>2019</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor A launch — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>Ortho / Rheum</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>74%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor A launch — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>PCP / Other</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>85%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor B launch — timing</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>Does not launch</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor B launch — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>Ortho / Rheum</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>86.5%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor B launch — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>PCP / Other</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>84%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor C launch — timing</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>All</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>2020</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor C launch — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>Ortho / Rheum</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>90%</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '7px 12px', color: '#334155' }}>Competitor C launch — retention</td>
+                            <td style={{ padding: '7px 12px', color: '#64748b' }}>PCP / Other</td>
+                            <td style={{ padding: '7px 12px', color: '#334155', fontWeight: 500 }}>95%</td>
+                          </tr>
+
+                          <tr style={{ background: '#f8fafc' }}>
+                            <td colSpan={3} style={{ padding: '6px 12px', color: '#64748b', fontSize: '11px', fontWeight: 700 }}>OTHER</td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '7px 12px', color: '#94a3b8' }}>Other market or payer event (placeholder)</td>
+                            <td style={{ padding: '7px 12px', color: '#94a3b8' }}>—</td>
+                            <td style={{ padding: '7px 12px', color: '#94a3b8' }}>—</td>
+                          </tr>
                         </tbody>
                       </table>
                       <div style={{ padding: '8px 12px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', borderTop: '1px solid #e2e8f0' }}>
-                        This is the standard shape a PMR summary takes for share-impact questions - one factor per row, retention split by physician channel.
+                        This structure organizes parameters, segments, and values reliably across payer, operational, and competitive categories.
                       </div>
                     </div>
                   </div>
