@@ -47,6 +47,7 @@ function AccordionSection({
   onQuickSet?: (level: 0 | 2 | 4) => void;
   children: React.ReactNode;
 }) {
+  const ctx = React.useContext(SliderContext);
   return (
     <div className="accordion-section">
       <button
@@ -60,6 +61,23 @@ function AccordionSection({
       {isOpen && (
         <div className="accordion-body">
           {children}
+          {ctx?.customAssumptions?.filter((a: any) => a.group === title).map((ca: any) => (
+            <div key={ca.id} style={{ position: 'relative', marginTop: '16px', padding: '12px', border: '1px dashed var(--border)', borderRadius: '6px' }}>
+               <button className="btn small" onClick={() => ctx.setCustomAssumptions((p: any) => p.filter((x: any) => x.id !== ca.id))} style={{ position: 'absolute', top: 12, right: 12, fontSize: '11px', padding: '4px 8px' }}>Remove</button>
+               <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', paddingRight: '40px' }}>{ca.name}</div>
+               <div style={{ fontSize: '15px', color: 'var(--navy)', marginTop: '4px' }}>{ca.value}</div>
+            </div>
+          ))}
+          {ctx?.setCustomAssumptions && (
+            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+              <button className="btn secondary small" style={{ fontSize: '12px' }} onClick={() => {
+                if (ctx.setDummyModalGroup && ctx.setDummyModalOpen) {
+                  ctx.setDummyModalGroup(title);
+                  ctx.setDummyModalOpen(true);
+                }
+              }}>+ Add dummy assumption</button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -85,6 +103,9 @@ function SliderControl({
   onChange: (val: number) => void;
 }) {
   const ctx = React.useContext(SliderContext);
+  if (ctx?.hiddenAssumptions?.includes(fieldKey)) return null;
+  const removeBtn = ctx?.setHiddenAssumptions ? <button className="btn small" onClick={() => ctx.setHiddenAssumptions((p: string[]) => [...p, fieldKey])} style={{ fontSize: '11px', padding: '2px 6px', marginRight: '8px' }} title="Remove">Remove</button> : null;
+
   const isScenariosEnabled = ctx?.scenariosEnabledMap?.[fieldKey] || false;
   const [localInput, setLocalInput] = React.useState<string | null>(null);
 
@@ -116,7 +137,7 @@ function SliderControl({
   if (asDropdown) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-        <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{label}</span>
+        <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{removeBtn}{label}</span>
         <select
           value={currentIdx}
           onChange={e => onChange(dynamicStops[parseInt(e.target.value)])}
@@ -136,9 +157,9 @@ function SliderControl({
   if (hideSlider) {
     const showSliderForThis = fieldKey === 'diagnosisRate';
     return (
-      <div className="slider-control-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="slider-control-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
         <div className="slider-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '0' }}>
-          <span className="slider-label" style={{ marginBottom: 0 }}>{label}</span>
+          <span className="slider-label" style={{ marginBottom: 0 }}>{removeBtn}{label}</span>
           <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
         </div>
         
@@ -198,9 +219,9 @@ function SliderControl({
   }
 
   return (
-    <div className="slider-control-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div className="slider-control-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
       <div className="slider-label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '0' }}>
-        <span className="slider-label" style={{ marginBottom: 0 }}>{label}</span>
+        <span className="slider-label" style={{ marginBottom: 0 }}>{removeBtn}{label}</span>
         <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
       </div>
       
@@ -278,9 +299,13 @@ function ToggleControl({
   label: string; fieldKey: string;
   value: boolean; onChange: (val: boolean) => void;
 }) {
+  const ctx = React.useContext(SliderContext);
+  if (ctx?.hiddenAssumptions?.includes(fieldKey)) return null;
+  const removeBtn = ctx?.setHiddenAssumptions ? <button className="btn small" onClick={() => ctx.setHiddenAssumptions((p: string[]) => [...p, fieldKey])} style={{ fontSize: '11px', padding: '2px 6px', marginRight: '8px' }} title="Remove">Remove</button> : null;
+
   return (
     <div className="toggle-row">
-      <span className="toggle-label">{label}</span>
+      <span className="toggle-label">{removeBtn}{label}</span>
       <label className="toggle-switch">
         <input
           type="checkbox"
@@ -303,10 +328,14 @@ function SelectControl({
   value: string; onAskAI: () => void;
   onChange: (val: string) => void;
 }) {
+  const ctx = React.useContext(SliderContext);
+  if (ctx?.hiddenAssumptions?.includes(fieldKey)) return null;
+  const removeBtn = ctx?.setHiddenAssumptions ? <button className="btn small" onClick={() => ctx.setHiddenAssumptions((p: string[]) => [...p, fieldKey])} style={{ fontSize: '11px', padding: '2px 6px', marginRight: '8px' }} title="Remove">Remove</button> : null;
+
   return (
     <div className="select-control-row">
       <div className="slider-label-row">
-        <span className="slider-label">{label}</span>
+        <span className="slider-label">{removeBtn}{label}</span>
         <button className="ask-ai-btn" onClick={onAskAI}>✨ Ask AI</button>
       </div>
       <div className="segmented-control">
@@ -334,6 +363,10 @@ function NumberControl({
   onChange: (val: number) => void;
   asDropdown?: boolean;
 }) {
+  const ctx = React.useContext(SliderContext);
+  if (ctx?.hiddenAssumptions?.includes(fieldKey)) return null;
+  const removeBtn = ctx?.setHiddenAssumptions ? <button className="btn small" onClick={() => ctx.setHiddenAssumptions((p: string[]) => [...p, fieldKey])} style={{ fontSize: '11px', padding: '2px 6px', marginRight: '8px' }} title="Remove">Remove</button> : null;
+
   const [localInput, setLocalInput] = React.useState<string | null>(null);
 
   const displayVal = unit === '%' ? Math.round(currentValue * 10000) / 100 : currentValue;
@@ -353,7 +386,7 @@ function NumberControl({
 
   return (
     <div className={asDropdown ? "slider-control-row" : ""} style={!asDropdown ? { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' } : { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-      <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{label}</span>
+      <span style={{ fontSize: '13px', color: '#374151', flex: '1 1 auto', minWidth: 0 }}>{removeBtn}{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         <input 
           type="number" 
@@ -374,10 +407,14 @@ function DateOrNeverControl({
   label: string; fieldKey: string;
   value: string; onChange: (val: string) => void;
 }) {
+  const ctx = React.useContext(SliderContext);
+  if (ctx?.hiddenAssumptions?.includes(fieldKey)) return null;
+  const removeBtn = ctx?.setHiddenAssumptions ? <button className="btn small" onClick={() => ctx.setHiddenAssumptions((p: string[]) => [...p, fieldKey])} style={{ fontSize: '11px', padding: '2px 6px', marginRight: '8px' }} title="Remove">Remove</button> : null;
+
   const isNever = value === 'does_not_launch';
   return (
     <div className="date-or-never-row">
-      <span className="slider-label">{label}</span>
+      <span className="slider-label">{removeBtn}{label}</span>
       <div className="date-never-controls">
         <label className="never-checkbox-label">
           <input
@@ -610,6 +647,12 @@ export default function ForecastApp() {
   const [savedScenarios, setSavedScenarios] = useState<{name: string, tag: string, s: ForecastState}[]>([]);
   const [scenarioNameInput, setScenarioNameInput] = useState('');
   const [sensitivityLevel, setSensitivityLevel] = useState<5 | 10>(5);
+  const [hiddenAssumptions, setHiddenAssumptions] = useState<string[]>([]);
+  const [customAssumptions, setCustomAssumptions] = useState<{ id: string; name: string; value: string; group: React.ReactNode }[]>([]);
+  const [dummyModalOpen, setDummyModalOpen] = useState(false);
+  const [dummyModalGroup, setDummyModalGroup] = useState<React.ReactNode>('');
+  const [dummyModalName, setDummyModalName] = useState('');
+  const [dummyModalValue, setDummyModalValue] = useState('');
   
   // Resource Gathering state
   const [uploadedSheets, setUploadedSheets] = useState<Record<number, boolean>>({});
@@ -2139,7 +2182,8 @@ const chatScript: ChatStepDef[] = [
     let sn = 1;
     const l = (lbl: string) => asDropdown ? lbl : `${sn++}. ${lbl}`;
     return (
-    <SliderContext.Provider value={{ scenariosEnabledMap, setScenariosEnabledMap, customCentersMap, setCustomCentersMap }}>
+      <>
+    <SliderContext.Provider value={{ scenariosEnabledMap, setScenariosEnabledMap, customCentersMap, setCustomCentersMap, hiddenAssumptions, setHiddenAssumptions, customAssumptions, setCustomAssumptions, setDummyModalOpen, setDummyModalGroup }}>
       <CollapsibleMainGroup title="1. Forecast setup" isOpen={openMainGroups.has('1. Forecast setup')} onToggle={() => toggleMainGroup('1. Forecast setup')}>
         <div style={{ padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border)', fontSize: '13.5px', color: 'var(--text)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px' }}>
@@ -2299,6 +2343,41 @@ const chatScript: ChatStepDef[] = [
         </AccordionSection>
       </CollapsibleMainGroup>
     </SliderContext.Provider>
+    
+    {dummyModalOpen && (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%', border: '1px solid var(--border)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Add Dummy Assumption</h3>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px' }}>Name:</label>
+            <input value={dummyModalName} onChange={e => setDummyModalName(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px' }}>Value (e.g. "10%", "$500"):</label>
+            <input value={dummyModalValue} onChange={e => setDummyModalValue(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button className="btn secondary" onClick={() => {
+              setDummyModalName('');
+              setDummyModalValue('');
+              setDummyModalOpen(false);
+            }}>Cancel</button>
+            <button className="btn" onClick={() => {
+              if (!dummyModalName || !dummyModalValue) return;
+              setCustomAssumptions(p => [...p, { id: Date.now().toString(), name: dummyModalName, value: dummyModalValue, group: dummyModalGroup }]);
+              setDummyModalName('');
+              setDummyModalValue('');
+              setDummyModalOpen(false);
+            }}>Add</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
   };
 
@@ -2571,7 +2650,9 @@ const exportScenariosHTML = async () => {
     sensitivityLevel,
     controlSchema: exportControlSchema,
     assistantKB,
-    logoDataUrl
+    logoDataUrl,
+    hiddenAssumptions,
+    customAssumptions
   };
 
   const payloadJson = JSON.stringify(exportPayload).replace(/</g, '\\u003c');
@@ -3199,6 +3280,7 @@ const exportScenariosHTML = async () => {
           
           mainHtml += '<details class="sub-group" open><summary style="border-left-color: ' + borderColor + '">' + esc(subGroup) + '</summary><div class="sub-group-content">';
           mainHtml += groups[mainGroup].subGroups[subGroup].map(function(control) {
+            if (DATA.hiddenAssumptions && DATA.hiddenAssumptions.indexOf(control.key) !== -1) return '';
             const value = state[control.key];
             if (control.type === 'toggle') {
               return '<div class="control"><div class="toggle"><label>' + esc(control.label) + '</label><label class="switch"><input type="checkbox" ' + (value ? 'checked' : '') + ' onchange="setField(\\'' + control.key + '\\', this.checked)"><span class="slider"></span></label></div></div>';
@@ -3281,6 +3363,14 @@ const exportScenariosHTML = async () => {
             }
             return '<div class="control"><div class="top"><label>' + esc(control.label) + '</label></div><select onchange="setField(\\'' + control.key + '\\', this.value)">' + optionsHtml + '</select></div>';
           }).join('');
+          
+          if (DATA.customAssumptions) {
+             const customs = DATA.customAssumptions.filter(function(ca) { return ca.group === subGroup; });
+             customs.forEach(function(ca) {
+                mainHtml += '<div style="margin-top:16px; padding:12px; border:1px dashed var(--border); border-radius:6px; background:#fff;"><div style="font-size:13px; font-weight:500; color:var(--text);">' + esc(ca.name) + '</div><div style="font-size:15px; color:var(--navy); margin-top:4px;">' + esc(ca.value) + '</div></div>';
+             });
+          }
+
           mainHtml += '</div></details>';
         });
         mainHtml += '</div></details>';
@@ -3506,14 +3596,14 @@ const exportScenariosHTML = async () => {
 
       <nav className="tabs" id="tabnav">
         {[
-          'Welcome',
-          'AI conversation',
-          'Resource Gathering',
-          'Assumptions',
-          'Forecast',
-          'Scenarios',
-          'Compare',
-          'Export'
+          { name: 'Welcome', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> },
+          { name: 'AI conversation', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> },
+          { name: 'Resource Gathering', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> },
+          { name: 'Assumptions', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 12 12 17 22 12"></polyline><polyline points="2 17 12 22 22 17"></polyline></svg> },
+          { name: 'Forecast', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> },
+          { name: 'Scenarios', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v12"></path><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg> },
+          { name: 'Compare', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> },
+          { name: 'Export', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> }
         ].map((tab, idx) => {
           const tabNum = idx + 1;
           const isClickable = tabNum <= maxTab;
@@ -3526,7 +3616,8 @@ const exportScenariosHTML = async () => {
                 if (isClickable) goPage(tabNum);
               }}
             >
-              {tab}
+              <span className="tab-icon">{tab.icon}</span>
+              {tab.name}
             </button>
           );
         })}
