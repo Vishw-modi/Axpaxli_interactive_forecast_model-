@@ -1180,7 +1180,7 @@ const chatScript: ChatStepDef[] = [
   {
     id: 'stage2_q5',
     who: 'ai',
-    text: "2B. And how fast should diagnosis rates climb each year as campaign awareness broadens?",
+    text: "2A. And how fast should diagnosis rates climb each year as campaign awareness broadens?",
     controls: [
       { type: 'slider', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth rate', stops: [0.019, 0.025, 0.032, 0.045, 0.055], unit: '%' }
     ],
@@ -2236,13 +2236,13 @@ const chatScript: ChatStepDef[] = [
       <CollapsibleMainGroup title="2. Demand" isOpen={openMainGroups.has('2. Demand')} onToggle={() => toggleMainGroup('2. Demand')}>
 
 
-        <AccordionSection idx={1} title="2B. Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
+        <AccordionSection idx={1} title="2A. Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
 
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Diagnosis rate (base year)")} fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={s.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => h('diagnosisRate', v)} />
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Diagnosis annual growth rate")} fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={s.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => h('diagnosisAnnualGrowthRate', v)} />
         </AccordionSection>
 
-        <AccordionSection idx={2} title="2C. Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
+        <AccordionSection idx={2} title="2B. Treatment Split" color="#e07b2a" isOpen={openSections.has(2)} onQuickSet={(level) => handleQuickSet(2, level)} onToggle={() => toggleSection(2)}>
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("IAS treated % of diagnosed (base yr)")} fieldKey="iasTreatedPctOfDiagnosed" stops={[0.244, 0.264, 0.284, 0.304, 0.324]} currentValue={s.iasTreatedPctOfDiagnosed} unit="%" onAskAI={() => openAiModal('iasTreatedPctOfDiagnosed')} onChange={v => h('iasTreatedPctOfDiagnosed', v)} />
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("IAS treated annual growth rate")} fieldKey="iasTreatedGrowthRate" stops={[0.01, 0.02, 0.03, 0.035, 0.04]} currentValue={s.iasTreatedGrowthRate} unit="%" onAskAI={() => openAiModal('iasTreatedGrowthRate')} onChange={v => h('iasTreatedGrowthRate', v)} />
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("HA-to-IAS ratio")} fieldKey="haRatioToIAS" stops={[0.30, 0.40, 0.45, 0.50, 0.55]} currentValue={s.haRatioToIAS} unit="%" onAskAI={() => openAiModal('haRatioToIAS')} onChange={v => h('haRatioToIAS', v)} />
@@ -2452,15 +2452,15 @@ const chatScript: ChatStepDef[] = [
 const exportScenariosHTML = async () => {
   // ----- Control schema (drives the live sidebar in the exported HTML) -----
   const exportControlSchema = [
-    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisRate', label: 'Diagnosis rate', min: 0.03, max: 0.08, step: 0.001, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth', min: 0.01, max: 0.06, step: 0.001, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed', min: 0.20, max: 0.40, step: 0.005, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth', min: 0.00, max: 0.05, step: 0.005, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'haRatioToIAS', label: 'HA ratio to IAS', min: 0.25, max: 0.60, step: 0.01, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'haRatioGrowthRate', label: 'HA ratio annual growth', min: -0.02, max: 0.02, step: 0.005, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasAndHATreatedBoth', label: 'Both IAS + HA', min: 0.05, max: 0.25, step: 0.005, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'initialAdditionalMarketGrowth', label: 'Promotion lift', min: 0.00, max: 0.10, step: 0.005, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'annualDecayRateOfAdditionalGrowth', label: 'Promotion decay', min: 0.10, max: 0.30, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2A. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisRate', label: 'Diagnosis rate', min: 0.03, max: 0.08, step: 0.001, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2A. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth', min: 0.01, max: 0.06, step: 0.001, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed', min: 0.20, max: 0.40, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth', min: 0.00, max: 0.05, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'haRatioToIAS', label: 'HA ratio to IAS', min: 0.25, max: 0.60, step: 0.01, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'haRatioGrowthRate', label: 'HA ratio annual growth', min: -0.02, max: 0.02, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'iasAndHATreatedBoth', label: 'Both IAS + HA', min: 0.05, max: 0.25, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'initialAdditionalMarketGrowth', label: 'Promotion lift', min: 0.00, max: 0.10, step: 0.005, unit: '%' },
+    { mainGroup: '2. Demand', subGroup: '2B. Treatment Split', type: 'range', key: 'annualDecayRateOfAdditionalGrowth', label: 'Promotion decay', min: 0.10, max: 0.30, step: 0.005, unit: '%' },
     { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'overstatementAdjFactor', label: 'Overstatement discount', min: 0.05, max: 0.40, step: 0.01, unit: '%' },
     { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC score data available' },
     { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available' },
@@ -3251,7 +3251,7 @@ const exportScenariosHTML = async () => {
         groups[mainGroup].order.forEach(function(subGroup) {
           // Provide some slight variation in the left border color based on the subGroup name if desired
           let borderColor = 'var(--teal)';
-          if (subGroup.includes('2C') || subGroup.includes('3A') || subGroup.includes('4C')) borderColor = 'var(--accent)';
+          if (subGroup.includes('2B') || subGroup.includes('3A') || subGroup.includes('4C')) borderColor = 'var(--accent)';
           if (subGroup.includes('4A') || subGroup.includes('4B')) borderColor = 'var(--blue)';
           
           mainHtml += '<details class="sub-group" open><summary style="border-left-color: ' + borderColor + '">' + esc(subGroup) + '</summary><div class="sub-group-content">';
