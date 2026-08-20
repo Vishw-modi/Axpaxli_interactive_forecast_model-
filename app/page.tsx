@@ -2234,42 +2234,10 @@ const chatScript: ChatStepDef[] = [
       </CollapsibleMainGroup>
 
       <CollapsibleMainGroup title="2. Demand" isOpen={openMainGroups.has('2. Demand')} onToggle={() => toggleMainGroup('2. Demand')}>
-        {!asDropdown && (
-          <AccordionSection idx={101} title="2A. US Population Census" color="#2980b9" isOpen={openSections.has(101)} onQuickSet={(level) => handleQuickSet(101, level)} onToggle={() => toggleSection(101)}>
-            <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-                US Population Census (by Year & Age Bucket)
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn secondary" onClick={() => document.getElementById('upload-census')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                </button>
-                <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                <button className="btn secondary" onClick={() => setPreviewSheet(1)} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                </button>
-              </div>
-            </div>
-          </AccordionSection>
-        )}
+
 
         <AccordionSection idx={1} title="2B. Patient Universe & Diagnosis" color="#1a9e75" isOpen={openSections.has(1)} onQuickSet={(level) => handleQuickSet(1, level)} onToggle={() => toggleSection(1)}>
-          <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
-            <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-              Year 1 IMS OA Knee Diagnosed Patients — Insured & Uninsured (by Age) <InfoTooltip text="Conservative = 0% of uninsured diagnosed; Aggressive = uninsured diagnosed at the same rate as insured — this is what sets the 2A range" />
-            </div>
-            {!asDropdown && (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn secondary" onClick={() => document.getElementById('upload-ims')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                </button>
-                <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                <button className="btn secondary" onClick={() => setPreviewSheet(2)} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                </button>
-              </div>
-            )}
-          </div>
+
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Diagnosis rate (base year)")} fieldKey="diagnosisRate" stops={[0.048, 0.049, 0.051, 0.052, 0.053]} currentValue={s.diagnosisRate} unit="%" onAskAI={() => openAiModal('diagnosisRate')} onChange={v => h('diagnosisRate', v)} />
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Diagnosis annual growth rate")} fieldKey="diagnosisAnnualGrowthRate" stops={[0.019, 0.025, 0.032, 0.045, 0.055]} currentValue={s.diagnosisAnnualGrowthRate} unit="%" onAskAI={() => openAiModal('diagnosisAnnualGrowthRate')} onChange={v => h('diagnosisAnnualGrowthRate', v)} />
         </AccordionSection>
@@ -2282,43 +2250,13 @@ const chatScript: ChatStepDef[] = [
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("IAS+HA treated (both) %")} fieldKey="iasAndHATreatedBoth" stops={[0.10, 0.125, 0.15, 0.175, 0.20]} currentValue={s.iasAndHATreatedBoth} unit="%" onAskAI={() => openAiModal('iasAndHATreatedBoth')} onChange={v => h('iasAndHATreatedBoth', v)} />
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Initial promotional market lift")} fieldKey="initialAdditionalMarketGrowth" stops={[0.025, 0.035, 0.045, 0.055, 0.065]} currentValue={s.initialAdditionalMarketGrowth} unit="%" onAskAI={() => openAiModal('initialAdditionalMarketGrowth')} onChange={v => h('initialAdditionalMarketGrowth', v)} />
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Annual decay of promo lift")} fieldKey="annualDecayRateOfAdditionalGrowth" stops={[0.15, 0.175, 0.20, 0.225, 0.25]} currentValue={s.annualDecayRateOfAdditionalGrowth} unit="%" onAskAI={() => openAiModal('annualDecayRateOfAdditionalGrowth')} onChange={v => h('annualDecayRateOfAdditionalGrowth', v)} />
-          <div style={{ padding: '12px 0 8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
-            <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-              Rx Analysis — Treatment Share × Physician Type
-            </div>
-            {!asDropdown && (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn secondary" onClick={() => document.getElementById('upload-rx')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                </button>
-                <input type="file" id="upload-rx" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                <button className="btn secondary" onClick={() => handleViewFile('step 5.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                </button>
-              </div>
-            )}
-          </div>
+
         </AccordionSection>
       </CollapsibleMainGroup>
 
       <CollapsibleMainGroup title="3. Share" isOpen={openMainGroups.has('3. Share')} onToggle={() => toggleMainGroup('3. Share')}>
         <AccordionSection idx={3} title="3A. Product Profile & Preference" color="#e07b2a" isOpen={openSections.has(3)} onQuickSet={(level) => handleQuickSet(3, level)} onToggle={() => toggleSection(3)}>
-          <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', paddingBottom: '12px' }}>
-            <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text)' }}>
-              Primary market research for peak share
-            </div>
-            {!asDropdown && (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn secondary" onClick={() => document.getElementById('upload-pmr')?.click()} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>📎</span> Upload File
-                </button>
-                <input type="file" id="upload-pmr" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                <button className="btn secondary" onClick={() => handleViewFile('3rd_excel.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                  <span style={{ marginRight: '6px' }}>👁️</span> View current data
-                </button>
-              </div>
-            )}
-          </div>
+
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Overstatement adjustment factor")} fieldKey="overstatementAdjFactor" stops={[0.10, 0.16, 0.22, 0.25, 0.30]} currentValue={s.overstatementAdjFactor} unit="%" onAskAI={() => openAiModal('overstatementAdjFactor')} onChange={v => h('overstatementAdjFactor', v)} />
           <ToggleControl label={l("WOMAC pain-score data available?")} fieldKey="womacScoreAvailable" value={s.womacScoreAvailable} onChange={v => h('womacScoreAvailable', v)} />
           <ToggleControl label={l("Diabetes/glycemic data available?")} fieldKey="diabetesGlycemicDataAvailable" value={s.diabetesGlycemicDataAvailable} onChange={v => h('diabetesGlycemicDataAvailable', v)} />
@@ -3224,7 +3162,11 @@ const exportScenariosHTML = async () => {
       const input = document.getElementById('scenarioName');
       const name = String((input && input.value) || scenarioName).trim();
       if (!name) return;
-      const tag = ['tag-base', 'tag-up', 'tag-down'][savedScenarios.length % 3];
+      const baseFc = getRebasedForecast(DATA.currentState);
+      const scFc = getRebasedForecast(state);
+      let tag = 'tag-base';
+      if (scFc.peakRevenue > baseFc.peakRevenue + 1000) tag = 'tag-up';
+      else if (scFc.peakRevenue < baseFc.peakRevenue - 1000) tag = 'tag-down';
       savedScenarios.push({ name: name, tag: tag, s: clone(state) });
       scenarioName = 'Scenario ' + (savedScenarios.length + 1);
       persistScenarios();
@@ -3446,8 +3388,14 @@ const exportScenariosHTML = async () => {
     }
 
     function renderScenarioSidebar() {
+      const baseFc = getRebasedForecast(DATA.currentState);
       const list = savedScenarios.length ? savedScenarios.map(function(sc, idx) {
-        return '<div class="scenario-item"><div><div class="name">' + esc(sc.name) + '</div><div class="meta"><span class="scenario-tag ' + esc(sc.tag) + '">' + esc((sc.tag || 'tag-base').replace('tag-', '')) + '</span></div></div><div style="display:flex;gap:6px;"><button class="btn secondary small" onclick="loadScenarioIntoState(' + idx + ')">Load</button><button class="btn ghost small" onclick="deleteScenario(' + idx + ')">Delete</button></div></div>';
+        const scFc = getRebasedForecast(sc.s);
+        let computedTag = 'tag-base';
+        if (scFc.peakRevenue > baseFc.peakRevenue + 1000) computedTag = 'tag-up';
+        else if (scFc.peakRevenue < baseFc.peakRevenue - 1000) computedTag = 'tag-down';
+        const tagLabel = computedTag.replace('tag-', '');
+        return '<div class="scenario-item"><div><div class="name">' + esc(sc.name) + '</div><div class="meta"><span class="scenario-tag ' + esc(computedTag) + '">' + esc(tagLabel) + '</span></div></div><div style="display:flex;gap:6px;"><button class="btn secondary small" onclick="loadScenarioIntoState(' + idx + ')">Load</button><button class="btn ghost small" onclick="deleteScenario(' + idx + ')">Delete</button></div></div>';
       }).join('') : '<div class="empty-note">No saved scenarios yet. Save your first one to start comparing.</div>';
       return '<div class="card"><div class="card-title">Scenario builder</div><div class="card-sub">Save the current assumption set. Compare saved scenarios in the Compare tab.</div><div class="inline-row"><input id="scenarioName" type="text" class="grow" value="' + esc(scenarioName) + '" placeholder="Scenario name" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;"><button class="btn small" onclick="saveScenario()">Save scenario</button></div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn secondary small" onclick="loadScenarioIntoState(-1)">Reset to base</button></div><div class="scenario-list">' + list + '</div></div>';
     }
@@ -3464,10 +3412,21 @@ const exportScenariosHTML = async () => {
 
     function renderCompareTab() {
       const userScenariosOnly = savedScenarios.filter(function(sc) { return sc.name !== 'Base' && sc.name !== 'Base (current)'; });
-      const all = [{ name: 'Base (current)', tag: 'tag-base', s: state }].concat(userScenariosOnly);
+      const all = [{ name: 'Base (current)', tag: 'tag-base', s: DATA.currentState }].concat(userScenariosOnly);
+      const baseFc = getRebasedForecast(DATA.currentState);
+      const basePeakRev = baseFc.peakRevenue;
       const rows = all.map(function(sc) {
         const fc = getRebasedForecast(sc.s);
-        return '<tr><td><strong>' + esc(sc.name) + '</strong> <span class="scenario-tag ' + esc(sc.tag || 'tag-base') + '" style="margin-left:6px;">' + esc((sc.tag || 'tag-base').replace('tag-', '')) + '</span></td><td>' + esc(formatPercent(fc.adjustedPeakShare * 100)) + '</td><td>' + esc(formatCurrency(sc.s.wacPrice)) + '</td><td>' + esc(Math.ceil(sc.s.yearsToPeak)) + '</td><td>' + esc(formatCurrency(fc.peakRevenue)) + '</td><td>' + esc(formatCurrency(fc.revenue[1] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[2] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[3] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[4] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[5] || 0)) + '</td></tr>';
+        let computedTag = 'tag-base';
+        if (sc.name === 'Base (current)' || sc.name === 'Base') {
+          computedTag = 'tag-base';
+        } else if (fc.peakRevenue > basePeakRev + 1000) {
+          computedTag = 'tag-up';
+        } else if (fc.peakRevenue < basePeakRev - 1000) {
+          computedTag = 'tag-down';
+        }
+        const tagLabel = computedTag.replace('tag-', '');
+        return '<tr><td><strong>' + esc(sc.name) + '</strong> <span class="scenario-tag ' + esc(computedTag) + '" style="margin-left:6px;">' + esc(tagLabel) + '</span></td><td>' + esc(formatPercent(fc.adjustedPeakShare * 100)) + '</td><td>' + esc(formatCurrency(sc.s.wacPrice)) + '</td><td>' + esc(Math.ceil(sc.s.yearsToPeak)) + '</td><td>' + esc(formatCurrency(fc.peakRevenue)) + '</td><td>' + esc(formatCurrency(fc.revenue[1] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[2] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[3] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[4] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[5] || 0)) + '</td></tr>';
       }).join('');
       const emptyNote = savedScenarios.length === 0 ? '<div class="empty-note" style="margin-bottom:12px;">Only the base scenario is shown. Save scenarios in the <b>Scenario</b> tab to compare them here.</div>' : '';
       return '<div style="display:flex;flex-direction:column;gap:16px;">' + emptyNote + '<div class="card"><div class="card-title">Scenario comparison</div><div class="scenario-table-wrap"><table><thead><tr><th>Scenario</th><th>Peak share</th><th>WAC</th><th>Yrs to peak</th><th>Peak rev</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead><tbody>' + rows + '</tbody></table></div></div><div class="card"><div class="card-title">Year-by-year comparison</div><div class="chart-wrap tall"><canvas id="compareBarChart"></canvas></div></div></div>';
@@ -3550,7 +3509,7 @@ const exportScenariosHTML = async () => {
           const labels = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
           const palette = ['#F25621', '#00b2a9', '#3b82f6', '#7c3aed', '#f59e0b', '#ec4899', '#10b981', '#8b5cf6'];
           const userScenariosOnly = savedScenarios.filter(function(sc) { return sc.name !== 'Base' && sc.name !== 'Base (current)'; });
-          const datasets = [{ name: 'Base (current)', s: state }].concat(userScenariosOnly).map(function(sc, idx) {
+          const datasets = [{ name: 'Base (current)', s: DATA.currentState }].concat(userScenariosOnly).map(function(sc, idx) {
             return {
               label: sc.name,
               data: getRebasedForecast(sc.s).revenue.slice(1, 6),
@@ -4273,9 +4232,12 @@ const exportScenariosHTML = async () => {
                   />
                   <button className="btn" style={{ padding: '8px 18px', fontSize: '14px', background: 'var(--accent)', color: '#fff', border: 'none' }} disabled={!scenarioNameInput.trim()} onClick={() => {
                     if (scenarioNameInput.trim()) {
-                      const tagTypes = ['tag-base', 'tag-down', 'tag-up'];
-                      const randomTag = tagTypes[savedScenarios.length % 3];
-                      setSavedScenarios([...savedScenarios, { name: scenarioNameInput, tag: randomTag, s: {...scenarioState} }]);
+                      const basePeak = f.peakRevenue;
+                      const scPeak = scenarioF.peakRevenue;
+                      let computedTag = 'tag-base';
+                      if (scPeak > basePeak + 1000) computedTag = 'tag-up';
+                      else if (scPeak < basePeak - 1000) computedTag = 'tag-down';
+                      setSavedScenarios([...savedScenarios, { name: scenarioNameInput, tag: computedTag, s: {...scenarioState} }]);
                       setScenarioNameInput('');
                     }
                   }}>Save</button>
@@ -4339,12 +4301,21 @@ const exportScenariosHTML = async () => {
               <tbody>
                 {scenarios.map((sc, i) => {
                   const fc = getRebasedForecast(sc.s);
+                  const basePeak = f.peakRevenue;
+                  let computedTag = 'tag-base';
+                  if (sc.name === 'Base' || sc.name === 'Base (current)') {
+                    computedTag = 'tag-base';
+                  } else if (fc.peakRevenue > basePeak + 1000) {
+                    computedTag = 'tag-up';
+                  } else if (fc.peakRevenue < basePeak - 1000) {
+                    computedTag = 'tag-down';
+                  }
                   const fcAnnual = {
                     revenue: fc.revenue.slice(1)
                   };
                   return (
                     <tr key={i}>
-                      <td><span className={`scenario-tag ${sc.tag}`}>{sc.name}</span></td>
+                      <td><span className={`scenario-tag ${computedTag}`}>{sc.name}</span></td>
                       <td>{fmtPct(fc.adjustedPeakShare * 100)}</td>
                       <td>{fmtM(sc.s.wacPrice)}</td>
                       <td>{Math.ceil(sc.s.yearsToPeak)}</td>
