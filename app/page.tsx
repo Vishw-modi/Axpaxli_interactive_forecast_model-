@@ -2314,40 +2314,6 @@ const chatScript: ChatStepDef[] = [
         </AccordionSection>
       </CollapsibleMainGroup>
     </SliderContext.Provider>
-    
-    {dummyModalOpen && (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}>
-        <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%', border: '1px solid var(--border)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Add Assumption</h3>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px' }}>Name:</label>
-            <input value={dummyModalName} onChange={e => setDummyModalName(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
-          </div>
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px' }}>Value (e.g. "10%", "$500"):</label>
-            <input value={dummyModalValue} onChange={e => setDummyModalValue(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <button className="btn secondary" onClick={() => {
-              setDummyModalName('');
-              setDummyModalValue('');
-              setDummyModalOpen(false);
-            }}>Cancel</button>
-            <button className="btn" onClick={() => {
-              if (!dummyModalName || !dummyModalValue) return;
-              setCustomAssumptions(p => [...p, { id: Date.now().toString(), name: dummyModalName, value: dummyModalValue, group: dummyModalGroup }]);
-              setDummyModalName('');
-              setDummyModalValue('');
-              setDummyModalOpen(false);
-            }}>Add</button>
-          </div>
-        </div>
-      </div>
-    )}
     </>
   );
   };
@@ -4823,6 +4789,39 @@ const exportScenariosHTML = async () => {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {dummyModalOpen && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%', border: '1px solid var(--border)', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--navy)' }}>Add Assumption</h3>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px', color: 'var(--text)' }}>Name:</label>
+                <input value={dummyModalName} onChange={e => setDummyModalName(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} placeholder="E.g., Regional Adoption" />
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px', color: 'var(--text)' }}>Value (e.g. "10%", "$500"):</label>
+                <input value={dummyModalValue} onChange={e => setDummyModalValue(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} placeholder="E.g., 10%" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button className="btn secondary" onClick={() => {
+                  setDummyModalName('');
+                  setDummyModalValue('');
+                  setDummyModalOpen(false);
+                }}>Cancel</button>
+                <button className="btn" onClick={() => {
+                  if (!dummyModalName || !dummyModalValue) return;
+                  setCustomAssumptions(p => [...p, { id: Date.now().toString(), name: dummyModalName, value: dummyModalValue, group: dummyModalGroup }]);
+                  setDummyModalName('');
+                  setDummyModalValue('');
+                  setDummyModalOpen(false);
+                }}>Add</button>
               </div>
             </div>
           </div>
