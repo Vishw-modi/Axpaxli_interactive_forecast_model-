@@ -75,7 +75,7 @@ function AccordionSection({
                   ctx.setDummyModalGroup(title);
                   ctx.setDummyModalOpen(true);
                 }
-              }}>+ Add dummy assumption</button>
+              }}>+ Add Assumption</button>
             </div>
           )}
         </div>
@@ -765,7 +765,7 @@ type ResourceStage = {
 const resourcePreviewData: Record<number, { title: string; headers: string[]; rows: string[][] }> = {
   1: {
     title: 'Epidemiology / Population Base',
-    headers: ['Age Band', '2024', '2025', '2026', '2027'],
+    headers: ['AGE BAND', '2024', '2025', '2026', '2027'],
     rows: [
       ['0–24 years', '103.2M', '103.6M', '103.9M', '104.1M'],
       ['25–44 years', '88.4M', '88.9M', '89.3M', '89.8M'],
@@ -775,7 +775,7 @@ const resourcePreviewData: Record<number, { title: string; headers: string[]; ro
   },
   2: {
     title: 'Diagnosed Patients (2016 IMS data)',
-    headers: ['Age Band', 'Diagnosed - Insured', '% of Total Pop.', 'Diagnosed - Uninsured (Est.)'],
+    headers: ['AGE BAND', 'DIAGNOSED - INSURED', '% OF TOTAL POP.', 'DIAGNOSED - UNINSURED (EST.)'],
     rows: [
       ['0–24 years', '1.9M', '1.9%', '0.3M'],
       ['25–44 years', '2.6M', '2.9%', '0.4M'],
@@ -903,6 +903,7 @@ const newFlowScript = [
           <ul style="margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Brand & indication</li>
             <li>Geography</li>
+            <li>Route of administration</li>
             <li>Launch timing</li>
             <li>Forecast horizon</li>
           </ul>
@@ -939,6 +940,7 @@ const newFlowScript = [
   <ul style="margin: 0 0 12px 0; padding-left: 20px; line-height: 1.6;">
     <li style="margin-bottom: 4px;"><strong>Indication</strong> → Product X is approved for osteoarthritis (OA) knee pain, so I'll set that as the indication.</li>
     <li style="margin-bottom: 4px;"><strong>Geography</strong> → given the primary market is US, I'll scope this as <strong>US-only</strong> unless another market needs covering.</li>
+    <li style="margin-bottom: 4px;"><strong>Route of Administration</strong> → Product X is an <strong>injectable</strong>, so I'll set that as the RoA unless oral or IV formulations also need covering.</li>
     <li style="margin-bottom: 4px;"><strong>Launch Date</strong> → based on drug approval records, launch looks to be around <strong>October 2017</strong>, so I'll anchor to that.</li>
     <li style="margin-bottom: 4px;"><strong>Forecast Horizon</strong> → OA Knee is a mature, stable category, so a <strong>5-year horizon</strong> is typical.</li>
   </ul>
@@ -962,12 +964,13 @@ const newFlowScript = [
   Looking at OA Knee specifically — the primary specialties treating this are <strong>orthopedic surgeons and rheumatologists</strong>, with PCPs picking up a smaller share. And based on Product X's patient eligibility, the treatment side splits into <strong>intra-articular steroid (IAS)</strong>, which is where Product X sits, and <strong>hyaluronic acid (HA)</strong>, a different injectable class. Shall we track the model along those lines?
 </div>`, step: 2 },
   { who: 'user', text: "Yes.", step: 2 },
-  { who: 'ai', sectionHeader: '3 - INPUT ALIGNMENT', sectionSub: 'Must-have inputs and recommended data sources', sectionColor: '#1f7a6c', text: `With Patient-Based confirmed at the specialty × IAS/HA grain, here's the input framework I'll work through with you — what's must-have to get a credible forecast running, versus good-to-have refinement:
+  { who: 'ai', sectionHeader: '3 - INPUT ALIGNMENT', sectionSub: 'Must-have inputs and recommended data sources', sectionColor: '#1f7a6c', text: `With Patient-Based confirmed at the specialty and treatment-type level, here's the input framework I'll work through with you — what's must-have to get a credible forecast running, versus good-to-have refinement:
 <div style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; margin-top: 12px; margin-bottom: 12px; font-size: 13px;">
   <div style="background: #f8fafc; padding: 8px 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">MUST-HAVE vs. GOOD-TO-HAVE</div>
   <table style="width: 100%; border-collapse: collapse;">
     <thead style="background: #ffffff; text-align: left; font-size: 11px; color: #64748b; text-transform: uppercase;">
       <tr>
+        <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; width: 30px;">#</th>
         <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Category</th>
         <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Must-Have</th>
         <th style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">Good-to-Have</th>
@@ -975,38 +978,56 @@ const newFlowScript = [
     </thead>
     <tbody style="background: #ffffff;">
       <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">1</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Demand</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Epi, diagnosed & treated (IAS/HA)</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Epi, diagnosed & treated<br/>(IAS/HA, RoA)</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Regional splits</td>
       </tr>
       <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">2</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Share</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Peak Share, Time to Peak</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Uptake curve, analogs</td>
       </tr>
       <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">3</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Finance</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">WAC Price</td>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top;">Rebates, GTN %</td>
       </tr>
       <tr>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">4</td>
         <td style="padding: 12px; color: #334155; vertical-align: top;">Other<br/>Adjustments</td>
-        <td style="padding: 12px; color: #334155; vertical-align: top;">—</td>
+        <td style="padding: 12px; color: #334155; vertical-align: top;">Injection Frequency</td>
         <td style="padding: 12px; color: #334155; vertical-align: top;">Payer access, competitive events, broader market events</td>
       </tr>
     </tbody>
   </table>
 </div>`, step: 3 },
-  { who: 'ai', text: `Starting with <strong>Demand</strong> — I'll need epidemiology, diagnosed, and treated-patient counts.
+  { who: 'ai', text: `<strong>1. Demand</strong> — I'll need epidemiology, diagnosed, and treated-patient counts.
 <br><br>
 <span style="font-size: 12px; color: #6b7280; font-style: italic;">Diagnosed patients = the pool already identified with OA Knee and eligible for treatment — this becomes the base I multiply by treatment rates to size the market.</span>
 <br><br>
-For epi and diagnosis, a few options: Census, DRG claims, IMS/IQVIA, or Kantar.<br/>
+For epi and diagnosis, a few options: Census, DRG claims, IMS/IQVIA, or Kantar.
 For treated-patient splits by specialty and treatment type, primary market research tends to be more reliable than claims. Do you have access to any of these directly?`, step: 3 },
-  { who: 'user', text: "We have Year 1 IMS Data on diagnosed OA Knee patients, and proprietary market research for treated-patient splits.", step: 3 },
-  { who: 'ai', text: "Good — <strong>Census</strong> for the population base, your <strong>Year 1 IMS Data</strong> for diagnosis (both by age band, since patterns shift quite a bit across age groups here), and your <strong>proprietary research</strong> for treated-patient splits. I'd use that same research for <strong>Share</strong> — Peak Share and Time to Peak — supplemented with <strong>brand planning</strong>, and for <strong>Finance</strong>, WAC price from brand planning too.", step: 3 },
-  { who: 'ai', text: "Last category — <strong>Other Adjustments</strong>. Usual factors for a forecast like this: payer access/reimbursement friction, competitive launches, and broader market events. Anything relevant, and would that be research-driven too?", step: 3 },
-  { who: 'user', text: "Yes — access and competitive launches, same proprietary research.", step: 3 },
+  { who: 'user', text: "We have Year 1 IMS data on diagnosed OA Knee patients, and proprietary market research for treated-patient splits.", step: 3 },
+  { who: 'ai', text: "Good — Census for the population base, your Year 1 IMS data for diagnosis (both by age band, since patterns shift quite a bit across age groups here), and your proprietary research for treated-patient splits.", step: 3 },
+  { who: 'ai', text: "<strong>2. Share</strong> — the key inputs here are Peak Share and Time to Peak, both captured at the same specialty and treatment-type level we just aligned on.", step: 3 },
+  { who: 'ai', text: "<strong>3. Finance</strong> — the key input is WAC Price. Preference share and price are usually tested together in the same research instrument, so do you have both available?", step: 3 },
+  { who: 'user', text: "Yes — both peak share and WAC price are in our proprietary market research.", step: 3 },
+  { who: 'ai', text: `<strong>4. Other Adjustments</strong> — this covers a few factors:
+<ul style="margin: 8px 0 12px 0; padding-left: 20px; line-height: 1.6;">
+  <li>Payer access / reimbursement friction</li>
+  <li>J-code transition period</li>
+  <li>Refrigeration requirement</li>
+  <li>Office / payer rejection trend</li>
+  <li>Injection frequency — needed to convert patients into treatments and revenue</li>
+  <li>Competitive launches</li>
+</ul>
+Which of these apply here?`, step: 3 },
+  { who: 'user', text: "We'll need payer access, injection frequency, and competitive launches factored in.", step: 3 },
+  { who: 'ai', text: "Good call — would that also come from your primary research?", step: 3 },
+  { who: 'user', text: "Yes.", step: 3 },
   { who: 'ai', text: "That covers everything. Let's move to uploading the inputs from Census, IMS diagnosed, and market research data sources before finalizing the parameters and assumptions.", step: 4 }
 ];
 
@@ -1702,7 +1723,7 @@ const chatScript: ChatStepDef[] = [
   };
 
   const [openSections, setOpenSections] = useState<Set<number>>(new Set([0, 1]));
-  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set(['Forecast Setup & Market Alignment', 'Foundation / Data', 'Core Demand Modeling', 'Access & Competitive Friction Adjustments', 'Volume & Revenue Output']));
+  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set(['Forecast Setup & Market Alignment', 'Foundation / Data', 'Core Demand Modeling', 'Access & Competitive Friction Adjustments', '4. Adjustments (Competitive and Payer Friction)']));
   const toggleMainGroup = (groupName: string) => {
     setOpenMainGroups(prev => {
       const next = new Set(prev);
@@ -2203,6 +2224,7 @@ const chatScript: ChatStepDef[] = [
             <strong>Product:</strong> <span>Product X</span>
             <strong>Indication:</strong> <span>OA Knee only</span>
             <strong>Geography:</strong> <span>US only</span>
+            <strong>Route of Administration:</strong> <span>Injectable</span>
           </div>
         </div>
         <AccordionSection idx={0} title="1A. Key Dates" color="#34495e" isOpen={openSections.has(0)} onQuickSet={(level) => handleQuickSet(0, level)} onToggle={() => toggleSection(0)}>
@@ -2223,7 +2245,7 @@ const chatScript: ChatStepDef[] = [
                   <span style={{ marginRight: '6px' }}>📎</span> Upload File
                 </button>
                 <input type="file" id="upload-census" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                <button className="btn secondary" onClick={() => handleViewFile('Book1.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                <button className="btn secondary" onClick={() => setPreviewSheet(1)} style={{ padding: '6px 12px', fontSize: '13px' }}>
                   <span style={{ marginRight: '6px' }}>👁️</span> View current data
                 </button>
               </div>
@@ -2242,7 +2264,7 @@ const chatScript: ChatStepDef[] = [
                   <span style={{ marginRight: '6px' }}>📎</span> Upload File
                 </button>
                 <input type="file" id="upload-ims" accept=".xlsx, .csv" style={{ display: 'none' }} onChange={(e) => { e.target.value = ''; }} />
-                <button className="btn secondary" onClick={() => handleViewFile('insured and uninsured patients.csv')} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                <button className="btn secondary" onClick={() => setPreviewSheet(2)} style={{ padding: '6px 12px', fontSize: '13px' }}>
                   <span style={{ marginRight: '6px' }}>👁️</span> View current data
                 </button>
               </div>
@@ -2348,10 +2370,8 @@ const chatScript: ChatStepDef[] = [
             <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Retention PCP")} fieldKey="antiNGFRetentionPCP" stops={[0.90, 0.92, 0.95, 0.97, 1.00]} currentValue={s.antiNGFRetentionPCP} unit="%" onAskAI={() => openAiModal('antiNGFRetentionPCP')} onChange={v => h('antiNGFRetentionPCP', v)} />
           </div>
         </AccordionSection>
-      </CollapsibleMainGroup>
 
-      <CollapsibleMainGroup title="5. Volume & Revenue Output" isOpen={openMainGroups.has('5. Volume & Revenue Output')} onToggle={() => toggleMainGroup('5. Volume & Revenue Output')}>
-        <AccordionSection idx={8} title="5A. Volume & Sampling" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
+        <AccordionSection idx={8} title="4E. Volume Adjustments" color="#7b3fa0" isOpen={openSections.has(8)} onQuickSet={(level) => handleQuickSet(8, level)} onToggle={() => toggleSection(8)}>
           <SliderControl asDropdown={asDropdown} hideSlider={hideSlider} label={l("Injection frequency (per patient/year)")} fieldKey="frequencyOfInjectionsYearly" stops={[1.0, 1.3, 1.5, 1.7, 2.0]} currentValue={s.frequencyOfInjectionsYearly} unit="/yr" onAskAI={() => openAiModal('frequencyOfInjectionsYearly')} onChange={v => h('frequencyOfInjectionsYearly', v)} />
         </AccordionSection>
       </CollapsibleMainGroup>
@@ -2496,8 +2516,6 @@ const exportScenariosHTML = async () => {
   const exportControlSchema = [
     { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisRate', label: 'Diagnosis rate', min: 0.03, max: 0.08, step: 0.001, unit: '%' },
     { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'diagnosisAnnualGrowthRate', label: 'Diagnosis annual growth', min: 0.01, max: 0.06, step: 0.001, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'treatmentRate', label: 'Treatment rate', min: 0.80, max: 0.98, step: 0.005, unit: '%' },
-    { mainGroup: '2. Demand', subGroup: '2B. Patient Universe & Diagnosis', type: 'range', key: 'addressableShare', label: 'Addressable share', min: 0.40, max: 0.80, step: 0.01, unit: '%' },
     { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasTreatedPctOfDiagnosed', label: 'IAS treated % of diagnosed', min: 0.20, max: 0.40, step: 0.005, unit: '%' },
     { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasTreatedGrowthRate', label: 'IAS treated annual growth', min: 0.00, max: 0.05, step: 0.005, unit: '%' },
     { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'haRatioToIAS', label: 'HA ratio to IAS', min: 0.25, max: 0.60, step: 0.01, unit: '%' },
@@ -2505,7 +2523,6 @@ const exportScenariosHTML = async () => {
     { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'iasAndHATreatedBoth', label: 'Both IAS + HA', min: 0.05, max: 0.25, step: 0.005, unit: '%' },
     { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'initialAdditionalMarketGrowth', label: 'Promotion lift', min: 0.00, max: 0.10, step: 0.005, unit: '%' },
     { mainGroup: '2. Demand', subGroup: '2C. Treatment Split', type: 'range', key: 'annualDecayRateOfAdditionalGrowth', label: 'Promotion decay', min: 0.10, max: 0.30, step: 0.005, unit: '%' },
-    { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'peakShare', label: 'Peak share', min: 0.10, max: 0.40, step: 0.005, unit: '%' },
     { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'range', key: 'overstatementAdjFactor', label: 'Overstatement discount', min: 0.05, max: 0.40, step: 0.01, unit: '%' },
     { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'toggle', key: 'womacScoreAvailable', label: 'WOMAC score data available' },
     { mainGroup: '3. Share', subGroup: '3A. Product Profile & Preference', type: 'toggle', key: 'diabetesGlycemicDataAvailable', label: 'Diabetes/glycemic data available' },
@@ -2537,14 +2554,11 @@ const exportScenariosHTML = async () => {
     { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'monthOrNever', key: 'antiNGFLaunchDate', label: 'Product W launch date' },
     { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'antiNGFRetentionOrtho', label: 'Product W retention - Ortho', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
     { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4D. Competitive Events', type: 'range', key: 'antiNGFRetentionPCP', label: 'Product W retention - PCP', min: 0.60, max: 1.00, step: 0.01, unit: '%' },
-    { mainGroup: '5. Volume & Revenue Output', subGroup: '5A. Volume & Sampling', type: 'range', key: 'frequencyOfInjectionsYearly', label: 'Frequency of injections', min: 1.0, max: 3.0, step: 0.1, unit: ' /yr' }
+    { mainGroup: '4. Adjustments (Competitive and Payer Friction)', subGroup: '4E. Volume Adjustments', type: 'range', key: 'frequencyOfInjectionsYearly', label: 'Frequency of injections', min: 1.0, max: 3.0, step: 0.1, unit: ' /yr' }
   ];
 
   const exportAssumptions: Array<{ key: keyof ForecastState; name: string }> = [
     { key: 'diagnosisRate', name: 'Diagnosis rate' },
-    { key: 'treatmentRate', name: 'Treatment rate' },
-    { key: 'addressableShare', name: 'Addressable share' },
-    { key: 'peakShare', name: 'Peak share' },
     { key: 'yearsToPeak', name: 'Years to peak share' },
     { key: 'netPrice', name: 'Net price' },
     { key: 'injectionsPerYear', name: 'Injections per year' },
@@ -2649,6 +2663,7 @@ const exportScenariosHTML = async () => {
       { k: 'Product', v: 'Product X' },
       { k: 'Indication', v: 'OA Knee only' },
       { k: 'Geography', v: 'US only' },
+      { k: 'Route of Administration', v: 'Injectable' },
       { k: 'Launch Date', v: 'Oct 2017' },
       { k: 'Horizon', v: '5 years' },
       { k: 'Model', v: 'Patient-Based' },
@@ -3795,6 +3810,7 @@ const exportScenariosHTML = async () => {
                         { k: 'Product', v: 'Product X' },
                         { k: 'Indication', v: 'OA Knee only' },
                         { k: 'Geography', v: 'US only' },
+                        { k: 'Route of Admin', v: 'Injectable' },
                         { k: 'Launch Date', v: 'Oct 2017' },
                         { k: 'Horizon', v: '5 years' }
                       );
@@ -4440,7 +4456,66 @@ const exportScenariosHTML = async () => {
                 </button>
               </div>
               <div style={{ overflow: 'auto', flex: 1, border: '1px solid var(--line)', borderRadius: '8px' }}>
-                {previewSheet === 3 ? (
+                {previewSheet === 1 ? (
+                  <div style={{ padding: '12px' }}>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', color: '#475569', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>AGE BAND</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700 }}>2024</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700 }}>2025</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700 }}>2026</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700 }}>2027</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['0–24 years', '103.2M', '103.6M', '103.9M', '104.1M'],
+                            ['25–44 years', '88.4M', '88.9M', '89.3M', '89.8M'],
+                            ['45–64 years', '84.1M', '83.7M', '83.4M', '83.0M'],
+                            ['65+ years', '61.5M', '63.2M', '64.8M', '66.3M']
+                          ].map((row, rowIndex) => (
+                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              {row.map((cell, cellIndex) => (
+                                <td key={cellIndex} style={{ padding: '10px 14px', textAlign: cellIndex === 0 ? 'left' : 'right', color: '#334155', whiteSpace: 'nowrap' }}>{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : previewSheet === 2 ? (
+                  <div style={{ padding: '12px' }}>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '10px 14px', textAlign: 'left', color: '#475569', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>AGE BAND</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>DIAGNOSED - INSURED</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>% OF TOTAL POP.</th>
+                            <th style={{ padding: '10px 14px', textAlign: 'right', color: '#334155', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>DIAGNOSED - UNINSURED (EST.)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['0–24 years', '1.9M', '1.9%', '0.3M'],
+                            ['25–44 years', '2.6M', '2.9%', '0.4M'],
+                            ['45–64 years', '6.4M', '7.6%', '1.0M'],
+                            ['65+ years', '4.7M', '7.6%', '0.7M']
+                          ].map((row, rowIndex) => (
+                            <tr key={rowIndex} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              {row.map((cell, cellIndex) => (
+                                <td key={cellIndex} style={{ padding: '10px 14px', textAlign: cellIndex === 0 ? 'left' : 'right', color: '#334155', whiteSpace: 'nowrap' }}>{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : previewSheet === 3 ? (
                   <div style={{ padding: '12px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 10px', borderRadius: '999px', background: '#f7f7fb', color: '#667085', fontSize: '11px', fontWeight: 700, marginBottom: '10px' }}>
                       <span>Data Source:</span>
