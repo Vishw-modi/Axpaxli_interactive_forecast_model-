@@ -633,7 +633,7 @@ const CollapsibleMainGroup = ({ title, isOpen, onToggle, children }: { title: Re
 );
 
 
-const MONTH_LABELS_60 = buildSequentialLabels('Mon', 60);
+const MONTH_LABELS_60 = buildSequentialLabels('M', 60);
 
 export default function ForecastApp() {
   const [activeTab, setActiveTab] = useState(1);
@@ -1722,8 +1722,8 @@ const chatScript: ChatStepDef[] = [
     window.scrollTo(0, 0);
   };
 
-  const [openSections, setOpenSections] = useState<Set<number>>(new Set([0, 1]));
-  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set(['Forecast Setup & Market Alignment', 'Foundation / Data', 'Core Demand Modeling', 'Access & Competitive Friction Adjustments', '4. Adjustments (Competitive and Payer Friction)']));
+  const [openSections, setOpenSections] = useState<Set<number>>(new Set());
+  const [openMainGroups, setOpenMainGroups] = useState<Set<string>>(new Set());
   const toggleMainGroup = (groupName: string) => {
     setOpenMainGroups(prev => {
       const next = new Set(prev);
@@ -2384,7 +2384,7 @@ const chatScript: ChatStepDef[] = [
         display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
         <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '400px', maxWidth: '90%', border: '1px solid var(--border)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Add Dummy Assumption</h3>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Add Assumption</h3>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px' }}>Name:</label>
             <input value={dummyModalName} onChange={e => setDummyModalName(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
@@ -2655,7 +2655,7 @@ const exportScenariosHTML = async () => {
   const exportPayload = {
     currentState: state,
     defaultState: defaultState,
-    savedScenarios: scenarios.map(sc => ({ name: sc.name, tag: sc.tag, s: sc.s })),
+    savedScenarios: savedScenarios.map(sc => ({ name: sc.name, tag: sc.tag, s: sc.s })),
     actuals: (f as any).zilrettaActuals,
     treatments: (f as any).zilrettaTreatments,
     baseAssumptionsRows,
@@ -3171,21 +3171,24 @@ const exportScenariosHTML = async () => {
       const addressable = s.prevalence * s.diagnosisRate * s.treatmentRate * s.addressableShare;
       const peakRevenue = Math.max.apply(null, revenue);
       const adjustedPeakPatients = addressable * adjustedPeakShare;
-      return { years, patients, revenue, cumulativeRevenue, share, addressable, peakRevenue, cumulative, adjustedPeakShare, adjustedPeakPatients };
+      const zilrettaActuals = [349088, 40497790, 254686453, 600051917, 836669581, 911430289];
+      const zilrettaTreatments = [567, 70391, 442933, 1043569, 1455078, 1585096];
+      return { years, patients, revenue, cumulativeRevenue, share, addressable, peakRevenue, cumulative, adjustedPeakShare, adjustedPeakPatients, zilrettaActuals, zilrettaTreatments };
     }
 
     const baseModel = computeForecast(DATA.defaultState);
 
     function getRebasedForecast(s) {
       const raw = computeForecast(s);
+      const actualsList = (DATA.actuals && DATA.actuals.length) ? DATA.actuals : raw.zilrettaActuals;
       const rebasedRevenue = raw.revenue.map(function(value, idx) {
         const baseModeled = baseModel.revenue[idx] || 1;
         const currentModeled = raw.revenue[idx] || 0;
-        const actual = (DATA.actuals || [])[idx] || 0;
+        const actual = actualsList[idx] || 0;
         return actual * (currentModeled / baseModeled);
       });
       // If actuals are missing/zero, fall back to modeled revenue so charts still populate
-      const hasActuals = (DATA.actuals || []).some(function(v) { return v && v > 0; });
+      const hasActuals = actualsList.some(function(v) { return v && v > 0; });
       raw.revenue = hasActuals ? rebasedRevenue : raw.revenue;
       raw.peakRevenue = Math.max.apply(null, raw.revenue);
       let cum = 0;
@@ -3194,13 +3197,16 @@ const exportScenariosHTML = async () => {
     }
 
     function loadSavedScenarios() {
+      if (DATA.savedScenarios && Array.isArray(DATA.savedScenarios) && DATA.savedScenarios.length > 0) {
+        return DATA.savedScenarios.map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: clone(sc.s) }; });
+      }
       try {
         const raw = localStorage.getItem('forecast_ai_scenarios_v1');
-        if (!raw) return (DATA.savedScenarios || []).map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: clone(sc.s) }; });
+        if (!raw) return [];
         const parsed = JSON.parse(raw);
         return Array.isArray(parsed) ? parsed.map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: sc.s }; }) : [];
       } catch (err) {
-        return (DATA.savedScenarios || []).map(function(sc) { return { name: sc.name, tag: sc.tag || 'tag-base', s: clone(sc.s) }; });
+        return [];
       }
     }
     function persistScenarios() { try { localStorage.setItem('forecast_ai_scenarios_v1', JSON.stringify(savedScenarios)); } catch (err) {} }
@@ -3457,7 +3463,8 @@ const exportScenariosHTML = async () => {
     }
 
     function renderCompareTab() {
-      const all = [{ name: 'Base (current)', tag: 'tag-base', s: state }].concat(savedScenarios);
+      const userScenariosOnly = savedScenarios.filter(function(sc) { return sc.name !== 'Base' && sc.name !== 'Base (current)'; });
+      const all = [{ name: 'Base (current)', tag: 'tag-base', s: state }].concat(userScenariosOnly);
       const rows = all.map(function(sc) {
         const fc = getRebasedForecast(sc.s);
         return '<tr><td><strong>' + esc(sc.name) + '</strong> <span class="scenario-tag ' + esc(sc.tag || 'tag-base') + '" style="margin-left:6px;">' + esc((sc.tag || 'tag-base').replace('tag-', '')) + '</span></td><td>' + esc(formatPercent(fc.adjustedPeakShare * 100)) + '</td><td>' + esc(formatCurrency(sc.s.wacPrice)) + '</td><td>' + esc(Math.ceil(sc.s.yearsToPeak)) + '</td><td>' + esc(formatCurrency(fc.peakRevenue)) + '</td><td>' + esc(formatCurrency(fc.revenue[1] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[2] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[3] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[4] || 0)) + '</td><td>' + esc(formatCurrency(fc.revenue[5] || 0)) + '</td></tr>';
@@ -3542,7 +3549,8 @@ const exportScenariosHTML = async () => {
         if (cmp) {
           const labels = ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
           const palette = ['#F25621', '#00b2a9', '#3b82f6', '#7c3aed', '#f59e0b', '#ec4899', '#10b981', '#8b5cf6'];
-          const datasets = [{ name: 'Base (current)', s: state }].concat(savedScenarios).map(function(sc, idx) {
+          const userScenariosOnly = savedScenarios.filter(function(sc) { return sc.name !== 'Base' && sc.name !== 'Base (current)'; });
+          const datasets = [{ name: 'Base (current)', s: state }].concat(userScenariosOnly).map(function(sc, idx) {
             return {
               label: sc.name,
               data: getRebasedForecast(sc.s).revenue.slice(1, 6),
@@ -4400,20 +4408,20 @@ const exportScenariosHTML = async () => {
             </div>
           </div>
 
-          <div className="card export-card">
+          {/* <div className="card export-card">
             <div>
               <div className="etitle">Export Interactive Business Model</div>
               <div className="edesc">A dynamic, high-level summary designed for executive and leadership review.</div>
             </div>
             <button className="btn" onClick={() => {}}>Open the model</button>
-          </div>
+          </div> */}
 
           <div className="card export-card">
             <div>
-              <div className="etitle">Export Scenarios (HTML)</div>
+              <div className="etitle">Export Interactive Business Model</div>
               <div className="edesc">Download all saved scenarios as an interactive HTML document, exactly as they appear in the Scenarios tab.</div>
             </div>
-            <button className="btn" onClick={exportScenariosHTML}>Download Scenarios HTML</button>
+            <button className="btn" onClick={exportScenariosHTML}>Download the Model (HTML)</button>
           </div>
 
 
